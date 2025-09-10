@@ -666,7 +666,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 {
                     archiCarga.IdOrden = objSolicitudes.IdOrden;
                     archiCarga.IdUsuario = UsuarioToken.IdCatUsuario;
-                    archiCarga.Identificador = objTransporteAsignado.Placas;
+                    archiCarga.Identificador = objSLOTransporteSolicitud.IdSLOTransporteSolicitud.ToString();
 
                     // 🔹 Actualizar progreso en el mismo modal
                     //await SweetAlertService.UpdateAsync(new SweetAlertOptions
