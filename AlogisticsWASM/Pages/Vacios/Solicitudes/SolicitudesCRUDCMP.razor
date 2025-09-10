@@ -1,0 +1,97 @@
+﻿@using ALOG.Modelos.Modelos.DTO.Solicitudes
+@using ALOGRespositorios.Modelos.Dtos.Control
+
+@inject NotificationService NotificationService
+@inject SweetAlertService Swal;
+@inject UsuarioTokenDTO _UsuarioTokenDTO
+@inject IConfiguration configuration
+@inject Radzen.DialogService DialogService
+
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="10px" Style="margin-bottom: 10px">
+    <RadzenFieldset Text="Formulario de Ticket">
+
+
+        <div class="row" style="margin-top:10px">
+            <!-- Ticket -->
+            <div class="col-md-6">
+                <RadzenLabel Text="Ticket" Component="Ticket" />
+                <RadzenNumeric @bind-Value="ticket.Ticket" Style="width:100%" Name="Ticket" />
+            </div>
+            <!-- Contenedor con máscara -->
+            <div class="col-md-6">
+                <RadzenLabel Text="Cliente a Facturar" Component="IdCatClienteFacturar" />
+                <RadzenTextBox @bind-Value="ticket.RfcCLienteFacturar" Name="IdCatClienteFacturar" Style="width:100%" @oninput="OnInput" />
+                @* <RadzenDropDown @bind-Value="ticket.RfcCLienteFacturar" Data="@clientesFacturar" TextProperty="Nombre" ValueProperty="Id" Style="width:100%" /> *@
+              @*   <RadzenAutoComplete @bind-Value=@strPcliente Data=@respListarCoincidencias TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                    ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" Change=@AutoCompleteOnClienteChange LoadData=@AutoCompleteOnLoadCliente Style="width: 100%"
+                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                                    Name="CatClienteId2" /> *@
+            </div>
+
+        </div>
+        <div class="row" style="margin-top:10px">
+            <!-- Cliente a Facturar -->
+            <div class="col-md-6">
+                <RadzenLabel Text="Contenedor" Component="Contenedor" />
+                <!-- Se sugiere formato: 4 letras, un guion y 7 dígitos -->
+                <RadzenTextBox @bind-Value="ticket.Contenedor" Name="Contenedor" Style="width:100%" Placeholder="AAAA-0000000" @oninput="OnInputContenedor" />
+            </div>
+            <div class="col-md-6">
+                <RadzenLabel Text="Tipo Contenedor" Component="ClaveTipoContenedor" />
+                <!-- Se sugiere formato: 4 letras, un guion y 7 dígitos -->
+                @* <RadzenTextBox @bind-Value="ticket.ClaveTipoContenedor" Name="ClaveTipoContenedor" Style="width:100%" /> *@
+                <RadzenDropDown @bind-Value="ticket.ClaveTipoContenedor" Data="@lstCatTipoContenedors" TextProperty="Acronimo" ValueProperty="Acronimo" Style="width:100%" />
+            </div>
+
+        </div>
+
+
+        <div class="row" style="margin-top:10px">
+            <!-- AutoComplete para Naviera -->
+            <div class="col-md-6">
+                <RadzenLabel Text="Referencia Cliente" Component="RefCliente" />
+                @* <RadzenAutoComplete TValue="int" @bind-Value="ticket.RazonSocialCLienteFacturar" Data="@navieras" Placeholder="Seleccione Naviera" Style="width:100%" /> *@
+                <RadzenTextBox @bind-Value="ticket.ReferenciaCliente" Name="RefCliente" Style="width:100%" @oninput="OnInputRefCliente" />
+            </div>
+            <!-- AutoComplete para Patio -->
+            @* <div class="col-md-6">
+                <RadzenLabel Text="Patio" Component="IdCatPatio" />
+                <RadzenAutoComplete TValue="int" @bind-Value="ticket.RazonSocialCLienteFacturar" Data="@patios" Placeholder="Seleccione Patio" Style="width:100%" />
+            </div> *@
+        </div>
+        <div class="row" style="margin-top:20px">
+            <div class="col-md-12 text-right">
+                @if (isUpdateMode)
+                {
+                    <!-- Permite actualizar solo si el estado es 7 -->
+                    @* <RadzenButton ButtonType="ButtonType.Submit" Text="Actualizar" Style="margin-right: 10px" Disabled="@(ticket.IdCatReferenciaEstado != 7)" /> *@
+                }
+                else
+                {
+                    <RadzenButton ButtonType="ButtonType.Button" Text="Crear" Style="margin-right: 10px" Click="@OnValidSubmit" />
+                }
+                <RadzenButton Text="Cancelar" Click="@OnCancel" ButtonStyle="ButtonStyle.Secondary" />
+            </div>
+        </div>
+    </RadzenFieldset>
+</RadzenStack>
+
+
+@code{
+    private void OnInput(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString().ToUpper();
+        ticket.RfcCLienteFacturar = input;
+    }
+    private void OnInputContenedor(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString().ToUpper();
+        ticket.Contenedor = input;
+    }
+    private void OnInputRefCliente(ChangeEventArgs e)
+    {
+        var input = e.Value?.ToString().ToUpper();
+        ticket.ReferenciaCliente = input;
+    }
+}

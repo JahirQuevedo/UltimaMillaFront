@@ -1,0 +1,639 @@
+﻿@page "/recepcion-consulta/{DataRecepcion}"
+@page "/recepcion-consulta"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using Newtonsoft.Json
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("recepcion")) />
+    </RadzenColumn>
+    @* <RadzenColumn Size="6" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("recepcion-reportdannios")) />
+    </RadzenColumn> *@
+</RadzenRow>
+
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Recepción</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+
+@if (_recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) 
+{
+
+<RadzenStack AlignItems="AlignItems.Normal" class="rz-p-5 rz-mt-5 rz-mb-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2"  
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Normal">
+        <RadzenColumn Size="12" s>
+            <RadzenText TextStyle="TextStyle.H6" class="text-center align-content-start">
+                Tarja: @_recepcionMercanciaDTO.ClaveReferenciaTarja
+            </RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Normal">
+        <RadzenColumn Size="6" class="text-start align-content-start">
+            <b>Buque:</b>
+        </RadzenColumn>
+         <RadzenColumn Size="6" class="text-end align-content-start">
+            @_monitorRecepcionMercancia.Buque
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Normal">
+        <RadzenColumn Size="6" class="text-start align-content-start">
+            <b>Viaje:</b>
+        </RadzenColumn>
+         <RadzenColumn Size="6" class="text-end align-content-start">
+            @_monitorRecepcionMercancia.FolioViaje
+        </RadzenColumn>
+    </RadzenRow>
+
+    <RadzenRow>
+        <RadzenColumn Size="6" class="rz-text-truncate">
+            <b>Mercancía:</b>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end align-content-start">
+            @_monitorRecepcionMercancia.Mercancia
+        </RadzenColumn>
+    </RadzenRow>
+
+        <RadzenRow>
+        <RadzenColumn Size="6" class="rz-text-truncate">
+            <b>Operador:</b>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end align-content-start">
+            @_monitorRecepcionMercancia.OperadorTransporte
+        </RadzenColumn>
+    </RadzenRow>
+
+        <RadzenRow>
+        <RadzenColumn Size="6" class="rz-text-truncate">
+            <b>Transportista:</b>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end align-content-start">
+            @_monitorRecepcionMercancia.LineaTransportista
+        </RadzenColumn>
+    </RadzenRow>
+
+        <RadzenRow>
+        <RadzenColumn Size="6" class="rz-text-truncate">
+            <b>Placas:</b>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end align-content-start">
+            @_monitorRecepcionMercancia.PlacasTransporte
+        </RadzenColumn>
+        </RadzenRow>
+
+</RadzenStack>
+
+<RadzenStack AlignItems="AlignItems.Normal" class="rz-background-color-base-300 rz-border-base-300 rz-border-radius-2"  
+   JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <div class="rz-text-align-center">
+        <RadzenSelectBar @bind-Value=@valEstadoRecepcion TValue="int" Change="() => ShowMonitorRecepcionSelected()"
+        Multiple="false">
+            <Items>
+                <RadzenSelectBarItem Text="Todos" Value="1" />
+                <RadzenSelectBarItem Text="Ingresados" Value="2" />
+                <RadzenSelectBarItem Text="Pendientes" Value="3" />
+            </Items>
+        </RadzenSelectBar>
+    </div>
+</RadzenStack>
+
+
+}
+
+@if (_monitorRecepcionMercancia.RecoleccionTarjaConfirmada.Equals(false) 
+        && _recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) {
+
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5 rz-mt-5 rz-mb-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenButton Click=@(args => ConfirmarTarjaRecepcionMercancia()) Text="Confirmar Tarja" Icon="check_circle" 
+                ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+        </RadzenColumn>
+</RadzenRow>
+
+}
+
+<RadzenDataList AllowVirtualization=@permiteVirtualization Style="@(permiteVirtualization ? "height:400px;overflow:auto;" : "width:100%;")" 
+                WrapItems="@(!permiteVirtualization)" AllowPaging="@(!permiteVirtualization)" PageSize="@registrosPorPagina" Count="@totalRegistros" 
+ LoadData=@LoadData IsLoading=@isLoading TItem="MonitorRecepcionMercancia"
+    Data="@_listaMonitorRecepcionMercancia" TItem="MonitorRecepcionMercancia" class="rz-p0">
+    <Template Context="monitorRecepcion">
+
+            <RadzenStack class="@((!monitorRecepcion.FechaIngreso.Equals(DateTime.MinValue) && monitorRecepcion.ProcesoRecepcionCompletado)  ? "rz-background-color-success-lighter" : (!monitorRecepcion.FechaIngreso.Equals(DateTime.MinValue) && !monitorRecepcion.ProcesoRecepcionCompletado) ? "rz-background-color-warning-lighter" : "rz-background-color-base-50")">
+                <RadzenRow>
+                    <RadzenColumn Size="12" class="text-center align-content-start">
+                        ID Mercancía
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow>
+                    <RadzenColumn Size="2" class="text-center">
+                        @if (!monitorRecepcion.FechaIngreso.Equals(DateTime.MinValue)) {
+                            <RadzenIcon Icon="no_crash" class="rz-me-1" />
+                        } 
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="text-center">
+                        <RadzenText TextStyle="TextStyle.H6"> @(monitorRecepcion.IdMercancia)</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="2" class="text-center">
+                        &nbsp;
+                    </RadzenColumn>
+                </RadzenRow>
+                @if  (!monitorRecepcion.IdUbicacionAlmacen.Equals(0)) {
+                <RadzenRow>
+                    <RadzenStack Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceAround" Style="width:100%;">
+                        <RadzenRow>
+                            <RadzenColumn Size="2" class="text-center align-content-start rz-pr-5 rz-pt-2">
+                                <RadzenIcon Icon="warehouse" style="font-size: 32px;" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="5" class="text-center align-content-start">
+                                <b>Zona</b><br/>@(monitorRecepcion.ClaveZonaAlmacenaje)
+                            </RadzenColumn>
+                            <RadzenColumn Size="5" class="text-center align-content-start">
+                                <b>Ubicación</b><br/>@(monitorRecepcion.ClaveUbicacion)
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenStack>
+                </RadzenRow>
+                }
+                <hr style="border: none; background-color: var(--rz-base-600); height: 1px; margin: 0;" />
+                @* ------------------------------------------------------------------------------------------------------------- *@
+                @if (_recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Partida)) 
+                {
+                    <RadzenRow AlignItems="AlignItems.Normal">
+                        <RadzenColumn Size="12" s>
+                            <RadzenText TextStyle="TextStyle.H6" class="text-center align-content-start">
+                                Tarja: @monitorRecepcion.ClaveReferenciaTarja
+                            </RadzenText>
+                        </RadzenColumn>
+                    </RadzenRow>
+                    <RadzenRow AlignItems="AlignItems.Normal">
+                        <RadzenColumn Size="6" class="rz-text-truncate">
+                            <b>Buque:</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6" class="text-end align-content-start">
+                            @_monitorRecepcionMercancia.Buque
+                        </RadzenColumn>
+                    </RadzenRow>
+                    <RadzenRow AlignItems="AlignItems.Normal">
+                        <RadzenColumn Size="6" class="rz-text-truncate">
+                            <b>Viaje:</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6" class="text-end align-content-start">
+                            @_monitorRecepcionMercancia.FolioViaje
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                    <RadzenRow>
+                        <RadzenColumn Size="6" class="rz-text-truncate">
+                            <b>Mercancía:</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6" class="text-end align-content-start">
+                            @_monitorRecepcionMercancia.Mercancia
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                        <RadzenRow>
+                        <RadzenColumn Size="6" class="rz-text-truncate">
+                            <b>Operador:</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6" class="text-end align-content-start">
+                            @_monitorRecepcionMercancia.OperadorTransporte
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                        <RadzenRow>
+                        <RadzenColumn Size="6" class="rz-text-truncate">
+                            <b>Transportista:</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6" class="text-end align-content-start">
+                            @_monitorRecepcionMercancia.LineaTransportista
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                        <RadzenRow>
+                        <RadzenColumn Size="6" class="rz-text-truncate">
+                            <b>Placas:</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="6" class="text-end align-content-start">
+                            @_monitorRecepcionMercancia.PlacasTransporte
+                        </RadzenColumn>
+                        </RadzenRow>
+                    <hr style="border: none; background-color: var(--rz-base-600); height: 1px; margin: 0;" />
+                }
+                @* ------------------------------------------------------------------------------------------------------------- *@
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="text-start align-content-start">
+                        <b>Programación:</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="text-end align-content-start">
+                        @monitorRecepcion.FechaProgramacion.ToShortDateString()
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="text-start align-content-start">
+                        <b>Recolección:</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="text-end align-content-start">
+                        @ObtenerFechaEnFormato(monitorRecepcion.FechaRecoleccion, "dd-MM-yyyy HH:mm:ss")
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="text-start align-content-start">
+                        <b>Ingreso:</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="text-end align-content-start">
+                        @ObtenerFechaEnFormato(monitorRecepcion.FechaIngreso, "dd-MM-yyyy HH:mm:ss")
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="12" class="text-end align-content-end">
+                        <RadzenCheckBox @bind-Value=@monitorRecepcion.TieneAveria Name="RECEPCION_TIENE_AVERIA" Disabled=@disabledTieneAveria />
+                        <RadzenLabel Text="Tiene Averia" Component="RECEPCION_TIENE_AVERIA" class="rz-ms-2" />
+                    </RadzenColumn>
+                </RadzenRow>
+
+                @if (monitorRecepcion.FechaRecoleccion.Equals(DateTime.MinValue)) 
+                {
+
+                    <RadzenRow>
+                        <RadzenColumn Size="12" class="text-center">
+                            <RadzenButton Click=@(args => OnConfirmarRecoleccionInventario(monitorRecepcion)) Text="Confirmar" Icon="no_crash"
+                                ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                } else if (monitorRecepcion.FechaIngreso.Equals(DateTime.MinValue) && !monitorRecepcion.ProcesoRecepcionCompletado)
+                {
+
+                    <RadzenRow>
+                        <RadzenColumn Size="12" class="text-center">
+                            <RadzenButton Click=@(args => OnIngresarMercancia(monitorRecepcion)) Text="Ingresar"  Icon="download_done"
+                                ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                } else if (!monitorRecepcion.FechaIngreso.Equals(DateTime.MinValue) && !monitorRecepcion.ProcesoRecepcionCompletado) {
+
+                    <RadzenRow>
+                        <RadzenColumn Size="12" class="text-center">
+                            <RadzenButton Click=@(args => OnIngresarMercancia(monitorRecepcion)) Text="Concluir Ingreso"  Icon="download_done"
+                                ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                } else if (!monitorRecepcion.FechaIngreso.Equals(DateTime.MinValue) && monitorRecepcion.ProcesoRecepcionCompletado) {
+
+                    <RadzenRow>
+                        <RadzenColumn Size="12" class="text-center">
+                            <RadzenButton Click=@(args => OnIngresarMercancia(monitorRecepcion)) Text="Vizualiar Ingreso"  Icon="eye_tracking"
+                                ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                        </RadzenColumn>
+                    </RadzenRow>
+
+                }
+
+
+                @* <RadzenStack Orientation="Orientation.Horizontal">
+                    <RadzenImage Path="@order.Employee?.Photo" Style="width: 80px; height: 80px; border-radius: 50%;" AlternateText="@(order.Employee?.FirstName + " " + order.Employee?.LastName)" />
+                    <RadzenStack Gap="0.25rem">
+                        <h4 class="rz-mb-0">@(order.Employee?.FirstName + " " + order.Employee?.LastName)</h4>
+                        <div>@order.ShipAddress</div>
+                        <div style="font-size: .8em">@(order.ShipCity), @(order.ShipCountry)</div>
+                    </RadzenStack>
+                </RadzenStack> *@
+
+            </RadzenStack>
+    </Template>
+</RadzenDataList>
+
+@code {
+
+    [Parameter] public string DataRecepcion { get; set; }
+
+    MonitorPartida monitorPartida = new MonitorPartida();
+
+    List<MonitorPartida> listaMonitorPartida = new List<MonitorPartida>();
+
+    List<MonitorRecepcionMercancia> _listaMonitorRecepcionMercancia = new List<MonitorRecepcionMercancia>();
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+   int valEstadoRecepcion = 1;
+
+    bool permiteVirtualization = false;
+    int count;
+
+    bool disabledTieneAveria = true;
+
+    bool isLoading;
+
+    int registrosPorPagina = 50;
+
+    int totalRegistros;
+
+    int numeroDePagina = 1;
+
+    LoadDataArgs _args;
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; } 
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        _listaMonitorRecepcionMercancia = new List<MonitorRecepcionMercancia>();
+
+        await LoadStateRecepcionAsync();
+
+        _monitorRecepcionMercancia =  new MonitorRecepcionMercancia();
+
+        _monitorRecepcionMercancia = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+        ////Console.WriteLine("OnInitializedAsync");
+
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+        ////Console.WriteLine("OnParametersSet");
+
+        if (DataRecepcion != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataRecepcion);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            ////Console.WriteLine("Decoded: " + decodedString);
+
+            _recepcionMercanciaDTO =  new RecepcionMercanciaDTO();
+
+            _recepcionMercanciaDTO = JsonConvert.DeserializeObject<RecepcionMercanciaDTO>(decodedString);
+
+            await LoadData(_args);
+
+            //await LoadData(_args);
+
+            @* await LoadStateRecepcionAsync();
+
+            _monitorRecepcionMercancia =  new MonitorRecepcionMercancia();
+
+            _monitorRecepcionMercancia = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+            totalRegistros = _listaMonitorRecepcionMercancia.Count; *@
+
+        }
+
+    }
+
+    private string ObtenerFechaEnFormato(DateTime _fecha, string _formatoFecha) {
+
+        return _fecha.Equals(DateTime.MinValue) ? null : _fecha.ToString("dd-MM-yyyy HH:mm:ss");
+
+    }
+
+    public async Task ConfirmarTarjaRecepcionMercancia()
+    {
+
+        ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+        _consultaRecepcion.Entidad = new ConsultaRecepcion();
+        _consultaRecepcion.Entidad.IdTarja = _recepcionMercanciaDTO.IdTarja;
+
+        var _result = await _recepcionService.ConfirmarRecepcionMercanciaPorIdTarja(_consultaRecepcion);
+
+        if (_result.Success) {
+
+            _listaMonitorRecepcionMercancia = _result.Data;
+
+            await SaveStateRecepcionAsync();
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "Error al confirmar la Tarja de Recepción.", Duration = 4000 });
+
+        }
+
+    }
+
+    private async void OnConfirmarRecoleccionInventario(MonitorRecepcionMercancia monitorRecepcionMercancia) {
+
+
+        ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+        _consultaRecepcion.Entidad = new ConsultaRecepcion();
+
+        _consultaRecepcion.Entidad.IdInventario = monitorRecepcionMercancia.IdInventario;
+        _consultaRecepcion.Entidad.TieneAveria = monitorRecepcionMercancia.TieneAveria;
+
+        ////Console.WriteLine("-> OnConfirmarRecoleccionInventario _consultaRecepcion : " + System.Text.Json.JsonSerializer.Serialize(_consultaRecepcion));
+
+        var _result = await _recepcionService.ConfirmarRecepcionMercanciaPorIdPartidaInventario(monitorRecepcionMercancia.IdInventario, monitorRecepcionMercancia.TieneAveria ? 1 : 0);
+
+        if (_result.Success) {
+
+            var index = _listaMonitorRecepcionMercancia.FindIndex(x => x.Equals(monitorRecepcionMercancia.IdInventario));
+
+            if (index != -1)
+            {
+                _listaMonitorRecepcionMercancia[index].FechaRecoleccion = _result.Data.FechaRecoleccion;
+            }
+
+            await LoadData(_args);
+
+            await SaveStateRecepcionAsync();
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "Error al confirmar la mercancía.", Duration = 4000 });
+
+        }
+
+
+    }
+
+    private async void OnIngresarMercancia(MonitorRecepcionMercancia monitorRecepcionMercancia) {
+
+        RecepcionMercanciaDTO recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+        _recepcionMercanciaDTO.IdMercancia = monitorRecepcionMercancia.IdMercancia;
+        _recepcionMercanciaDTO.IdInventario = monitorRecepcionMercancia.IdInventario;
+        _recepcionMercanciaDTO.IdTarja = monitorRecepcionMercancia.IdTarja;
+
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+        await SaveStateAsync();
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/recepcion-reportdannios/{base64EncodedData}");
+
+    }
+
+    async Task LoadData(LoadDataArgs args)
+    {
+        isLoading = true;
+
+        ////Console.WriteLine("LoadData");
+
+        ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+        _consultaRecepcion.Entidad = new ConsultaRecepcion();
+        _consultaRecepcion.Entidad.TipoClasificacionRecepcion = (TipoClasificacionRecepcion)valEstadoRecepcion;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+
+        _consultaRecepcion.NumeroDePagina = numeroDePagina;
+        _consultaRecepcion.RegistrosPorPagina = registrosPorPagina;
+
+        if (_recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) {
+
+            _consultaRecepcion.Entidad.ClaveReferenciaTarja = _recepcionMercanciaDTO.ClaveReferenciaTarja;
+
+        } else if (_recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Partida)) {
+
+            _consultaRecepcion.Entidad.IdMercancia = _recepcionMercanciaDTO.IdMercancia;
+
+        }
+
+        var _result = await _recepcionService.ObtenerListaPaginada(_consultaRecepcion);
+
+        if (_result.Success) {
+
+            if (!_result.Data.Count.Equals(0)) {
+
+                _listaMonitorRecepcionMercancia = _result.Data;
+
+                var _recepcionMercancia = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+                if (_recepcionMercancia != null) {
+
+                    if (_recepcionMercancia.RecoleccionTarjaConfirmada) {
+
+                        disabledTieneAveria = true;
+
+                    } else {
+
+                        disabledTieneAveria = false;
+                    }
+                }
+
+                totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+            }
+
+        }
+
+        isLoading = false; 
+
+        await InvokeAsync(StateHasChanged);
+    } 
+
+    private async void  ShowMonitorRecepcionSelected() {
+
+       //Console.WriteLine($"Valor del SelecctBar: {valEstadoRecepcion}");
+
+        if (!valEstadoRecepcion.Equals(0)) {
+
+            await LoadData(_args);
+
+        }
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _monitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<MonitorRecepcionMercancia>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<MonitorRecepcionMercancia>(_monitorRecepcionMercancia));
+    }
+
+    private async Task LoadStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultListRecepcion = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "ListaMonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(resultListRecepcion))
+        {
+            _listaMonitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<List<MonitorRecepcionMercancia>>(resultListRecepcion);
+        }
+    }
+
+    private async Task SaveStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "ListaMonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<List<MonitorRecepcionMercancia>>(_listaMonitorRecepcionMercancia));
+    }
+
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await DialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

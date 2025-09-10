@@ -1,0 +1,33 @@
+﻿@page "/monitorSalidas"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime;
+
+@inject NotificationService NotificationService
+@inject DialogService BusyDialogService
+
+<h3>Salidas</h3>
+
+@code {
+
+    protected override async Task OnInitializedAsync() 
+    {
+        await base.OnInitializedAsync();
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync(); 
+
+    }
+    
+
+}

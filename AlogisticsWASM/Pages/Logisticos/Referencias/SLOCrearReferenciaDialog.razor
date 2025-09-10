@@ -1,0 +1,44 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOG.Modelos.Modelos.DTO.Logistica
+@inject DialogService DialogService
+
+<RadzenTemplateForm Data="ObjsloReferenciasDTO" Submit="@((SLOReferenciasDTO args)=>{ Guardar(args); })">
+    <RadzenFieldset Text="Nueva Referencia">
+
+        <!-- Cliente -->
+        <RadzenLabel Text="Cliente Solicitante" Component="CatCliente" />
+        <RadzenAutoComplete @bind-Value=@strcliente Data=@ListarClientes TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" Change=@OnClienteChange LoadData=@AutoCompleteOnLoadCliente Style="width: 100%"
+                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                            Name="CatCliente" />
+
+        <!-- Cliente a Facturar -->
+        @* <RadzenLabel Text="Cliente a Facturar" Component="CatClienteFact" />
+        <RadzenAutoComplete @bind-Value=@strfactCliente Data=@ListarClientesAFact TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" Change=@OnClienteFactChange LoadData=@AutoCompleteOnLoadCliente Style="width: 100%"
+                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                            Name="CatClienteFact" /> *@
+
+        <!-- Referencia Cliente -->
+        @* <RadzenLabel Text="Ref. Cliente" Component="refcliente" />
+        <RadzenTextBox Style="min-width: 25%; max-width: 25%;" aria-label="Default TextBox" Name="refcliente" @bind-Value="strRefcliente" /> *@
+        
+        <!-- Aduana -->
+        <RadzenLabel Text="Aduana" Component="DropDownAduana" />
+        <RadzenDropDown @bind-Value=@strAduana Data=@lstAduanas.Select(x =>x.Nombre) Change=@DropDownOnAduanaChange Style="min-width: 25%; max-width: 25%;" Name="DropDownAduana" AllowClear=true />
+
+        <!-- Tipo de Servicio -->
+        <RadzenLabel Text="Servicio" />
+        <RadzenDropDown Data="@tiposServicio"
+                        TextProperty="Value"
+                        ValueProperty="Key"
+                        @bind-Value="ObjsloReferenciasDTO.TipoServicio"
+                        Name="TipoServicio"
+                        Style="min-width: 25%; max-width: 25%;" />
+
+        <!-- Botones -->
+        <RadzenButton ButtonType="ButtonType.Submit" Text="Guardar" Style="margin-top: 20px" />
+        <RadzenButton Text="Cancelar" Click="@(() => DialogService.Close(null))" Style="margin-left: 10px" />
+    </RadzenFieldset>
+</RadzenTemplateForm>

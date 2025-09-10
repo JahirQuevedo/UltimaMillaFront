@@ -1,0 +1,508 @@
+﻿@page "/recepcion-fotocamara/{DataRecepcion}"
+@page "/recepcion-fotocamara"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOG.Modelos.Modelos.DTO.Solicitudes
+@using ALOGRepositorios.Services
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@using ALOGRepositorios.Services.Peticiones.IPeticiones
+@using Microsoft.AspNetCore.Authorization
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Drawing
+@using SixLabors.ImageSharp.Drawing.Processing
+@using SixLabors.ImageSharp.Processing;
+@using SixLabors.ImageSharp.Formats.Jpeg
+@using SixLabors.Fonts
+@using System.Net.Http
+@using System.IO
+@using System.Text.Json
+@using Newtonsoft.Json
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject DialogService BusyDialogService
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+<script src="resources/js/Fotos/WebCamera.js"></script>
+
+<style>
+
+    .rz-fileupload-files {
+        display: none !important;
+    }
+
+    .camera-background-image {
+        background-image: url(/img/camera-photo.jpg); 
+        background-size: cover; 
+        background-repeat: no-repeat; 
+        background-position: center;
+    }
+
+</style>
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnBack())  />
+    </RadzenColumn>
+    @* <RadzenColumn Size="6" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("ubicacion"))  />
+    </RadzenColumn> *@
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        @* <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Recepción</RadzenText>
+        </RadzenColumn> *@
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">EVIDENCIA FOTOGRAFICA</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+
+<RadzenStack AlignItems="AlignItems.Center" class="rz-p-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">@(_recepcionMercanciaDTO.IdMercancia)</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center align-content-start">
+            ID Mercancía
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+<RadzenStack AlignItems="AlignItems.Normal" class="rz-p-0 rz-mt-5"
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center" class="rz-pt-2 camera-background-image">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center ">
+            <video id="videoFeed" width="320" height="240" />
+            <canvas class="d-none" id="currentFrame" width="1280" height="720" />
+         </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow class="text-center">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12">
+            <RadzenRadioButtonList Value=@valTipoFoto TValue="int" Disabled=@_monitorRecepcionMercancia.ProcesoRecepcionCompletado Change=@(args => valTipoFoto = args) >
+                <Items>
+                    <RadzenRadioButtonListItem Text="Recepción" Value="1" />
+                    <RadzenRadioButtonListItem Text="Evidencia de Daño" Value="2" />
+                </Items>
+            </RadzenRadioButtonList>
+         </RadzenColumn> 
+    </RadzenRow>
+    @* <RadzenRow class="text-center">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12">
+            <RadzenButton Icon="camera" Text="Tomar Foto" ButtonStyle="ButtonStyle.Primary" Click=@(args => CaptureFrame()) />
+         </RadzenColumn> 
+    </RadzenRow> *@
+    <RadzenRow class="text-center">
+         <RadzenColumn Size="4" SizeMD="4" SizeLG="4" class="text-center">
+            <RadzenButton Icon="play_circle" Text="Iniciar" ButtonStyle="ButtonStyle.Primary" Disabled=@_monitorRecepcionMercancia.ProcesoRecepcionCompletado Click=@(args => StartCamera()) />
+         </RadzenColumn>
+         
+         <RadzenColumn Size="4" SizeMD="4" SizeLG="4" class="text-center">
+            <RadzenButton Icon="photo_camera" ButtonStyle="ButtonStyle.Primary" Disabled=@_monitorRecepcionMercancia.ProcesoRecepcionCompletado Click=@(args => CaptureFrame()) />
+         </RadzenColumn>
+         <RadzenColumn Size="4" SizeMD="4" SizeLG="4" class="text-center">
+            <RadzenButton Icon="stop_circle" Text="Detener" ButtonStyle="ButtonStyle.Primary" Disabled=@_monitorRecepcionMercancia.ProcesoRecepcionCompletado Click=@(args => StopCamera()) />
+         </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow class="text-center">
+        <RadzenColumn Size="6" SizeMD="6" SizeLG="6" class="text-center">
+            <RadzenButton Icon="switch_camera" Text="Cambiar Cámara" ButtonStyle="ButtonStyle.Primary" Disabled=@_monitorRecepcionMercancia.ProcesoRecepcionCompletado Click=@(args => SwitchCamera()) />
+         </RadzenColumn>
+         <RadzenColumn Size="6" SizeMD="6" SizeLG="6" class="text-center">
+            <RadzenButton Icon="gallery_thumbnail" Text="Galería de Fotos" Click=@(args => OnGaleriaFoto()) ButtonStyle="ButtonStyle.Primary" />
+         </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow>
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12">
+            <RadzenCard Variant="Variant.Outlined">
+                <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Adjuntar Fotos</RadzenText>
+                <RadzenUpload Multiple="true" Accept="image/*" Icon="upload" ChooseText="" Style="width: 100%" Change=@OnClientChange InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Selecciona archivo" }})" />
+            </RadzenCard>
+    </RadzenColumn>
+    </RadzenRow>
+    @* <RadzenRow class="text-center">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12">
+            <RadzenButton Icon="gallery_thumbnail" Text="Galeria de Fotos" Click=@(args => OnGaleriaFoto()) ButtonStyle="ButtonStyle.Primary" />
+         </RadzenColumn> 
+    </RadzenRow> *@
+</RadzenStack>
+
+@code {
+
+    [Parameter] public string DataRecepcion { get; set; }
+
+    private string captionText = String.Empty;
+
+    private string frameUri;
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+    int valTipoFoto = 1;
+
+    DialogSettings _settings;
+
+    FontCollection collection = new FontCollection();
+
+    FontFamily sansFamily;
+
+    Font captionFont;
+
+    const float TextPadding = 8f;
+
+    const float TextFontSize = 64f;
+
+    private bool useFrontCamera = false;
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; }
+
+    [Inject] private IServicioFotograficoService? _servicioFotograficoService { get; set; } 
+
+    [Inject] private IOrdenService? _ordenservice {get; set;}
+
+    public class DialogSettings
+    {
+        public string Left { get; set; }
+        public string Top { get; set; }
+        public string Width { get; set; }
+        public string Height { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        //await JSRuntime.InvokeVoidAsync("startVideo", "videoFeed");
+
+        await LoadStateAsync();
+        // Se omite la referencia de la fuente ya que no es utilzada en este momento.
+        // @* var fontBytes = await Http.GetByteArrayAsync("resources/js/Fotos/OpenSans-Regular.ttf");
+        // collection.Add(new MemoryStream(fontBytes));
+        // collection.TryGet("Open Sans", out sansFamily);
+        // captionFont = sansFamily.CreateFont(16, FontStyle.Regular); *@
+
+        valTipoFoto = 1;
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+         if (DataRecepcion != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataRecepcion);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            ////Console.WriteLine("Decoded: " + decodedString);
+
+            _recepcionMercanciaDTO =  new RecepcionMercanciaDTO();
+
+            _recepcionMercanciaDTO = JsonConvert.DeserializeObject<RecepcionMercanciaDTO>(decodedString);
+
+                ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+            _consultaRecepcion.Entidad = new ConsultaRecepcion();
+            _consultaRecepcion.Entidad.IdInventario = _recepcionMercanciaDTO.IdInventario;
+
+            ////Console.WriteLine("Se realiza la busqueda del Id Inventario: " + _recepcionMercanciaDTO.IdInventario.ToString());
+
+            var _result = await _recepcionService?.ObtenerListaPaginada(_consultaRecepcion);
+
+            if (_result.Success) {
+
+                ////Console.WriteLine("--->Se obtiene información del Inventario para la Recepción");
+
+                _monitorRecepcionMercancia = _result.Data.Take(1).SingleOrDefault();
+
+                ////Console.WriteLine("-> _monitorRecepcionMercancia : " + System.Text.Json.JsonSerializer.Serialize(_monitorRecepcionMercancia));
+
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    async Task OnClientChange(UploadChangeEventArgs args)
+    {
+        // ////Console.WriteLine($"Client-side upload changed");
+
+        string _pathOrdenServicio = String.Empty;
+
+        SolPathOrdenDTO solPathOrdenDTO = new SolPathOrdenDTO();
+
+        solPathOrdenDTO.IdOrden = _monitorRecepcionMercancia.IdOrdenServicio;
+        solPathOrdenDTO.IdLineaNegocio = 4;
+
+        var _ordenServicio = await _ordenservice.ObtenerPath(solPathOrdenDTO);
+
+        if (_ordenServicio.IsSuccess) {
+
+            _pathOrdenServicio = _ordenServicio.strMensaje;
+
+            if (!_pathOrdenServicio.EndsWith("/")) {
+                _pathOrdenServicio += "/";
+            }
+
+            DirectoryInfo directoryInfo = new DirectoryInfo(_pathOrdenServicio);
+            _pathOrdenServicio = directoryInfo.FullName;
+
+        }
+
+        ////Console.WriteLine("-> _ordenServicio : " + System.Text.Json.JsonSerializer.Serialize(_ordenServicio));
+
+        InvokeAsync(async () =>
+            {
+                bool _cargaCompleta = true;
+                foreach (var file in args.Files)
+                {
+                    ////Console.WriteLine($"File: {file.Name} / {file.Size} bytes");
+
+                    try
+                    {
+                        byte[] bytes;
+
+                        long maxFileSize = 10 * 1024 * 1024;
+
+                        var stream = file.OpenReadStream(maxFileSize);
+                                        
+                        using var ms = new MemoryStream();
+                        await stream.CopyToAsync(ms);      
+
+                        stream.Close();
+
+                        bytes = ms.ToArray();
+
+                        CargaArchivoFotografico cargaArchivoFotografico = new CargaArchivoFotografico();
+                        cargaArchivoFotografico.IdEmpresaLogin = 1;
+                        cargaArchivoFotografico.IdTarja = _monitorRecepcionMercancia.IdTarja;
+                        cargaArchivoFotografico.FolioTarja = _monitorRecepcionMercancia.FolioTarja;
+                        cargaArchivoFotografico.IdFolioServicio = _monitorRecepcionMercancia.IdFolioServicio;
+                        cargaArchivoFotografico.FolioServicio = _monitorRecepcionMercancia.FolioServicio;
+                        cargaArchivoFotografico.IdInventario = _recepcionMercanciaDTO.IdInventario;
+                        cargaArchivoFotografico.IdMercancia = _recepcionMercanciaDTO.IdMercancia;
+                        cargaArchivoFotografico.TipoFoto = (TipoFoto)valTipoFoto;
+                        cargaArchivoFotografico.ArchivoBase = new ArchivoBase();
+                        cargaArchivoFotografico.ArchivoBase.RutaBase = _pathOrdenServicio;
+                        cargaArchivoFotografico.ArchivoBase.Content = bytes;
+                        cargaArchivoFotografico.ArchivoBase.Extension = ".jpg";
+
+                        ResultBase _result = await _servicioFotograficoService.Guardar(cargaArchivoFotografico);
+
+                        if (!_result.Success) {
+
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Evidencia Fotográfica", Detail = _result.MensajeRespuesta, Duration = 3000 });
+
+                            _cargaCompleta = false;
+
+                            throw new Exception(_result.MensajeRespuesta);
+
+                        }
+
+
+                    }
+                    catch (Exception ex)
+                    {
+                       //Console.WriteLine($"Client-side file read error: {ex.Message}");
+                        _cargaCompleta = false;
+                        BusyDialogService.Close();
+
+                    }
+                    finally {
+
+                    }
+                }
+
+                BusyDialogService.Close();
+
+                if (_cargaCompleta) {
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Evidencia Fotográfica", Detail = "La imágenes se adjuntaron correctamente.", Duration = 4000 });
+                }
+
+                await InvokeAsync(StateHasChanged);
+
+             });
+
+            await BusyDialog("Procesando Información...");
+    }
+
+    private async Task CaptureFrame()
+    {
+
+        await JSRuntime.InvokeAsync<String>("getFrame", "videoFeed", "currentFrame", DotNetObjectReference.Create(this));
+
+        await DialogService.OpenAsync<VistaModalRegistroCapturaCamara>($"Captura de Evidencia",
+            new Dictionary<string, object>() { { "base64EncodedImageData", frameUri }, 
+                                                { "recepcionMercanciaDTO", _recepcionMercanciaDTO },
+                                                { "tipoFoto", valTipoFoto },
+                                                { "monitorRecepcionMercancia", _monitorRecepcionMercancia} },
+            new DialogOptions() 
+            {
+                Resizable = false, 
+                Draggable = true,
+                Resize = OnResize,
+                Drag = OnDrag,
+                Width = "400px", 
+                Height ="380px"
+                });
+
+    }
+
+    private async Task StartCamera()
+    {
+        await JSRuntime.InvokeAsync<String>("startVideo", useFrontCamera);
+    }
+
+    private async Task SwitchCamera()
+    {
+        // método para el cambio de cámara.
+        useFrontCamera = !useFrontCamera;
+        await JSRuntime.InvokeAsync<String>("switchCamera", "videoFeed", useFrontCamera);
+    }
+
+    private async Task StopCamera()
+    {
+        await JSRuntime.InvokeAsync<String>("stopVideo", "videoFeed");
+    }
+
+
+    [JSInvokable]
+    public void ProcesarImagen(string imageString)
+    {
+   
+        @* byte[] imageData = Convert.FromBase64String(imageString.Split(',')[1]);
+
+        using (var image = Image.Load(imageData))
+        {
+            /* image.Mutate(x => x
+                .Flip(FlipMode.Horizontal) 
+                .Fill(Color.ParseHex("0008"), new RectangularPolygon(0,220, 320, 20))
+                .DrawText(captionText, captionFont, Color.White, new PointF(image.Width - rect.Width - 16f,
+            image.Height - rect.Height - TextPadding)) 
+            ); */
+
+            image.Mutate(x => x
+                .Flip(FlipMode.Horizontal) 
+            );
+
+            frameUri = image.ToBase64String(JpegFormat.Instance);
+        } *@
+
+        frameUri = imageString;
+
+    }
+
+    async void OnGaleriaFoto() {
+
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+        await SaveStateAsync();
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/recepcion-fotogaleria/{base64EncodedData}");
+
+    }
+
+    void OnDrag(System.Drawing.Point point)
+    {
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Left = $"{point.X}px";
+        Settings.Top = $"{point.Y}px";
+
+    }
+
+    async void OnBack() {
+
+        await JSRuntime.InvokeAsync<String>("stopVideo", "videoFeed");
+
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+        await SaveStateAsync();
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/recepcion-reportdannios/{base64EncodedData}");
+
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _monitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<MonitorRecepcionMercancia>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<MonitorRecepcionMercancia>(_monitorRecepcionMercancia));
+    }
+
+    void OnResize(System.Drawing.Size size)
+    {
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Width = $"{size.Width}px";
+        Settings.Height = $"{size.Height}px";
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+    public DialogSettings Settings 
+    { 
+        get
+        {
+            return _settings;
+        }
+        set
+        {
+            if (_settings != value)
+            {
+                _settings = value;
+            }
+        }
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

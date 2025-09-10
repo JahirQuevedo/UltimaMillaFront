@@ -1,0 +1,278 @@
+﻿@page "/vacioscontroltower"
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Utilerias
+@inject NotificationService NotificationService
+@inject SweetAlertService Swal;
+@inject UsuarioTokenDTO _UsuarioTokenDTO
+@inject IConfiguration configuration
+@inject Radzen.DialogService DialogService
+
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+</style>
+
+<RadzenCard Variant="Variant.Outlined" class="rz-my-4">
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+        <div>Edit Mode:</div>
+        <RadzenSelectBar @bind-Value="@editMode" TextProperty="Text" ValueProperty="Value"
+                         Data="@(Enum.GetValues(typeof(DataGridEditMode)).Cast<DataGridEditMode>().Select(t => new { Text = $"{t}", Value = t }))" Size="ButtonSize.Small"
+                         Disabled="@(editMode == DataGridEditMode.Multiple && ordersToInsert.Count() > 1)" />
+    </RadzenStack>
+</RadzenCard>
+
+<RadzenDataGrid @ref="ordersGrid" AllowAlternatingRows="false" AllowFiltering="true" AllowPaging="true" PageSize="5" AllowSorting="true" EditMode="@editMode"
+                Data="@orders" TItem="PeticionesContenedores" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow" Sort="@Reset" Page="@Reset" Filter="@Reset" ColumnWidth="200px">
+    <HeaderTemplate>
+        <RadzenButton ButtonStyle="ButtonStyle.Success" Icon="add_circle" Text="Add New Order" Click="@InsertRow" Disabled="@(editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)" />
+    </HeaderTemplate>
+    <Columns>
+        <RadzenDataGridColumn Property="IdContenedor" Title="Cont.ID" Width="120px" Frozen="true" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.FechaRegistro)" Title="Fecha" Width="200px">
+            <Template Context="order">
+                @String.Format("{0:d}", order.FechaRegistro)
+            </Template>
+            <EditTemplate Context="order">
+                <RadzenDatePicker @bind-Value="order.FechaRegistro" Style="width:100%" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select order date" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="Contenedor" Title="Contenedor" Width="120px" Frozen="true" />
+        <RadzenDataGridColumn Property="RefenciaCliente" Title="Ref.Cliente" Width="120px" Frozen="true" />
+        <RadzenDataGridColumn Property="CatPatios.RazonSocial" Title="Patios" Width="220px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.PatioId" Data="@IECatPatios" TextProperty="@nameof(CatPatios.RazonSocial)" ValueProperty="@nameof(CatPatios.RazonSocial)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select Patio" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="CatAduana.Nombre" Title="Aduana" Width="280px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.AduanaId" Data="@IECatAduanas" TextProperty="@nameof(CatAduana.Nombre)" ValueProperty="@nameof(CatAduana.Nombre)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select Aduana" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="CatClientes.RazonSocial" Title="Cliente" Width="280px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.ClienteId" Data="@IECatClientes" TextProperty="@nameof(CatClientes.RazonSocial)" ValueProperty="@nameof(CatClientes.RazonSocial)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select Aduana" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn Property="CatNavieras.RazonSocial" Title="Naviera" Width="280px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.Naviera_Id" Data="@IECatNavieras" TextProperty="@nameof(CatNavieras.RazonSocial)" ValueProperty="@nameof(CatNavieras.RazonSocial)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select Aduana" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.ReferenciaFacturacion)" Title="Ref.Facturación">
+            <EditTemplate Context="order">
+                <RadzenTextBox @bind-Value="order.ReferenciaFacturacion" Style="width:200px; display: block" Name="RefFact" aria-label="Enter Referencia Facturación" />
+                <RadzenRequiredValidator Text="Referencia Facturación is required" Component="RefFact" Popup="true" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="CatClientes.RazonSocial" Title="Cliente Facturar" Width="280px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.IdClienteFacturarA" Data="@IECatClientes" TextProperty="@nameof(CatClientes.RazonSocial)" ValueProperty="@nameof(CatClientes.RazonSocial)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Seleccione Aduana" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="CatTransportistas.RazonSocial" Title="Estado" Width="280px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.IdCatTransportista" Data="@IECatTransportistas" TextProperty="@nameof(CatTransportistas.RazonSocial)" ValueProperty="@nameof(CatTransportistas.RazonSocial)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Seleccione Transportista" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="IdEstadoContenedor" Title="Estado" Width="280px">
+            <EditTemplate Context="order">
+                <RadzenDropDown @bind-Value="order.IdEstadoContenedor" Data="@lstCatReferenciaEstados" TextProperty="@nameof(CatReferenciaEstado.Nombre)" ValueProperty="@nameof(CatReferenciaEstado.Nombre)" Style="width:100%; display: block;"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Seleccione Estado" }})" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+
+        @*   <RadzenDataGridColumn Property="@nameof(Order.OrderDate)" Title="Order Date" Width="200px">
+        <Template Context="order">
+        @String.Format("{0:d}", order.OrderDate)
+        </Template>
+        <EditTemplate Context="order">
+        <RadzenDatePicker @bind-Value="order.OrderDate" Style="width:100%" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select order date" }})" />
+        </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(Order.Freight)" Title="Freight">
+        <Template Context="order">
+        @String.Format(new System.Globalization.CultureInfo("en-US"), "{0:C}", order.Freight)
+        </Template>
+        <EditTemplate Context="order">
+        <RadzenNumeric @bind-Value="order.Freight" Style="width:100%" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select freight" }})" />
+        </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(Order.ShipName)" Title="Ship Name">
+        <EditTemplate Context="order">
+        <RadzenTextBox @bind-Value="order.ShipName" Style="width:200px; display: block" Name="ShipName" aria-label="Enter ship name" />
+        <RadzenRequiredValidator Text="ShipName is required" Component="ShipName" Popup="true" />
+        </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(Order.ShipCountry)" Title="ShipCountry">
+        <EditTemplate Context="order">
+        <RadzenTextBox @bind-Value="order.ShipCountry" Style="width:200px; display: block" Name="ShipCountry" aria-label="Enter ship country" />
+        <RadzenRequiredValidator Text="ShipCountry is required" Component="ShipCountry" Popup="true" />
+        </EditTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(Order.ShipCity)" Title="ShipCity">
+        <EditTemplate Context="order">
+        <RadzenTextBox @bind-Value="order.ShipCity" Style="width:200px; display: block" Name="ShipCity" aria-label="Enter ship city" />
+        <RadzenRequiredValidator Text="ShipCity is required" Component="ShipCity" Popup="true" />
+        </EditTemplate>
+        </RadzenDataGridColumn> *@
+        <RadzenDataGridColumn Context="order" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+            <Template Context="order">
+                <RadzenButton Icon="add_circle" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Shade="Shade.Lighter" Click="@(() => InsertAfterRow(order))" title="Add new row after this row" Disabled="@(editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)" />
+                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => EditRow(order))" @onclick:stopPropagation="true" />
+                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" Shade="Shade.Lighter" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(order))" @onclick:stopPropagation="true" />
+            </Template>
+            <EditTemplate Context="order">
+                <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(order))" aria-label="Save" />
+                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@((args) => CancelEdit(order))" aria-label="Cancel" />
+                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" Shade="Shade.Lighter" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(order))" aria-label="Delete" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+    RadzenDataGrid<PeticionesContenedores> ordersGrid; //
+    IEnumerable<PeticionesContenedores> orders;
+    IEnumerable<CatPatios> IECatPatios;
+    IEnumerable<CatNavieras> IECatNavieras;
+    IEnumerable<CatAduana> IECatAduanas;
+    IEnumerable<CatClientes> IECatClientes;
+    IEnumerable<CatTransportistas> IECatTransportistas;
+    List<CatReferenciaEstado> lstCatReferenciaEstados;
+
+    DataGridEditMode editMode = DataGridEditMode.Single;
+
+    List<PeticionesContenedores> ordersToInsert = new List<PeticionesContenedores>();
+    List<PeticionesContenedores> ordersToUpdate = new List<PeticionesContenedores>();
+
+    private UtileriasPage objUtileriasPage=new UtileriasPage();
+    void Reset()
+    {
+        ordersToInsert.Clear();
+        ordersToUpdate.Clear();
+    }
+
+    void Reset(PeticionesContenedores order)
+    {
+        ordersToInsert.Remove(order);
+        ordersToUpdate.Remove(order);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+        lstCatReferenciaEstados = objUtileriasPage.ObtenerEstadosReferencia();
+        
+        //customers = dbContext.Customers;
+        //employees = dbContext.Employees;
+
+        //orders = dbContext.Orders.Include("Customer").Include("Employee");
+    }
+
+    async Task EditRow(PeticionesContenedores order)
+    {
+        if (!ordersGrid.IsValid) return;
+
+        if (editMode == DataGridEditMode.Single)
+        {
+            Reset();
+        }
+
+        ordersToUpdate.Add(order);
+        await ordersGrid.EditRow(order);
+    }
+
+    void OnUpdateRow(PeticionesContenedores order)
+    {
+        Reset(order);
+
+        // dbContext.Update(order);
+
+        // dbContext.SaveChanges();
+    }
+
+    async Task SaveRow(PeticionesContenedores order)
+    {
+        await ordersGrid.UpdateRow(order);
+    }
+
+    void CancelEdit(PeticionesContenedores order)
+    {
+        Reset(order);
+
+        ordersGrid.CancelEditRow(order);
+
+        // var orderEntry = dbContext.Entry(order);
+        // if (orderEntry.State == EntityState.Modified)
+        // {
+        //     orderEntry.CurrentValues.SetValues(orderEntry.OriginalValues);
+        //     orderEntry.State = EntityState.Unchanged;
+        // }
+    }
+
+    async Task DeleteRow(PeticionesContenedores order)
+    {
+        Reset(order);
+
+        if (orders.Contains(order))
+        {
+            // dbContext.Remove<PeticionesContenedores>(order);
+
+            // dbContext.SaveChanges();
+
+            await ordersGrid.Reload();
+        }
+        else
+        {
+            ordersGrid.CancelEditRow(order);
+            await ordersGrid.Reload();
+        }
+    }
+
+    async Task InsertRow()
+    {
+        if (!ordersGrid.IsValid) return;
+
+        if (editMode == DataGridEditMode.Single)
+        {
+            Reset();
+        }
+
+        var order = new PeticionesContenedores();
+        ordersToInsert.Add(order);
+        await ordersGrid.InsertRow(order);
+    }
+
+    async Task InsertAfterRow(PeticionesContenedores row)
+    {
+        if (!ordersGrid.IsValid) return;
+
+        if (editMode == DataGridEditMode.Single)
+        {
+            Reset();
+        }
+
+        var order = new PeticionesContenedores();
+        ordersToInsert.Add(order);
+        await ordersGrid.InsertAfterRow(order, row);
+    }
+
+    void OnCreateRow(PeticionesContenedores order)
+    {
+        // dbContext.Add(order);
+
+        // dbContext.SaveChanges();
+
+        ordersToInsert.Remove(order);
+    }
+}

@@ -1,0 +1,56 @@
+﻿@page "/recepcion-informecondicionauto"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@using Microsoft.AspNetCore.Authorization
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Drawing
+@using SixLabors.ImageSharp.Drawing.Processing
+@using SixLabors.ImageSharp.Processing;
+@using SixLabors.ImageSharp.Formats.Jpeg
+@using SixLabors.Fonts
+@using System.Net.Http
+@using System.IO
+@using System.Text.Json
+@using Newtonsoft.Json
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+
+<h3>Informe Condición de Autumóvil</h3>
+
+<RadzenImage Path="img/automovil-informe/automovil-informe-condicion-front.jpg" AlternateText="community" />
+<canvas id="canvas" @ref="canvasRef" width="320" height="500" 
+    @onclick="OnCanvasClick" style="border:1px solid black;"></canvas>
+
+<p>Coordenadas: X = @xCoord, Y = @yCoord</p>
+
+@code {
+    private ElementReference canvasRef;
+    private int xCoord;
+    private int yCoord;
+    public class CanvasRect
+    {
+        public double Left { get; set; }
+        public double Top { get; set; }
+
+    }
+
+    private async Task OnCanvasClick(MouseEventArgs e)
+    {
+        var canvas = canvasRef;
+        var rect = await JSRuntime.InvokeAsync<CanvasRect>("getCanvasBoundingRect", canvasRef);
+
+        xCoord = (int)(e.ClientX - rect.Left);
+        yCoord = (int)(e.ClientY - rect.Top);
+
+
+        await JSRuntime.InvokeVoidAsync("drawPoint", canvas, xCoord, yCoord);
+    }
+}

@@ -1,0 +1,377 @@
+﻿@page "/vistaModalAgregarMercancia"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOGRepositorios.Services.Catalogos.ICatalogos
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject DialogService BusyDialogService
+@inject DialogService DialogServiceMercancia
+
+@inject DialogService dialogService
+@attribute [Authorize]
+<RadzenStack class="rz-p-0 rz-pb-2">
+    <RadzenCard Variant="Variant.Outlined" Style="width: 100%">
+        <RadzenRow AlignItems="AlignItems.Center">
+                <RadzenColumn Size="4">
+                    <RadzenLabel Text="Cliente" Component="LIB_MERCANCIA_RAZONSOCIAL_CLIENTE"/>
+                    <RadzenAutoComplete @bind-Value=@consultaMonitorInventario.RazonSocialCliente Data=@listaCliente
+                        Name="LIB_MERCANCIA_RAZONSOCIAL_CLIENTE" Change=@OnChangeCliente class="rz-text-uppercase"
+                        Disabled="@disabledCliente"
+                        ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                        TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataCliente Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Cliente" }})" />
+                </RadzenColumn>
+                 <RadzenColumn Size="4">
+                    <RadzenLabel Text="Numeros/VIN" Component="LIB_MERCANCIA_NUMEROS"/>
+                    <RadzenTextBox Style="width: 100%;" @bind-Value=@consultaMonitorInventario.IDMercancia
+                        Name="LIB_MERCANCIA_NUMEROS" />
+                </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow>
+                <RadzenColumn Size="4">
+                    <RadzenLabel Text="Marcas" Component="LIB_MERCANCIA_MARCA"/>
+                    <RadzenTextBox Style="width: 100%;" @bind-Value=@consultaMonitorInventario.Marcas
+                        Name="LIB_MERCANCIA_MARCA" />
+                </RadzenColumn>
+                <RadzenColumn Size="2">
+                    <RadzenLabel Text="Modelo" Component="LIB_MERCANCIA_MODELO"/>
+                    <RadzenTextBox Style="width: 100%;" @bind-Value=@consultaMonitorInventario.Modelo
+                        Name="LIB_MERCANCIA_MODELO" />
+                </RadzenColumn>
+                <RadzenColumn Size="6" class="text-end align-content-end">
+                    <RadzenButton Text="Buscar" Icon="search" Click="@(args => BurcarExistenciaInventario())" />&nbsp;
+                    <RadzenButton Text="@(accionLiberacion.Equals(ECRUDAction.Create) ? "Crear": "Agregar" )" Icon="add" Click="@(args => CrearLiberacionInventario())" />
+                </RadzenColumn>
+        </RadzenRow>
+    </RadzenCard>    
+</RadzenStack>
+<RadzenStack class="rz-p-0 rz-m-0">
+    <RadzenRow>
+        <RadzenColumn Size="6" class="rz-p-0 rz-m-0 align-content-end text-center">
+            <h5>Mercancía en Patio</h5>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="align-content-end text-center">
+            <h5>Programar para Salida</h5>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow>
+        <RadzenColumn Size="6">    
+            <RadzenDataGrid @ref=gridSourceItem Data="@sourceMonitorInventarioAlmacen" AllowFiltering="true" 
+                            AllowSorting="true" 
+                            Count="@totalRegistros" 
+                            PageSize="@registrosPorPagina" 
+                            style="border-radius:7px;"
+                            ShowPagingSummary="true" 
+                            PagerHorizontalAlign="HorizontalAlign.Left"
+                            AllowPaging="true"
+                            LoadData="@ObtenerDatosMercanciaExistencia" 
+                            RowRender="@RowRender" ondragover="event.preventDefault()" 
+                            @ondrop=@(args => Move(targetMonitorInventarioAlmacen, sourceMonitorInventarioAlmacen))>
+                <Columns>
+                    @RenderColumns()
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenColumn>
+        <RadzenColumn Size="6">
+            <RadzenDataGrid @ref=gridTargetItem Data="@targetMonitorInventarioAlmacen" 
+                    AllowFiltering="false" AllowSorting="true"  
+                    PageSize="@registrosPorPaginaTarget"
+                    AllowPaging="true"
+                    ShowPagingSummary="true" 
+                    style="border-radius:7px;"
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    RowRender="@RowRender" ondragover="event.preventDefault()" 
+                    @ondrop=@(args => Move(sourceMonitorInventarioAlmacen, targetMonitorInventarioAlmacen))>
+                <Columns>
+                    @RenderColumns()
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenColumn> 
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+
+    [Parameter] public MonitorLiberacionInventario monitorLiberacionInventarioSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    RadzenDataGrid<MonitorInventarioAlmacen> gridTargetItem;
+
+    RadzenDataGrid<MonitorInventarioAlmacen> gridSourceItem;
+
+    MonitorInventarioAlmacen draggedItem;
+
+    MonitorLiberacionInventario monitorLiberacionInventario;
+
+    ConsultaMonitorInventario consultaMonitorInventario;
+
+    List<MonitorInventarioAlmacen> sourceMonitorInventarioAlmacen = new List<MonitorInventarioAlmacen>();
+
+    List<MonitorInventarioAlmacen> targetMonitorInventarioAlmacen = new List<MonitorInventarioAlmacen>();
+
+    ICollection<RespListarCoincidenciasDTO> listaCliente;
+
+    LoadDataArgs _args;
+
+    ECRUDAction accionLiberacion = ECRUDAction.Create;
+
+    bool isFirtsLoad = true;
+
+    bool disabledCliente = false;
+
+    bool isLoading = false;
+
+    int totalRegistrosTarget;
+
+    int registrosPorPaginaTarget = 5;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 5;
+
+    int numeroDePagina = 1;
+
+    [Inject] private IInventarioAlmacenService? _inventarioAlmacenService { get; set; } 
+
+    [Inject] private ICatClientesService? _clienteService { get; set; }
+
+    [Inject] private ILiberacionService? _liberacionService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+       //Console.WriteLine("-> OnInitializedAsync ");
+        isFirtsLoad = true;   
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        //Console.WriteLine("-> OnParametersSetAsync ");
+
+        consultaMonitorInventario = new ConsultaMonitorInventario();
+
+        if (monitorLiberacionInventarioSelected != null) {
+
+            
+            consultaMonitorInventario.IdCatCliente = monitorLiberacionInventarioSelected.IdCatCliente;
+            consultaMonitorInventario.RazonSocialCliente = monitorLiberacionInventarioSelected.Cliente;
+            consultaMonitorInventario.IdOrdenSalida = monitorLiberacionInventarioSelected.IdLiberacion;
+            accionLiberacion = ECRUDAction.Update;
+            disabledCliente = true;
+
+        }
+
+        await base.OnParametersSetAsync(); 
+
+    }
+
+    void RowRender(RowRenderEventArgs<MonitorInventarioAlmacen> args)
+    {
+        args.Attributes.Add("title", "Drag row to move it to the other DataGrid");
+        args.Attributes.Add("style", "cursor:grab");
+        args.Attributes.Add("draggable", "true");
+        args.Attributes.Add("ondragstart", EventCallback.Factory.Create<DragEventArgs>(this, () => draggedItem = args.Data));
+    }
+
+    void Move(List<MonitorInventarioAlmacen> source, List<MonitorInventarioAlmacen> target)
+    {
+        if (source.Contains(draggedItem))
+        {
+            source.Remove(draggedItem);
+            //gridSourceItem.Reset();
+            //totalRegistros = sourceMonitorInventarioAlmacen.Count();
+        }
+        if (!target.Contains(draggedItem))
+        {
+            target.Add(draggedItem);
+            //totalRegistrosTarget = targetMonitorInventarioAlmacen.Count();
+            gridTargetItem.Reload(); 
+        }
+    }
+
+    RenderFragment RenderColumns()
+    {
+        return __builder => {
+            <text>
+                <RadzenDataGridColumn TItem="MonitorInventarioAlmacen" Property="@nameof(MonitorInventarioAlmacen.Numeros)" Filterable="false" Title="ID Mercancia" Frozen="true" Width="160px" TextAlign="TextAlign.Center" />
+                <RadzenDataGridColumn TItem="MonitorInventarioAlmacen" Property="@nameof(MonitorInventarioAlmacen.Marcas)" Title="Marcas" Frozen="true" Width="160px" />
+                <RadzenDataGridColumn TItem="MonitorInventarioAlmacen" Property="@nameof(MonitorInventarioAlmacen.Modelo)" Title="Modelo" Width="160px" />
+                <RadzenDataGridColumn TItem="MonitorInventarioAlmacen" Property="@nameof(MonitorInventarioAlmacen.Cantidad)" Title="Cantidad" Width="120px" />
+                <RadzenDataGridColumn TItem="MonitorInventarioAlmacen" Property="@nameof(MonitorInventarioAlmacen.Peso)" Title="Peso" Width="120px" />
+            </text>
+        };
+    }
+
+    @* --------------------------------------------------------------------------------------------------------------------------------------------------------------- *@
+
+    public async Task CrearLiberacionInventario() {
+
+        if (!targetMonitorInventarioAlmacen.Count.Equals(0)) {
+
+            monitorLiberacionInventario = new MonitorLiberacionInventario();
+            monitorLiberacionInventario.CRUDAction = ECRUDAction.Create;
+            monitorLiberacionInventario.IdCatCliente = consultaMonitorInventario.IdCatCliente;
+            monitorLiberacionInventario.EstadoLiberacion = EstadoLiberacion.Pendiente;
+            monitorLiberacionInventario.IdEmpresaLogin = 1;
+            monitorLiberacionInventario.TipoMercanciaInventario = TipoMercanciaInventario.CargaSuelta;
+            monitorLiberacionInventario.ListaMonitorInventarioAlmacen = new List<MonitorInventarioAlmacen>();
+            monitorLiberacionInventario.ListaMonitorInventarioAlmacen = targetMonitorInventarioAlmacen;
+
+            if (monitorLiberacionInventarioSelected != null) {
+                monitorLiberacionInventario.IdLiberacion = monitorLiberacionInventarioSelected.IdLiberacion;
+                monitorLiberacionInventario.IdTarja = monitorLiberacionInventarioSelected.IdTarja;
+                monitorLiberacionInventario.CRUDAction = ECRUDAction.Update;
+            }
+ 
+            var result = await _liberacionService.CrearOrdenSalida(monitorLiberacionInventario);
+
+            if (result.Success) {
+                
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Mercancia", Detail = "La Liberación se creo correctamente.", Duration = 4000 });
+
+                DialogServiceMercancia.Close(true);
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Mercancia", Detail = result.MensajeRespuesta, Duration = 4000 });
+
+            }
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Mercancia", Detail = "No hay registros de mercancía para "+ (accionLiberacion.Equals(ECRUDAction.Create) ? "crear" : "agregar a") +" la liberación.", Duration = 4000 });
+
+        }
+        
+
+    }
+
+    private async Task BurcarExistenciaInventario()
+    {
+        await ObtenerDatosMercanciaExistencia(_args);
+
+    }
+
+    private async Task ObtenerDatosMercanciaExistencia(LoadDataArgs args)
+    {
+
+        ConsultaCatalogoBase<ConsultaMonitorInventario> _consultaInventario = new ConsultaCatalogoBase<ConsultaMonitorInventario>();
+        _consultaInventario.Entidad = new ConsultaMonitorInventario();
+        _consultaInventario.Entidad.TipoFecha = 0;
+        _consultaInventario.Entidad.BuscarPorConsultaInventario = BuscarPorConsultaInventario.Cliente;
+        _consultaInventario.Entidad.ListaIdCatCliente = new List<int>();
+        if (!consultaMonitorInventario.IdCatCliente.Equals(0)) {
+           
+            _consultaInventario.Entidad.ListaIdCatCliente.Add(consultaMonitorInventario.IdCatCliente);
+        
+            if (args != null) {
+                numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+            }
+
+            _consultaInventario.Entidad.IDMercancia = consultaMonitorInventario.IDMercancia;
+            _consultaInventario.Entidad.Marcas = consultaMonitorInventario.Marcas;
+            _consultaInventario.Entidad.Modelo = consultaMonitorInventario.Modelo;
+            
+
+            _consultaInventario.NumeroDePagina = numeroDePagina;
+            _consultaInventario.RegistrosPorPagina = registrosPorPagina;
+
+            InvokeAsync(async () =>
+            {
+
+                var _result = await _inventarioAlmacenService.ObtenerExistenciaMercanciaListaPaginada(_consultaInventario);
+
+                if (_result.Success) {
+
+                    sourceMonitorInventarioAlmacen = _result.Data;
+                    totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+                }
+
+                BusyDialogService.Close();
+
+                if (args == null) {
+                    targetMonitorInventarioAlmacen = new List<MonitorInventarioAlmacen>();
+                }
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Cargando Información...");
+
+        } else {
+
+            if (!isFirtsLoad) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Mercancia", Detail = "Registre al menos el nombre del Cliente para ubicar la mercancía.", Duration = 4000 });
+                
+            }
+            isFirtsLoad = false;
+        }
+
+    }
+
+    async Task OnLoadDataCliente(LoadDataArgs args) {
+
+        listaCliente = await _clienteService.GetClientesConincidencia(args.Filter);
+        if (listaCliente.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cliente", Detail = "No se encontró el Cliente solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeCliente(object value) {
+        consultaMonitorInventario.IdCatCliente = 0;
+        consultaMonitorInventario.RazonSocialCliente = null;
+
+        if (listaCliente != null) {
+            if (!listaCliente.Count().Equals(0)) {
+
+                var selectedCliente = listaCliente
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedCliente != null)
+                {
+                    var selectedId = selectedCliente.Id;
+                    consultaMonitorInventario.IdCatCliente = selectedCliente.Id;
+                    consultaMonitorInventario.RazonSocialCliente = selectedCliente.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}

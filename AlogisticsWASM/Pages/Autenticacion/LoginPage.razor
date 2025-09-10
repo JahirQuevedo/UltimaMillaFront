@@ -1,0 +1,120 @@
+﻿@page "/login"
+@layout MainLayoutLogin
+@using ALOG.Modelos.Modelos
+
+@using ALOGRepositorios.Services.Login.ILogin
+@using Microsoft.AspNetCore.Authorization
+@using Newtonsoft.Json
+@using System.Text
+@using Newtonsoft.Json.Linq
+@using ALOGRepositorios.Helpers
+
+<style>
+
+    .alo-background-image {
+        background-image: url(/img/4.png); 
+        background-size: cover; 
+        background-repeat: no-repeat; 
+        background-position: center;
+    }
+
+</style>
+
+
+<RadzenRow class="rz-text-align-center rz-justify-content-center rz-align-items-center rz-h-100 rz-vh-100">
+    <RadzenColumn class="rz-display-none rz-display-sm-block" SizeSM="12" SizeMD="12" SizeLG="7" SizeXS="12">
+        @* <RadzenImage Path="/img/4.png" Style="width:100%;" AlternateText="url image" /> *@
+        <RadzenCard class="rz-h-100 rz-vh-100 alo-background-image" />
+    </RadzenColumn>
+    <RadzenColumn class="rz-p-5" SizeSM="12" SizeMD="12" SizeLG="5" SizeXS="12">
+        <RadzenImage Path="/img/1.png" Style="width:20%;" AlternateText="url image" />
+        <div class="text-center mb-7">
+            <h3 class="text-body-highlight">Sign In</h3>
+            <p class="text-body-tertiary">Get access to your account</p>
+        </div>
+        <RadzenCard class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12" style="max-width: 600px;">
+            @if (EstaProcesando)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Wrap="FlexWrap.Wrap" class="rz-m-12" Gap="2rem">
+                    <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large">
+                        <Template>Wait</Template>
+                    </RadzenProgressBarCircular>
+                </RadzenStack>
+            }
+          
+            <RadzenTemplateForm Data=@("LoginWithDefaultValues")>
+                <RadzenLogin AllowRegister="false" AllowResetPassword="true" Username=@userName Password=@password
+                             AllowRememberMe="false" RememberMe="@rememberMe"
+                             Login=@(args => OnLogin(args, "Login with default values"))
+                             ResetPassword=@(args => OnResetPassword(args, "Login with default values"))
+                             Register=@(args => OnRegister("Login with default values")) />
+            </RadzenTemplateForm>
+            @if (MostrarErroresAutenticacion)
+            {
+                <RadzenAlert AlertStyle="AlertStyle.Warning" Variant="Variant.Flat" Shade="Shade.Lighter">
+                    @Errores
+                </RadzenAlert>
+            }
+
+        </RadzenCard>
+    </RadzenColumn>
+</RadzenRow>
+
+
+
+
+
+
+@* <main class="main" id="top">
+    <div class="row vh-100 g-0">
+        <div class="col-lg-6 position-relative d-none d-lg-block">
+            <div class="bg-holder" style="background-image:url(img/4.png);">
+            </div>
+            <!--/.bg-holder-->
+
+        </div>
+        <div class="col-lg-6" style="background: #f4f4f4;">
+            <div class="row flex-center h-100 g-0 px-4 px-sm-0">
+                <div class="col col-sm-6 col-lg-7 col-xl-6">
+                    <a class="d-flex flex-center text-decoration-none mb-4">
+                        <div class="d-flex align-items-center fw-bolder fs-3 d-inline-block">
+                            <img src="img/logos/logoalo.png" alt="phoenix" width="200" />
+                        </div>
+                    </a>
+                    <div class="text-center mb-7">
+                        <h3 class="text-body-highlight">Identificación</h3>
+                        <p class="text-body-tertiary">Ingresa tus credenciales</p>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label class="form-label" for="email">Correo electrónico</label>
+                        <div class="form-icon-container">
+                            <input @bind="UserLogin.Usuario" class="form-control form-icon-input" id="email" type="email" placeholder="alo.gistic@autolog.com.mx" /><span class="fas fa-user text-body fs-9 form-icon"></span>
+                        </div>
+                    </div>
+                    <div class="mb-3 text-start">
+                        <label class="form-label" for="password">Contraseña</label>
+                        <div class="form-icon-container" data-password="data-password">
+                            <input @bind="UserLogin.Password" class="form-control form-icon-input pe-6" id="password" type="password" placeholder="Ingresa tu contraseña" data-password-input="data-password-input" /><span class="fas fa-key text-body fs-9 form-icon"></span>
+                            <button class="btn px-3 py-0 h-100 position-absolute top-0 end-0 fs-7 text-body-tertiary" data-password-toggle="data-password-toggle"><span class="uil uil-eye show"></span><span class="uil uil-eye-slash hide"></span></button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100 mb-3" style="background: #e74c3c" @onclick="@(() => LoginUser())">Ingresar</button>
+                </div>
+            </div>
+
+            <div>
+
+
+            </div>
+        </div>
+    </div>
+</main> *@
+
+
+@code {
+
+
+    //EventConsole console;
+
+
+}

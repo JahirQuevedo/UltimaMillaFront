@@ -1,0 +1,106 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>Disable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <Compile Remove="Layout\Logisticos\**" />
+	  <Content Remove="Layout\Logisticos\**" />
+	  <EmbeddedResource Remove="Layout\Logisticos\**" />
+	  <None Remove="Layout\Logisticos\**" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Compile Remove="Layout\Servicios\AsignarServicios.razor.cs" />
+		<Compile Remove="Pages\DonTrucking\FormularioOrden.razor.cs" />
+		<Compile Remove="Pages\DonTrucking\Ordenes.razor.cs" />
+		<Compile Remove="Pages\DonTrucking\OrdenesDetalles.razor.cs" />
+		<Compile Remove="Pages\Logisticos\Acarreos\AcarreosPage.razor.cs" />
+		<Compile Remove="Pages\Logisticos\UltimaMilla\UltimaMillaDetallePage.razor.cs" />
+		<Compile Remove="Pages\Logisticos\UltimaMilla\UltimaMillaModalGenerico.razor.cs" />
+		<Compile Remove="Pages\Logisticos\UltimaMilla\UltimaMillaPage.razor.cs" />
+		<Compile Remove="Pages\Vacios\Contenedores\Contenedores.razor.cs" />
+		<Compile Remove="Pages\Vacios\Referencias\Referencias.razor.cs" />
+		<Compile Remove="Pages\Vacios\Referencias\ReferenciasPageRZ.razor.cs" />
+		<Compile Remove="Pages\Vacios\Solicitudes\SolicitudesPage.razor.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="Layout\Graficas\BarraGrafica.razor" />
+		<Content Remove="Layout\Graficas\DoughnutChart.razor" />
+		<Content Remove="Layout\Graficas\EChartComponent.razor" />
+		<Content Remove="Layout\Graficas\Grafica1.razor" />
+		<Content Remove="Layout\Servicios\AsignarServicios.razor" />
+		<Content Remove="Pages\Dashboard\Dashboard.razor" />
+		<Content Remove="Pages\Dashboard\Dashboard1.razor" />
+		<Content Remove="Pages\Dashboard\Dashboard2.razor" />
+		<Content Remove="Pages\Dashboard\Dashboard3.razor" />
+		<Content Remove="Pages\DonTrucking\FormularioOrden.razor" />
+		<Content Remove="Pages\DonTrucking\Ordenes.razor" />
+		<Content Remove="Pages\DonTrucking\OrdenesDetalles.razor" />
+		<Content Remove="Pages\Logisticos\Acarreos\AcarreosPage.razor" />
+		<Content Remove="Pages\Logisticos\UltimaMilla\UltimaMillaDetallePage.razor" />
+		<Content Remove="Pages\Logisticos\UltimaMilla\UltimaMillaModalGenerico.razor" />
+		<Content Remove="Pages\Logisticos\UltimaMilla\UltimaMillaPage.razor" />
+		<Content Remove="Pages\Vacios\Contenedores\Contenedores.razor" />
+		<Content Remove="Pages\Vacios\Referencias\Referencias.razor" />
+		<Content Remove="Pages\Vacios\Referencias\ReferenciasPageRZ.razor" />
+		<Content Remove="Pages\Vacios\Solicitudes\SolicitudesPage.razor" />
+		<Content Remove="Pages\Vacios\VaciosControlTower.razor" />
+		<Content Remove="wwwroot\appsettings.json" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Blazored.LocalStorage" Version="4.5.0" />
+		<PackageReference Include="CurrieTechnologies.Razor.SweetAlert2" Version="5.6.0" />
+		<PackageReference Include="EPPlus" Version="7.6.0" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.10" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.10" PrivateAssets="all" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.12" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.12">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+		<PackageReference Include="Radzen.Blazor" Version="5.7.3" />
+		<PackageReference Include="SixLabors.Fonts" Version="2.1.2" />
+		<PackageReference Include="SixLabors.ImageSharp" Version="3.1.7" />
+		<PackageReference Include="SixLabors.ImageSharp.Drawing" Version="2.1.5" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Folder Include="Layout\Graficas\" />
+	  <Folder Include="Layout\Servicios\" />
+	  <Folder Include="Pages\Dashboard\" />
+	  <Folder Include="wwwroot\doc\" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <UpToDateCheckInput Remove="Pages\Vacios\VaciosControlTower.razor" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <_ContentIncludedByDefault Remove="Pages\Vacios\VaciosControlTower.razor" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Include="Pages\Vacios\ControlTower\VaciosControlTower.razor" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\ALOGRepositorios\ALOGRepositorios.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Reference Include="ALOG.Enums">
+	    <HintPath>..\..\ApiVacios\Dlls\ALOG.Enums.dll</HintPath>
+	  </Reference>
+	  <Reference Include="ALOG.Modelos">
+	    <HintPath>..\..\ApiVacios\Dlls\ALOG.Modelos.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
+
+</Project>

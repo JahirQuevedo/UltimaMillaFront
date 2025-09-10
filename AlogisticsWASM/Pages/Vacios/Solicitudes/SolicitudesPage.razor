@@ -1,0 +1,195 @@
+﻿@page "/vaciosplantilla2"
+
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.DTO.Solicitudes
+
+<style>
+
+    .ocultar-equis .rz-file .rz-button {
+        display: none !important;
+    }
+
+    .centrar {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        user-select: none;
+        white-space: nowrap;
+    }
+    .watermark {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 50px;
+        color: rgba(0, 0, 0, 0.1);
+        font-weight: bold;
+        text-transform: uppercase;
+        pointer-events: none;
+        user-select: none;
+        white-space: nowrap;
+    }
+</style>
+<div class="row g-3 mb-2">
+    <div class="rz-m-2">
+        <RadzenBreadCrumb>
+            <RadzenBreadCrumbItem Path="/" Text="Home" />
+            <RadzenBreadCrumbItem Path="/referenciasRZ" Text="Vacíos" />
+            <RadzenBreadCrumbItem Text="Solicitar servicios" />
+        </RadzenBreadCrumb>
+    </div>
+    <div class="col-auto">
+        <h4 class="mb-0">Solicitar servicios vacíos</h4>
+    </div>
+</div>
+@if (_estaCargando){
+    <div class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12 centrar" style="max-width: 600px;">
+        <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" ProgressBarStyle="ProgressBarStyle.Primary">
+            <Template>Cargando</Template>
+        </RadzenProgressBarCircular>
+    </div>
+}
+
+@if (_tieneAcceso){
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="20px" Style="max-width: 1000px; min-width: 790px; margin-bottom: 40px;">
+
+        <RadzenCard class="rz-shadow-2 rz-border-radius-1" Variant="Variant.Flat" Style="background-color: white; max-width: 1200px; min-width: 400px; height: 140px;">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="0px">
+                <RadzenUpload Class="ocultar-equis" Icon="upload" ChooseText="Importar plantilla" Accept=".xlsx" Multiple="false" Auto="false" Change="CargarExcelAsync" />
+            </RadzenStack>
+        </RadzenCard>
+
+        <RadzenCard class="rz-shadow-2 rz-border-radius-1" Variant="Variant.Flat" Style="background-color: white; max-width: 1200px; height: 140px;">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="10px">
+                <RadzenFormField Text="Moneda" Variant="Variant.Outlined">
+                    <RadzenDropDown AllowClear="true" @bind-Value=_claveMonedaSeleccionada AllowVirtualization="true" Name="DropDownVirtualization"
+                    AllowFiltering="true" Data=@_monedas TextProperty="@nameof(CatTipoMoneda.Descripcion)" ValueProperty="@nameof(CatTipoMoneda.ClaveSAT)" Style="width: 100%; max-width: 400px;" />
+                </RadzenFormField>
+
+                <RadzenFormField Text="Aduanas" Variant="Variant.Outlined">
+                    <RadzenDropDown AllowClear="true" @bind-Value=_idAduanaSeleccionada AllowVirtualization="true" Name="DropDownVirtualization"
+                    AllowFiltering="true" Data=@_aduanas TextProperty="@nameof(CatAduana.Nombre)" ValueProperty="@nameof(CatAduana.IdCatAduana)" Style="width: 100%; max-width: 400px;" />
+                </RadzenFormField>
+
+            </RadzenStack>
+
+
+        </RadzenCard>
+    </RadzenStack>
+
+
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="10px" Style="margin-top: 10px; margin-right: 10px; ">
+        <RadzenButton ButtonStyle="ButtonStyle.Secondary" Text="Asignar servicios" Click="AbrirModalServiciosAsync" />
+        <RadzenButton ButtonStyle="ButtonStyle.Secondary" Text="Generar solicitud" Click="ProcesarDatosAsync" />
+        <RadzenButton Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Primary" Text="Agregar contenedor" Click="@(args=>OpenModal())" />
+        <RadzenButton Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Primary" Text="Eliminar solicitud" Click="EliminarSolicitudesAsync" />
+    </RadzenStack>
+
+<RadzenDataGrid @ref="_grid"
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                AllowRowSelectOnRowClick="@_allowRowSelectOnRowClick"
+                LogicalFilterOperator="LogicalFilterOperator.Or"
+                SelectionMode="DataGridSelectionMode.Multiple"
+                @bind-Value=@_solicitudesSeleccionadas
+                FilterMode="FilterMode.Simple"
+                AllowColumnResize="true"
+                TItem="SolTicketDTO"
+                AllowFiltering="true"
+                AllowSorting="true"
+                Data="@_solicitudes"
+                ColumnWidth="200px"
+                AllowPaging="true"
+                PageSize="10"
+                Style="margin-top: 10px;">
+    <Columns>
+        <RadzenDataGridColumn Width="60px" Sortable="false" Filterable="false">
+            <HeaderTemplate>
+                <RadzenCheckBox TabIndex="-1"
+                                Value="@(
+                                        _solicitudesSeleccionadas == null || _solicitudesSeleccionadas?.Any() != true
+                                        ? false : !_solicitudes.All(i => _solicitudesSeleccionadas.Contains(i))
+                                        ? null  : _solicitudes.Any(i => _solicitudesSeleccionadas.Contains(i)))"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                                Change="@(args => _solicitudesSeleccionadas = args == true ? _solicitudes.ToList() : null)"
+                                TriState="false"
+                                TValue="bool?"/>
+            </HeaderTemplate>
+            <Template Context="data">
+                <RadzenCheckBox TabIndex="-1"
+                                TriState="false"
+                                Value="@(_solicitudesSeleccionadas != null && _solicitudesSeleccionadas.Contains(data))"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                                TValue="bool"
+                                Change=@(args => { if(!_allowRowSelectOnRowClick) { _grid.SelectRow(data); }})/>
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="Ticket" Title="Ticket" Width="100px;"  />
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="Contenedor" Title="Contenedor" Width="150px;" />           
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="ReferenciaCliente" Title="Ref. del cliente" Width="150px;" />
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="ClaveTipoContenedor" Title="T.contenedor" Width="100px;" />
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="RfcCLienteFacturar" Title="Cliente Facturar" Width="150px;" />
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="@nameof(SolTicketDTO.RazonSocialCLienteFacturar)" Title="Cliente Facturar" />
+        <RadzenDataGridColumn TItem="SolTicketDTO" Property="ReferenciaAlo" Title="No. de orden" Width="100px;" />
+        <RadzenDataGridColumn TItem="SolTicketDTO" Title="Servicios"  >
+           <Template Context="item">
+                    @if (_serviciosSeleccionadosPorTicket.ContainsKey(item.Id)) {
+                    <RadzenDropDown @bind-Value="_serviciosSeleccionadosPorTicket[item.Id]"
+                                    Data="item.Servicios"
+                                    TextProperty="Nombre"
+                                    ValueProperty="IdCatServicio"
+                                    AllowClear="false"
+                                    Multiple="true"
+                                    Placeholder="Servicios agregados"
+                                    Style="width: 100%; max-width: 250px;"
+                                    Change="() => ActualizarServiciosSeleccionados(item)" Width="80px" />
+                    
+                }
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="SolTicketDTO" Title="Estatus" Width="150px;">
+            <Template Context="item">
+                @switch (item.Estatus) {
+                    case "Procesando":
+                        <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary"
+                                                   Mode="ProgressBarMode.Indeterminate"
+                                                   ShowValue="false"
+                                                   Value="100"
+                                                   Width="50px"
+                                                   Height="50px" />
+                        break;
+                    case "Válido":
+                        <RadzenButton Click=@(args => OnClick("Solicitud aceptada",item.Errores, NotificationSeverity.Success)) 
+                                      Icon="check_circle"
+                                      ButtonStyle="ButtonStyle.Success" Style="border-radius: 50%" />
+                        break;
+                    case "Rechazado":
+                        <RadzenButton Click=@(args => OnClick(
+                                                            "Solicitud rechazada",
+                                                            item.Errores,
+                                                            NotificationSeverity.Error
+                                                            ))
+                                       Icon = "report"
+                                       ButtonStyle = "ButtonStyle.Danger"
+                                      Style="border-radius: 50%" />
+                        break;
+                }
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="SolTicketDTO" Title="Acciones"
+                              Width="80px"
+                              Frozen="true">
+            <HeaderTemplate>
+                Acciones
+            </HeaderTemplate>
+            <Template Context="item">
+                <RadzenButton Icon="delete"
+                              ButtonStyle="ButtonStyle.Danger"
+                              Size="ButtonSize.Small"
+                              Style="border-radius: 50%;"
+                              Click="() => EliminarSolicitudAsync(item)" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+}

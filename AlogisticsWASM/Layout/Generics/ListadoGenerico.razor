@@ -1,0 +1,16 @@
+﻿@typeparam TItem
+
+<div class="form-floating">
+    <select class="form-select" id="@GetSelectorEtiqueta()" @onchange="HandleSelection" disabled="@(!HabilitarComponente)">
+        <option value="0">-- Seleccione una opción --</option>
+        @if (Listado != null) {
+            @foreach (var item in Listado) {
+                <option value="@GetIdValue(item)" selected="@(GetIdValue(item) == SelectedId)">
+                    @GetDisplayValue(item)
+                </option>
+            }
+        }
+        
+    </select>
+    <label for="@GetSelectorEtiqueta()">@GetEtiqueta()</label>
+</div>

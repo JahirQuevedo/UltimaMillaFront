@@ -1,0 +1,245 @@
+﻿@page "/embarque-escanear/{DataEmbarque}"
+@page "/embarque-escanear"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@inject DialogService BusyDialogService
+
+@inject DialogService DialogServiceConfirm
+
+@attribute [Authorize]
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("embarque-consultaLiberacion"))  />
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Escanear</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+<RadzenStack
+    class="rz-mt-5 rz-p-5 rz-pb-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2">
+    <RadzenRow>
+        <RadzenColumn Size="6" class="text-start">
+            <RadzenText><b>Liberación</b></RadzenText>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end">
+            <RadzenText>@_monitorLiberacionInventario.FolioLiberacion</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow>
+        <RadzenColumn Size="6" class="text-start">
+            <RadzenText><b>Viaje</b></RadzenText>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end">
+            <RadzenText>@_monitorLiberacionInventario.ClaveViaje</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow>
+        <RadzenColumn Size="6" class="text-start">
+            <RadzenText><b>Tarja Salida</b></RadzenText>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="text-end">
+            <RadzenText>@_monitorLiberacionInventario.ClaveReferenciaTarja</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+<RadzenStack class="rz-pt-5">
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+            <RadzenColumn Size="12" SizeMD="12" SizeLG="12">
+                <RadzenFormField Text="ID Mercancía" Component="EMBARQUE_ID_MERCANCIA"
+                 Variant="Variant.Text" Style="width: 100%;">
+                    <RadzenTextBox Name="EMBARQUE_ID_MERCANCIA" @bind-Value="@valIDMercancia" 
+                    @onkeypress=@(args => ConfirmarEmbarqueKeyPressed(args)) />
+                </RadzenFormField>
+            </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenButton Icon="check_circle" Text="CONFIRMAR" ButtonStyle="ButtonStyle.Primary" 
+            Click=@(args => ConfirmarEmbarque()) />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+@code {
+
+    [Parameter] public string DataEmbarque { get; set; }
+
+    MonitorLiberacionInventario _monitorLiberacionInventario = new MonitorLiberacionInventario();
+
+    IList<MonitorInventarioAlmacen> selectedInventarioSalida;
+
+    string valIDMercancia = String.Empty;
+
+    ControlEmbarqueDTO _controlEmbarqueDTO = new ControlEmbarqueDTO();
+
+    [Inject] private ILiberacionService? _liberacionService {get; set; }
+    
+     protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        await LoadStateEmbarqueAsync();    
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+        //Console.WriteLine("OnParametersSet");
+
+        if (DataEmbarque != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataEmbarque);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            //Console.WriteLine("Decoded: " + decodedString);
+
+            _controlEmbarqueDTO =  new ControlEmbarqueDTO();
+
+            _controlEmbarqueDTO = JsonConvert.DeserializeObject<ControlEmbarqueDTO>(decodedString);
+
+        }
+
+    }
+
+    protected async Task ConfirmarEmbarqueKeyPressed(KeyboardEventArgs args) {
+
+        if (args.Key == "Enter")
+            {
+                var val = String.Empty;
+                val = await JSRuntime.InvokeAsync<string>("eval", $@"document.getElementById(""EMBARQUE_ID_MERCANCIA"").value");
+                valIDMercancia = val;
+                ConfirmarEmbarque();
+            }
+
+    }
+
+    async void ConfirmarEmbarque() {
+
+        string _mensaje = String.Empty;
+
+        valIDMercancia = valIDMercancia.Trim();
+
+        if (!String.IsNullOrEmpty(valIDMercancia)) {
+
+        var result = await DialogServiceConfirm.Confirm("Desea confirmar la salida?", "Liberación", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+        bool _confirmar = result.HasValue ? (bool)result : false;
+
+        if (_confirmar) {
+
+            InvokeAsync(async () =>
+            {
+
+                    ConsultaLiberacionInventario consultaLiberacionInventario = new ConsultaLiberacionInventario();
+                    if (!_monitorLiberacionInventario.IdLiberacion.Equals(0)) {
+                        consultaLiberacionInventario.IdOrdenSalida = _monitorLiberacionInventario.IdLiberacion;
+                    } else{
+                        consultaLiberacionInventario.IdOrdenSalida = _controlEmbarqueDTO.IdLiberacion;
+                    }
+                    consultaLiberacionInventario.IdMercancia = valIDMercancia;
+
+                    var _result = await _liberacionService.ControlEmbarqueAlmacen(consultaLiberacionInventario);
+
+                    if (_result.Success) {
+
+                        valIDMercancia = String.Empty;
+
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La mercancía se embarco para su liberación", Detail = _mensaje, Duration = 4000 });
+
+                    } else {
+
+                        _mensaje = "Error en Liberación:" + _monitorLiberacionInventario.FolioLiberacion.ToString() + ", " + _result.MensajeRespuesta;
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Salida Almacén", Detail = _mensaje, Duration = 4000 });
+
+                    }
+
+
+                BusyDialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Procesando Solicitud...");
+
+        }
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Salida Almacén", Detail = "Favor de ingresar el identificador de la mercancía.", Duration = 4000 });
+
+        }
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Confirmar Clicked", 
+            Detail = text }
+        );
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    private async Task LoadStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultList = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorLiberacionInventario");
+        if (!string.IsNullOrEmpty(resultList))
+        {
+            _monitorLiberacionInventario = System.Text.Json.JsonSerializer.Deserialize<MonitorLiberacionInventario>(resultList);
+        }
+    }
+
+    private async Task SaveStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorLiberacionInventario", System.Text.Json.JsonSerializer.Serialize<MonitorLiberacionInventario>(_monitorLiberacionInventario));
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

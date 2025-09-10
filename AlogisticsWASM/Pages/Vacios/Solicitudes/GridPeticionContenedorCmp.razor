@@ -1,0 +1,70 @@
+﻿@using ALOG.Modelos.Modelos.Vacios
+@using ALOG.Modelos.Modelos.DTO.Vacios
+
+<style>
+
+    .centrar {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    .auto-width-grid .rz-cell {
+        white-space: nowrap;
+        padding: 0.5rem 1rem;
+    }
+
+    .auto-width-grid .rz-header-cell {
+        white-space: nowrap;
+    }
+</style>
+
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap" class="rz-mb-4">
+    <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="add_circle" Text="Agregar contenedor" Click="@InsertRow" Disabled="@(_contenedorToInsert.Count() > 0 || DeshabilitarAcciones)" />
+</RadzenStack>
+
+<div style="overflow-x: auto;">
+    <RadzenDataGrid @ref="_gridContenedores"
+                    Data="@Contenedores"
+                    TItem="PeticionesContenedoresClienteExternoDTO"
+                    GridLines="Radzen.DataGridGridLines.Vertical"
+                    AllowColumnResize="true"
+                    ColumnWidth="200px"
+                    EditMode="DataGridEditMode.Single"
+                    RowUpdate="OnUpdateRow"
+                    RowCreate="OnCreateRow"
+                    AllowPaging="true"
+                    PageSize="5"
+                    AllowSorting="true"
+                    AllowFiltering="true"
+                    AllowRowSelectOnRowClick="false"
+                    FilterMode="FilterMode.Advanced"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand"
+                    LogicalFilterOperator="LogicalFilterOperator.Or"
+                    Style="min-width: 1000px; white-space: nowrap;"
+                    class="rz-shadow-3 auto-width-grid">
+        <Columns>
+            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Width="50px">
+                <HeaderTemplate>
+                    <RadzenCheckBox TValue="bool" @bind-Value="@_seleccionarTodos"
+                                    Change="@OnSeleccionarTodosChanged" />
+                </HeaderTemplate>
+                <Template Context="contenedor">
+                    <RadzenCheckBox TValue="bool"
+                                    Value="@_contenedoresSeleccionados.Contains(contenedor.Contenedor)"
+                                    Change="@(e => SeleccionarContenedor(contenedor.Contenedor, e))" />
+                </Template>
+            </RadzenDataGridColumn>
+
+            @if (ColumnTemplate != null)
+                @ColumnTemplate
+            @if (MostrarColumnaAcciones)
+                @RenderizarColumnaAcciones()
+        </Columns>
+    </RadzenDataGrid>
+</div>

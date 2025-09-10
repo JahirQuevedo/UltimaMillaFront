@@ -1,0 +1,16 @@
+﻿<span class="badge badge-phoenix @ObtenerClaseEstatus()">@estatus</span>
+
+@code{
+    [Parameter]
+    [EditorRequired]
+    public string estatus { get; set; } = string.Empty!;
+
+    private string ObtenerClaseEstatus() {
+        return estatus switch {
+            "ABIERTO" => "badge-phoenix-warning",
+            "CANCELADO" => "badge-phoenix-danger",
+            "CERRADO" => "badge-phoenix-success",
+            _ => "badge-phoenix-warning" // Clase por defecto si no coincide con las opciones anteriores
+        };
+    }
+}

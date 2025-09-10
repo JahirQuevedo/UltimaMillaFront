@@ -1,0 +1,11 @@
+﻿<RadzenStack AlignItems="AlignItems.Center" class="rz-m-12" Gap="2rem">
+    <div class="rz-text-align-center rz-mt-4">
+        <RadzenProgressBarCircular Value="100" ShowValue="false" Mode="ProgressBarMode.Indeterminate">
+            <Template>Procesando solicitud</Template>
+        </RadzenProgressBarCircular>
+    </div>
+</RadzenStack>
+
+@code {
+    [Parameter] public string Mensaje { get; set; } = "Cargando...";
+}

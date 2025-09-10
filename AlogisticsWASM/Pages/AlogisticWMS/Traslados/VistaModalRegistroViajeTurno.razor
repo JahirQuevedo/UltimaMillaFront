@@ -1,0 +1,735 @@
+﻿@page "/vistaModalRegistroViajeTurno"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+
+@inject DialogService BusyDialogService
+@inject DialogService DialogService
+@inject DialogService DialogServiceConfirm
+@attribute [Authorize]
+@* <RadzenTemplateForm Data="@monitorCtrlTransporteSelected" Submit="@((MonitorCtrlTransporte args) => { Submit(args); })"> *@
+    <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" 
+        JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; height: 100%;">
+        <RadzenStack>
+
+            <div class="row">
+                <div class="col-sm-2">
+                    <RadzenLabel Text="Folio" Component="TURNO_FOLIO" />
+                    <RadzenTextBox Name="TURNO_FOLIO" 
+                    Disabled=true
+                    Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                    @bind-Value="FolioTurno" />
+                </div>
+                <div class="col-sm-2">
+                    <RadzenLabel Text="Estatus" Component="TURNO_ESTATUS" />
+                    <RadzenTextBox Name="TURNO_ESTATUS" 
+                    Disabled=true
+                    Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                    @bind-Value="valEstadoTurno" />
+                </div>
+                <div class="col-sm-2">
+                    <RadzenLabel Text="Tipo Viaje" Component="TURNO_TIPO_VIAJE" />
+                    <RadzenTextBox Name="TURNO_TIPO_VIAJE" 
+                    Disabled=true
+                    Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                    @bind-Value="valTipoViaje" />
+                </div>
+                <div class="col-sm-3">
+                    <RadzenLabel Text="Terminal Origen" Component="TURNO_TERMINAL_ORIGEN" />
+                    <RadzenAutoComplete @bind-Value=@monitorCtrlTransporteSelected.ManiobristaOrigen Data=@listaManiobristaOrigen 
+                        Name="TURNO_TERMINAL_ORIGEN" Change=@OnChangeManiobristaOrigen class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorManiobrista.IdManiobrista)"
+                        TextProperty="@nameof(MonitorManiobrista.RazonSocial)" LoadData=@OnLoadDataManiobristaOrigen Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Terminal Origen" }})" />
+                </div>
+                <div class="col-sm-3">
+                    <RadzenLabel Text="Terminal Destino" Component="TURNO_TERMINAL_DESTINO" />
+                    <RadzenAutoComplete @bind-Value=@monitorCtrlTransporteSelected.ManiobristaDestino Data=@listaManiobristaDestino 
+                        Name="TURNO_TERMINAL_DESTINO" Change=@OnChangeManiobristaDestino class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorManiobrista.IdManiobrista)"
+                        TextProperty="@nameof(MonitorManiobrista.RazonSocial)" LoadData=@OnLoadDataManiobristaDestino Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Terminal Destino" }})" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3 col-md-3">
+                    <RadzenLabel Text="Viaje" Component="TURNO_CLAVE_VIAJE" />
+                    <RadzenTextBox Name="TURNO_CLAVE_VIAJE" 
+                        @bind-Value=@monitorCtrlTransporteSelected.ClaveViaje
+                        Style="width: 100%; max-width: 400px;" />
+                </div>
+                <div class="col-sm-3 col-md-3 text-center align-content-end">
+                    <RadzenCheckBox @bind-Value=@monitorCtrlTransporteSelected.EsViajeLocal Name="TURNO_LOCAL"  />
+                        <RadzenLabel Text="Es Local" Component="TURNO_LOCAL" class="rz-ms-2" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3 col-md-3">
+                    <RadzenLabel Text="Fecha:Hora Inicio" Component="TURNO_FECHA_INICIO" />
+                    <RadzenDatePicker @bind-Value="monitorCtrlTransporteSelected.FechaInicio" Style="width: 100%;" 
+                    Disabled="true"
+                    ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm" Name="REF_FECHA_ENTRADA" />
+                </div>  
+                    <div class="col-sm-3 col-md-3">
+                    <RadzenLabel Text="Fecha:Hora Fin" Component="TURNO_FECHA_FIN" />
+                    <RadzenDatePicker @bind-Value="monitorCtrlTransporteSelected.FechaFin" Style="width: 100%;" 
+                    Disabled="true"
+                    ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm" Name="REF_FECHA_ENTRADA" />
+                </div> 
+                <div class="col-sm-6 col-md-6">
+                    <RadzenLabel Text="Observaciones" Component="TURNO_OBSERVACIONES"/>
+                    <RadzenTextArea Style="width: 100%;" aria-label="TextArea" @bind-Value="monitorCtrlTransporteSelected.Observaciones"
+                    Name="TURNO_OBSERVACIONES" />
+                </div> 
+            </div>
+            <div class="row">
+                <div class="col-sm-3 col-md-4">
+                    <RadzenLabel Text="Linea Transportista" Component="TURNO_LINEA_TRANSPORTISTA" />
+                    <RadzenAutoComplete @bind-Value="monitorCtrlTransporteSelected.RazonSocialLineaTransporte" Data=@listaLineaTransporte
+                        Name="TURNO_LINEA_TRANSPORTISTA" Change=@OnChangeLineaTransporte class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorLineaTransporte.IdCatTransportista)"
+                        TextProperty="@nameof(MonitorLineaTransporte.RazonSocialLineaTransporte)" LoadData=@OnLoadDataLineaTransportista Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Linea Transportista" }})" />
+                </div>
+                <div class="col-sm-2 col-md-6">
+                    <RadzenLabel Text="Placas" Component="TURNO_LINEA_TRANSPORTISTA_PLACAS" />
+                    <RadzenAutoComplete @bind-Value=@monitorCtrlTransporteSelected.PlacasLineaTransporte Data=@listaLineaTransportePlacas
+                        Name="TURNO_LINEA_TRANSPORTISTA_PLACAS" Change=@OnChangeLineaTransportePlacas class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorLineaTransporte.IdLineaTransporte)"
+                        TextProperty="@nameof(MonitorLineaTransporte.Placas)" LoadData=@OnLoadDataPlacasLineaTransportista Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Transportista Placas" }})">
+                            <Template Context="monitorLineaTransporte">
+                                Linea Transportista: @monitorLineaTransporte.RazonSocialLineaTransporte
+                                <br />
+                                Placas: @monitorLineaTransporte.Placas
+                                <br />
+                                Num. Eco.: @monitorLineaTransporte.NumeroEconomico
+                            </Template>
+                    </RadzenAutoComplete>
+                </div>
+                <div class="col-sm-2 col-md-2">
+                    <RadzenLabel Text="Eco." Component="TURNO_LINEA_TRANSPORTISTA_NUMECONOMICO" />
+                    <RadzenTextBox Name="TURNO_LINEA_TRANSPORTISTA_NUMECONOMICO" 
+                        Disabled=false
+                        @bind-Value=@monitorCtrlTransporteSelected.NumEcoLineaTransporte
+                        Style="width: 100%; max-width: 400px;" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-8 col-md-8">
+                    <RadzenLabel Text="Operador" Component="TURNO_LINEA_OPERDADOR" />
+                    <RadzenAutoComplete @bind-Value=@monitorCtrlTransporteSelected.NombreOperadorLineaTransporte Data=@listaLineaOperador 
+                        Name="TURNO_LINEA_OPERDADOR" Change=@OnChangeLineaOperador class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorLineaOperador.IdLineaOperador)"
+                        TextProperty="@nameof(MonitorLineaOperador.NombreCompleto)" LoadData=@OnLoadDataLineaOperador Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Transportista Operador" }})" />
+                </div>
+                <div class="col-sm-4 col-md-4">
+                     <RadzenLabel Text="Tipo Transporte" Component="TURNO_TIPO_TRANSPORTE" />
+                    <RadzenAutoComplete @bind-Value=@monitorCtrlTransporteSelected.TipoTransporte Data=@listaTipoTransporte
+                        Name="TURNO_TIPO_TRANSPORTE" Change=@OnChangeTipoTransporte class="rz-text-uppercase"
+                        ValueProperty="@nameof(TipoTransporte.Id)"
+                        TextProperty="@nameof(TipoTransporte.Descripcion)" LoadData=@OnLoadDataTipoTransporte Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Tipo Transporte" }})" />
+                </div>
+            </div> 
+
+            @* <div class="row">
+                <div class="col-sm-4 col-md-4">
+                    &nbsp;
+                </div>
+                <div class="col-sm-4 col-md-4">
+                    &nbsp;
+                </div>
+                <div class="col-sm-4 col-md-4">
+                    &nbsp;
+                </div>
+            </div> *@
+
+        </RadzenStack>
+        <RadzenStack Visible="@ShowClose" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton ButtonType="ButtonType.Button" Size="ButtonSize.Large" Icon="delete" Text="Eliminar" Visible=@monitorCtrlTransporteSelected.TipoViaje.Equals(TipoViaje.Salida) />
+            <RadzenButton ButtonType="ButtonType.Button" Click=@(() => GuardarRegistroViaje()) Size="ButtonSize.Large" Icon="save" Text="Guardar" />
+            @* <RadzenButton ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large" Icon="play_circle" Text="Iniciar Viaje" />
+            <RadzenButton ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large" Icon="stop_circle" Text="Finalizar Viaje" />
+            <RadzenButton ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Large" Icon="print" Text="Imprimir" /> *@
+            @* <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="Cerrar" Click="@Cancel" /> *@
+        </RadzenStack>
+    </RadzenStack>
+@* </RadzenTemplateForm>*@
+
+@code {
+
+    [Parameter] public int IdControlTransporte { get; set; }
+
+    [Parameter] public MonitorCtrlTransporte monitorCtrlTransporte { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    MonitorCtrlTransporte monitorCtrlTransporteSelected = new MonitorCtrlTransporte();
+
+    string FolioTurno = String.Empty;
+
+    string valEstadoTurno = String.Empty;
+
+    string valTipoViaje = String.Empty;
+
+    string terminalOrigenSelected = String.Empty;
+
+    string terminalDestinoSelected = String.Empty;
+
+    string lineaTransporteSelected = String.Empty;
+
+    string lienaTransportePlacasSelected = String.Empty;
+
+    string lineaOperadorSelected = String.Empty;
+
+    string tipoTransporteSelected = String.Empty;
+
+    List<MonitorCtrlTransporte> listaMonitorCtrlTransporte;
+
+    List<MonitorManiobrista> listaManiobristaOrigen;
+
+    List<MonitorManiobrista> listaManiobristaDestino;
+
+    List<MonitorLineaTransporte> listaLineaTransporte;
+
+    List<MonitorLineaTransporte> listaLineaTransportePlacas;
+
+    List<MonitorLineaOperador> listaLineaOperador;
+
+    List<TipoTransporte> listaTipoTransporte;
+
+    TipoServicioAlmacenDescripcion tipoServicioAlmacenDescripcion;
+
+    TipoManiobrista tipoManiobrista;  
+
+    public enum TipoManiobrista
+    {
+        None,
+        Origen,
+        Destino
+    }
+
+    [Inject] private ITipoTransporteService? _tipoTransporteService { get; set; }
+
+    [Inject] private ILineaTransporteService? _lineaTransporteService { get; set; }
+
+    [Inject] private ILineaOperadorService? _lineaOperadorService { get; set; }
+
+    [Inject] private IManiobristaService? _maniobristaService { get; set; }
+
+    [Inject] private IControlTransporteService? _controlTransporteService { get; set; }    
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        listaManiobristaOrigen = new List<MonitorManiobrista>();
+        listaManiobristaDestino = new List<MonitorManiobrista>();
+        listaLineaTransporte = new List<MonitorLineaTransporte>();
+        listaLineaTransportePlacas = new List<MonitorLineaTransporte>();
+        listaLineaOperador = new List<MonitorLineaOperador>();
+        listaTipoTransporte = new List<TipoTransporte>();
+        monitorCtrlTransporteSelected = new MonitorCtrlTransporte();
+
+        monitorCtrlTransporteSelected.IdOrdenSalida = monitorCtrlTransporte.IdOrdenSalida;
+        monitorCtrlTransporteSelected.IdSolicitudTraslado = monitorCtrlTransporte.IdSolicitudTraslado;
+        monitorCtrlTransporteSelected.IdControlTransporte = monitorCtrlTransporte.IdCatTransportista;
+        monitorCtrlTransporteSelected.TipoViaje = monitorCtrlTransporte.TipoViaje;
+        valTipoViaje = monitorCtrlTransporteSelected.TipoViaje.ToString();
+
+        if (monitorCtrlTransporte != null) {
+            
+            if (!monitorCtrlTransporte.IdControlTransporte.Equals(0)) {
+                    
+                var resultBase =  await _controlTransporteService.ObtenerPorId(monitorCtrlTransporte.IdControlTransporte);
+
+                if (resultBase.Success) {
+
+                    monitorCtrlTransporteSelected = new MonitorCtrlTransporte();
+                    monitorCtrlTransporteSelected = resultBase.Data;
+                    valEstadoTurno = resultBase.Data.Estado.ToString();
+                    valTipoViaje = resultBase.Data.TipoViaje.ToString();
+                    FolioTurno = resultBase.Data.FolioTurno.ToString();
+                    valTipoViaje = monitorCtrlTransporteSelected.TipoViaje.ToString();
+                    
+                }
+
+            } else if (!monitorCtrlTransporte.IdSolicitudTraslado.Equals(0)) {
+
+                monitorCtrlTransporteSelected.IdCatTransportista = monitorCtrlTransporte.IdCatTransportista;
+                monitorCtrlTransporteSelected.RazonSocialLineaTransporte = monitorCtrlTransporte.RazonSocialLineaTransporte;
+                monitorCtrlTransporteSelected.IdManiobristaOrigen = monitorCtrlTransporte.IdManiobristaOrigen;
+                monitorCtrlTransporteSelected.IdManiobristaDestino = monitorCtrlTransporte.IdManiobristaDestino;
+                monitorCtrlTransporteSelected.ManiobristaOrigen = monitorCtrlTransporte.ManiobristaOrigen;
+                monitorCtrlTransporteSelected.ManiobristaDestino = monitorCtrlTransporte.ManiobristaDestino;
+
+            }
+
+        } 
+
+
+    }
+
+    protected override async Task OnInitializedAsync() 
+    {
+        ResultBase<MonitorCtrlTransporte> resultBase = new ResultBase<MonitorCtrlTransporte>();
+       
+        @* if (monitorCtrlTransporte != null) {
+            if (!monitorCtrlTransporte.IdControlTransporte.Equals(0)) {
+
+
+                    
+                    resultBase =  await _controlTransporteService.ObtenerPorId(monitorCtrlTransporte.IdControlTransporte);
+
+                    if (resultBase.Success) {
+                        monitorCtrlTransporteSelected = new MonitorCtrlTransporte();
+                        monitorCtrlTransporteSelected = resultBase.Data;
+                        valEstadoTurno = resultBase.Data.Estado.ToString();
+                        valTipoViaje = resultBase.Data.TipoViaje.ToString();
+                        FolioTurno = resultBase.Data.FolioTurno.ToString();
+                        valTipoViaje = monitorCtrlTransporteSelected.TipoViaje.ToString();
+                    }
+
+            }
+
+        } *@
+
+        await base.OnInitializedAsync();
+
+    }
+
+    void Cancel()
+    {
+        DialogService.Close(true);
+    }
+
+    async Task OnLoadDataTipoTransporte(LoadDataArgs args) {
+
+        //listaTipoTransporte = new List<TipoTransporte>();
+            
+        var resultBase = await _tipoTransporteService.ObtenerPorNombreContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaTipoTransporte = resultBase.Data;
+
+            if (listaTipoTransporte.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Tipo de Transporte", Detail = "No se encontró la descripción solicitada.", Duration = 4000 });
+                tipoTransporteSelected = String.Empty;
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Tipo de Transporte", Detail = "No se encontró la descripción solicitada.", Duration = 4000 });
+            tipoTransporteSelected = String.Empty;
+        }
+
+    }
+
+    async Task OnLoadDataLineaTransportista(LoadDataArgs args) {
+
+        //listaLineaTransporte = new List<MonitorLineaTransporte>();
+
+        var resultBase = await _lineaTransporteService.ObtenerPorRazonSocialContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaLineaTransporte = resultBase.Data;
+
+            if (listaLineaTransporte.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Linea Transporte", Detail = "No se encontró el transportista solicitado.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Línea Transporte", Detail = "No se encontró el trasnportista solicitado.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+    async Task OnLoadDataPlacasLineaTransportista(LoadDataArgs args) {
+
+        //listaLineaTransportePlacas = new List<MonitorLineaTransporte>();
+
+        int _IdCatTransportista = monitorCtrlTransporteSelected.IdCatTransportista;
+
+        var resultBase = await _lineaTransporteService.ObtenerPorPlacasContiene(_IdCatTransportista, args.Filter);
+
+        if (resultBase.Success) {
+
+            listaLineaTransportePlacas = resultBase.Data;
+
+            if (listaLineaTransportePlacas.Count.Equals(0)) {
+                //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Linea Transporte", Detail = "No se encontró la placa solicitada.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Línea Transporte", Detail = "No se encontró la placa solicitada.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+    async Task OnLoadDataLineaOperador(LoadDataArgs args) {
+
+        //listaLineaOperador = new List<MonitorLineaOperador>();
+
+        int _IdCatTransportista = monitorCtrlTransporteSelected.IdCatTransportista;
+
+        @* if (_IdCatTransportista.Equals(0)) {
+            monitorCtrlTransporteSelected.PlacasLineaTransporte = null;
+            monitorCtrlTransporteSelected.NumEcoLineaTransporte = null;
+        } *@
+        
+        var resultBase = await _lineaOperadorService.ObtenerPorNombreContiene(_IdCatTransportista, args.Filter);
+
+        if (resultBase.Success) {
+
+            listaLineaOperador = resultBase.Data;
+
+            if (listaLineaOperador.Count.Equals(0)) {
+                //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Operador Transporte", Detail = "No se encontró el operador solicitado.", Duration = 4000 });
+                //lineaOperadorSelected = String.Empty;
+            }
+        } else {
+            //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Operador Transporte", Detail = "No se encontró el operador solicitado.", Duration = 4000 });
+            //lineaOperadorSelected = String.Empty;
+        }
+
+    }
+
+    async Task OnLoadDataManiobristaOrigen(LoadDataArgs args)
+    {
+        tipoManiobrista = TipoManiobrista.Origen;
+
+        var resultBase = await _maniobristaService.ObtenerPorRazonSocialContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaManiobristaOrigen = resultBase.Data;
+
+            if (listaManiobristaOrigen.Count.Equals(0)) {
+                //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+    async Task OnLoadDataManiobristaDestino(LoadDataArgs args)
+    {
+        tipoManiobrista = TipoManiobrista.Destino;
+
+        var resultBase = await _maniobristaService.ObtenerPorRazonSocialContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaManiobristaDestino = resultBase.Data;
+
+            if (listaManiobristaDestino.Count.Equals(0)) {
+                //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+    void OnChangeManiobristaOrigen(object value)
+    {
+        ////Console.WriteLine("-> OnChangeManiobristaOrigen autocomplete : " + JsonSerializer.Serialize(value));
+
+        @* monitorCtrlTransporteSelected.IdManiobristaOrigen = 0;
+        monitorCtrlTransporteSelected.ManiobristaOrigen = null; *@
+
+        if (listaManiobristaOrigen != null) {
+            if (!listaManiobristaOrigen.Count().Equals(0)) {
+
+                var selectedManiobristaOrigen = listaManiobristaOrigen
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeManiobristaOrigen selectedManiobristaOrigen : " + JsonSerializer.Serialize(selectedManiobristaOrigen));
+
+                if (selectedManiobristaOrigen != null)
+                {
+                    var selectedId = selectedManiobristaOrigen.IdManiobrista;
+                    monitorCtrlTransporteSelected.IdManiobristaOrigen = selectedManiobristaOrigen.IdManiobrista;
+                    monitorCtrlTransporteSelected.ManiobristaOrigen = selectedManiobristaOrigen.RazonSocial;
+
+                    ////Console.WriteLine("OnChangeManiobristaOrigen IdManiobrista:" + monitorCtrlTransporteSelected.IdManiobristaOrigen);
+                }
+
+            }
+        }
+
+    }
+
+    void OnChangeManiobristaDestino(object value)
+    {
+        @* //Console.WriteLine("-> OnChangeManiobristaDestino autocomplete : " + JsonSerializer.Serialize(value));
+
+        ////Console.WriteLine("-> OnChangeManiobristaDestino autocomplete : " + JsonSerializer.Serialize(value));
+
+        monitorCtrlTransporteSelected.IdManiobristaDestino = 0;
+        monitorCtrlTransporteSelected.ManiobristaDestino = null; *@
+
+        if (listaManiobristaDestino != null) {
+            if (!listaManiobristaDestino.Count().Equals(0)) {
+
+                var selectedManiobristaDestino = listaManiobristaDestino
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeManiobristaDestino selectedManiobristaDestino : " + JsonSerializer.Serialize(selectedManiobristaDestino));
+
+                if (selectedManiobristaDestino != null)
+                {
+                    var selectedId = selectedManiobristaDestino.IdManiobrista;
+                    monitorCtrlTransporteSelected.IdManiobristaDestino = selectedManiobristaDestino.IdManiobrista;
+                    monitorCtrlTransporteSelected.ManiobristaDestino = selectedManiobristaDestino.RazonSocial;
+
+                    ////Console.WriteLine("OnChangeManiobristaDestino IdManiobrista:" + monitorCtrlTransporteSelected.IdManiobristaDestino);
+                }
+
+            }
+        }
+    }
+
+    void OnChangeLineaTransportePlacas(object value) {
+        
+        
+        ////Console.WriteLine("-> OnChangeLineaTransportePlacas model : " + JsonSerializer.Serialize(value));
+
+        @* monitorCtrlTransporteSelected.PlacasLineaTransporte = null;
+        monitorCtrlTransporteSelected.NumEcoLineaTransporte = null; *@
+
+        ////Console.WriteLine("-> OnChangeLineaTransportePlacas listaLineaTransporte : " + JsonSerializer.Serialize(listaLineaTransportePlacas));
+
+        if (listaLineaTransportePlacas != null) {
+
+            if (!listaLineaTransportePlacas.Count().Equals(0)) {
+
+                var selectedLineaTransportePlacas = listaLineaTransportePlacas
+                .FirstOrDefault(c => c.Placas == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeLineaTransportePlacas selectedLineaTransportePlacas : " + JsonSerializer.Serialize(selectedLineaTransportePlacas));
+
+                if (selectedLineaTransportePlacas != null)
+                {
+                    var selectedId = selectedLineaTransportePlacas.IdLineaTransporte;
+                    monitorCtrlTransporteSelected.IdCatTransportista = selectedLineaTransportePlacas.IdCatTransportista;
+                    monitorCtrlTransporteSelected.IdLineaTransTransporte = selectedLineaTransportePlacas.IdLineaTransporte;
+                    monitorCtrlTransporteSelected.NumEcoLineaTransporte = selectedLineaTransportePlacas.NumeroEconomico;
+                    monitorCtrlTransporteSelected.PlacasLineaTransporte = selectedLineaTransportePlacas.Placas;
+                    monitorCtrlTransporteSelected.RazonSocialLineaTransporte = selectedLineaTransportePlacas.RazonSocialLineaTransporte;
+
+                    ////Console.WriteLine("OnChangeLineaTransportePlacas IdCatTransportista:" + monitorCtrlTransporteSelected.IdCatTransportista);
+                }
+
+            }
+
+        }
+
+    }
+
+    void OnChangeLineaOperador(object value) {
+
+        ////Console.WriteLine("-> OnChangeLineaOperador model : " + JsonSerializer.Serialize(value));
+
+        @* monitorCtrlTransporteSelected.NombreOperadorLineaTransporte = null;
+        monitorCtrlTransporteSelected.IdLineaTransOperador = 0; *@
+
+        ////Console.WriteLine("-> OnChangeLineaOperador listaLineaOperador : " + JsonSerializer.Serialize(listaLineaOperador));
+
+        if (listaLineaOperador != null) {
+
+            if (!listaLineaOperador.Count().Equals(0)) {
+
+                var selectedLineaOperador = listaLineaOperador
+                .FirstOrDefault(c => c.NombreCompleto == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeLineaTransportePlacas selectedLineaTransportePlacas : " + JsonSerializer.Serialize(selectedLineaOperador));
+
+                if (selectedLineaOperador != null)
+                {
+                    var selectedId = selectedLineaOperador.IdLineaOperador;
+                    monitorCtrlTransporteSelected.IdCatTransportista = selectedLineaOperador.IdCatTransportista;
+                    monitorCtrlTransporteSelected.IdLineaTransOperador = selectedLineaOperador.IdLineaOperador;
+                    monitorCtrlTransporteSelected.RazonSocialLineaTransporte = selectedLineaOperador.RazonSocialLineaTransporte;
+                    monitorCtrlTransporteSelected.NombreOperadorLineaTransporte = selectedLineaOperador.NombreCompleto;
+
+                    ////Console.WriteLine("OnChangeLineaTransportePlacas IdCatTransportista:" + monitorCtrlTransporteSelected.IdCatTransportista);
+                }
+
+            }
+
+        }
+
+    }
+
+    void OnChangeTipoTransporte(object value) {
+
+        monitorCtrlTransporteSelected.TipoTransporte = null;
+        monitorCtrlTransporteSelected.IdTipoTransporte = 0;
+        if (listaTipoTransporte != null) {
+            if (!listaTipoTransporte.Count().Equals(0)) {
+
+                var selectedTipoTransporte = listaTipoTransporte
+                .FirstOrDefault(c => c.Descripcion == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeTipoTransporte selectedTipoTransporte : " + JsonSerializer.Serialize(selectedTipoTransporte));
+
+                if (selectedTipoTransporte != null)
+                {
+                    var selectedId = selectedTipoTransporte.Id;
+                    monitorCtrlTransporteSelected.TipoTransporte = selectedTipoTransporte.Descripcion;
+                    monitorCtrlTransporteSelected.IdTipoTransporte = selectedTipoTransporte.Id;
+
+                    ////Console.WriteLine("OnChangeTipoTransporte IdTipoTransporte:" + monitorCtrlTransporteSelected.IdTipoTransporte);
+                }
+
+            }
+        }
+
+    }
+
+    void OnChangeLineaTransporte(object value) {
+
+        ////Console.WriteLine("-> OnChangeLineaTransporte model : " + JsonSerializer.Serialize(value));
+
+        @* monitorCtrlTransporteSelected.IdLineaTransTransporte = 0; *@
+        monitorCtrlTransporteSelected.IdCatTransportista = 0;
+        monitorCtrlTransporteSelected.RazonSocialLineaTransporte = null;
+
+        ////Console.WriteLine("-> OnChangeLineaTransporte listaLineaTransporte : " + JsonSerializer.Serialize(listaLineaTransporte));
+
+        if (!listaLineaTransporte.Count().Equals(0)) {
+
+            var selectedLineaTransporte = listaLineaTransporte
+            .FirstOrDefault(c => c.RazonSocialLineaTransporte == value?.ToString());
+
+            ////Console.WriteLine("-> OnChangeLineaTransporte selectedLineaTransporte : " + JsonSerializer.Serialize(selectedLineaTransporte));
+
+            if (selectedLineaTransporte != null)
+            {
+                var selectedId = selectedLineaTransporte.IdLineaTransporte;
+                monitorCtrlTransporteSelected.IdCatTransportista = selectedLineaTransporte.IdCatTransportista;
+                monitorCtrlTransporteSelected.RazonSocialLineaTransporte = selectedLineaTransporte.RazonSocialLineaTransporte;
+                monitorCtrlTransporteSelected.PlacasLineaTransporte = null;
+                monitorCtrlTransporteSelected.NumEcoLineaTransporte = null;
+                monitorCtrlTransporteSelected.IdLineaTransTransporte = selectedLineaTransporte.IdLineaTransporte; 
+
+
+                ////Console.WriteLine("OnChangeLineaTransporte IdCatTransportista:" + monitorCtrlTransporteSelected.IdCatTransportista);
+
+
+            } else {
+
+                monitorCtrlTransporteSelected.IdCatTransportista = 0;
+                monitorCtrlTransporteSelected.RazonSocialLineaTransporte = null;
+                monitorCtrlTransporteSelected.IdLineaTransTransporte = 0;
+                @* monitorCtrlTransporteSelected.PlacasLineaTransporte = null;
+                monitorCtrlTransporteSelected.NumEcoLineaTransporte = null;
+                 *@
+
+            }
+
+        }
+
+    }
+
+    async void GuardarRegistroViaje()
+    {
+        string _mensaje = String.Empty;
+        bool _confirmar = false;
+
+        //Console.WriteLine("-> Guardar Datos Viaje args : " + JsonSerializer.Serialize(monitorCtrlTransporteSelected));
+
+        //TODO: Validar que la terminal origen y destino no sea la misma
+        //TODO: Validar que se registren los datos de la Linea Transportista: Placas / Operador
+        //TODO: Validar que se registr el Tipo de Transporte
+
+
+
+            @* var result = await DialogServiceConfirm.Confirm("Desea Guardar el Viaje?", "Registro de Viaje", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+            _confirmar = result.HasValue ? (bool)result : false;
+
+            if (_confirmar) { *@
+
+                monitorCtrlTransporteSelected.CRUDAction = ECRUDAction.Create;
+                monitorCtrlTransporteSelected.TipoViaje = monitorCtrlTransporte.IdOrdenSalida.Equals(0) ? TipoViaje.Entrada : TipoViaje.Salida;
+                monitorCtrlTransporteSelected.IdEmpresaLogin = 1;
+
+                if (!monitorCtrlTransporteSelected.IdControlTransporte.Equals(0)) {
+                    monitorCtrlTransporteSelected.CRUDAction = ECRUDAction.Update;
+                } else {
+                    monitorCtrlTransporteSelected.Estado = EstadoTurno.Creado;
+                }
+
+                var resultBase = await _controlTransporteService.Guardar(monitorCtrlTransporteSelected);
+
+                if (resultBase.Success) {
+
+                    monitorCtrlTransporteSelected = resultBase.Data;
+                    FolioTurno = resultBase.Data.FolioTurno.ToString();
+                    valEstadoTurno = resultBase.Data.Estado.ToString();
+                    valTipoViaje = resultBase.Data.TipoViaje.ToString();
+
+                    await InvokeAsync(StateHasChanged);
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Viaje", 
+                        Detail = $"Se registro correctamente el Viaje: {resultBase.MensajeRespuesta}", 
+                        Duration = 4000 });
+
+                } else {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", 
+                        Detail = $"Error: {resultBase.MensajeRespuesta}", 
+                        Duration = 4000 });
+
+                }
+
+                DialogService.Close(true);
+
+        @* } *@
+
+        
+
+        //await InvokeAsync(StateHasChanged);
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

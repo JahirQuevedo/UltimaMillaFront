@@ -1,0 +1,847 @@
+﻿@page "/vistaModalAsignarFolioServicio"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Login.ILogin
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using ALOGRepositorios.Services.Catalogos.ICatalogos
+@using AlogisticsWASM.Pages.AlogisticWMS.Programacion.SolicitudTraslado
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+
+@inject DialogService BusyDialogService
+@inject DialogService DialogService
+@inject DialogService DialogServiceRegistroSolicitudTraslado
+@inject DialogService DialogServiceConfirm
+@attribute [Authorize]
+<style>
+    .rz-dialog-content {
+        padding: .5rem;
+    }
+</style>
+<RadzenTemplateForm Data="@monitorFolioServicio" Submit="@((MonitorFolioServicio args) => { Submit(args); })">
+<RadzenSplitter Orientation="Orientation.Vertical" style="height: 400px; border: 1px solid rgba(0,0,0,.08);">
+    <RadzenSplitterPane Size="200px">
+        <RadzenSplitter >
+            <RadzenSplitterPane Size="20%" Min="20px" Max="20%" Collapsible="true" Resizable="false">
+                @* Listado de Tarjas *@
+
+                         <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Start" Style="height: 100%;">
+                            <RadzenDataGrid
+                                    Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                                    PagerHorizontalAlign="HorizontalAlign.Left"
+                                    @bind-Value=@selectedRelacionInventarioServicio
+                                    AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                                    FilterPopupRenderMode="PopupRenderMode.OnDemand" 
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    SelectionMode="DataGridSelectionMode.Single"
+                                    TItem="RelacionInventarioServicio"
+                                    RowDoubleClick="@gridDoubleClickEventSelected"
+                                    Style="width:100%"
+                                    Data="@(listaRelacionInventarioServicioSelected)" Density="Density.Compact" AllowAlternatingRows="false">
+                                <Columns>
+                                    <RadzenDataGridColumn Property="@nameof(RelacionInventarioServicio.FolioTarjaInventario)" Title="Tarja/Partida" Width="180px" />
+                                    @* <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Frozen="false" 
+                                        FrozenPosition="FrozenColumnPosition.Right" Width="80px">
+                                        <Template Context="data">
+                                            <RadzenButton ButtonStyle="ButtonStyle.Danger" 
+                                            Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium"  
+                                            class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                            </RadzenButton>
+                                        </Template>
+                                    </RadzenDataGridColumn> *@
+                                </Columns>
+                            </RadzenDataGrid>
+                        </RadzenStack>
+
+            </RadzenSplitterPane>
+            <RadzenSplitterPane Collapsible="false" Resizable="false">
+                @* Registro de Servicio Solicitado *@
+
+                <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" class="rz-p-2"
+                    JustifyContent="JustifyContent.SpaceBetween" Style="width:100%;">
+
+                        <div class="row">
+                            <div class="col-sm-2">
+                                <RadzenLabel Text="Folio de Servicio" Component="FOLIO_SERVICIO_NUMERO_FOLIO" />
+                                <RadzenTextBox Name="FOLIO_SERVICIO_NUMERO_FOLIO" 
+                                Disabled=true
+                                Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                                @bind-Value="valFolioServicio"/>
+                            </div>
+                            <div class="col-sm-4 col-md-4">
+                                <RadzenLabel Text="Fecha:Hora Captura" Component="FOLIO_SERVICIO_FECHA_CAPTURA" />
+                                <RadzenDatePicker @bind-Value="valFechaCaptura"
+                                Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                                Disabled="true"
+                                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" 
+                                DateFormat="dd/MM/yyyy HH:mm" Name="FOLIO_SERVICIO_FECHA_CAPTURA" />
+                            </div>
+                            <div class="col-sm-3 col-md-3">
+                                <RadzenLabel Text="Solicitó" Component="FOLIO_SERVICIO_SOLICITO" />
+                                <RadzenTextBox Name="FOLIO_SERVICIO_SOLICITO" 
+                                Style="width: 100%; max-width: 400px;"
+                                @bind-Value="strNombreUsuario"
+                                />
+                            </div>   
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-6 col-md-6">
+                                <RadzenLabel Text="Paquete" Component="FOLIO_SERVICIO_PAQUETE" />
+                                <RadzenAutoComplete @bind-Value=@monitorFolioServicio.DescripcionPaquete Data=@listaPaquetes 
+                                    Name="FOLIO_SERVICIO_PAQUETE" Change=@OnChangePaquete class="rz-text-uppercase"
+                                    ValueProperty="@nameof(Paquete.Id)"
+                                    TextProperty="@nameof(Paquete.Descripcion)" LoadData=@OnLoadDataPaquetes Style="width: 100%; text-transform: capitalize;" 
+                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Terminal Origen" }})" />
+                            </div>
+                            <div class="col-sm-3 col-md-3">
+                                <RadzenLabel Text="Fecha:Hora Programada" Component="FOLIO_SERVICIO_FECHA_PROGRAMADA" />
+                                <RadzenDatePicker @bind-Value="monitorFolioServicio.FechaProgramada"
+                                Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                                Disabled="false"
+                                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" 
+                                DateFormat="dd/MM/yyyy HH:mm" Name="FOLIO_SERVICIO_FECHA_PROGRAMADA" />
+                            </div>
+                        </div>
+                        @* <div>
+                            <div class="col-sm-6">
+                                <RadzenLabel Text="Facturar A" Component="FOLIO_SERVICIO_FACTURAR_A" />
+                                <RadzenAutoComplete @bind-Value=@monitorFolioServicio.DescripcionPaquete Data=@listClientesFacturarA 
+                                    Name="FOLIO_SERVICIO_FACTURAR_A" Change=@OnChangeFacturarA class="rz-text-uppercase"
+                                    ValueProperty="@nameof(Paquete.Id)"
+                                    TextProperty="@nameof(Paquete.Descripcion)" LoadData=@OnLoadDataFacturarA Style="width: 100%; text-transform: capitalize;" 
+                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Terminal Origen" }})" />
+                            </div>
+                        </div> *@
+
+                        <div class="row">
+                            <div class="col-sm-6 col-md-6">
+                                
+                                <div class="row">
+                                    <div class="col-sm-12 col-md-12">
+                                        <RadzenLabel Text="Cliente" Component="FOLIO_SERVICIO_RAZONSOCIAL_CLIENTE"/>
+                                        <RadzenAutoComplete @bind-Value=@monitorFolioServicio.RazonSocialCliente Data=@listaCliente Disabled="true"
+                                            Name="FOLIO_SERVICIO_RAZONSOCIAL_CLIENTE" Change=@OnChangeCliente class="rz-text-uppercase"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataCliente Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Cliente" }})" />
+                                    </div>  
+                                </div>  
+                                <div class="row">                                
+                                    <div class="col-sm-12 col-md-12">
+                                        <RadzenLabel Text="Facturar A" Component="FOLIO_SERVICIO_RAZONSOCIAL_FACTURARA"/>
+                                        <RadzenAutoComplete @bind-Value=@monitorFolioServicio.NombreFacturarA Data=@listaFacturarA Disabled="true"
+                                            Name="FOLIO_SERVICIO_RAZONSOCIAL_FACTURARA" Change=@OnChangeFacturarA class="rz-text-uppercase"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataFacturarA Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Facturar A" }})" />
+                                    </div>
+                                </div>
+                                @* <div class="row rz-mt-3">                                
+                                    <div class="col-sm-12 col-md-12">
+                                        <RadzenCheckBox @bind-Value=@valAplicaServicioAgrupado Name="FOLIO_SERVICIO_APLICA_SERVICIO_AGRUPADO" />
+                                        <RadzenLabel Text="Aplica Servicio Agrupado" Component="v" class="rz-ms-2" />
+                                    </div>
+                                </div> *@
+
+                            </div>
+                            <div class="col-sm-3 col-md-3">
+                                <RadzenLabel Text="Instrucciones del Servicio" Component="FOLIO_SERVICIO_INSTRUCCIONES"/>
+                                <RadzenTextArea Style="width: 100%;" aria-label="TextArea" Rows="7"
+                                    @bind-Value="monitorFolioServicio.InstruccionesDelServicio"
+                                    Name="FOLIO_SERVICIO_INSTRUCCIONES" />
+                            </div>
+                        </div>
+                        
+                </RadzenStack>
+
+            </RadzenSplitterPane>
+        </RadzenSplitter>
+    </RadzenSplitterPane>
+</RadzenSplitter>
+<RadzenStack Visible="@ShowClose" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem" class="rz-mt-3">
+    <RadzenButton ButtonStyle="ButtonStyle.Secondary" Visible=@(!AplicaServicioTrasladoVisible) Size="ButtonSize.Large" 
+    Click=@(() => ConfirmarServicio(monitorFolioServicio)) Disabled=@monitorFolioServicio.IdFolioServicio.Equals(0)
+    Icon="check_circle" Text="Confirmar Servicio" />
+    <RadzenButton ButtonStyle="ButtonStyle.Secondary" Visible=@AplicaServicioTrasladoVisible Size="ButtonSize.Large" 
+    Click=@(() => OpenModalRegistroSolicitudTraslado()) Disabled=@_disableSolicitudTraslado
+    Icon="local_shipping" Text="Solicitar Traslado" />
+    <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="Guardar" />
+    @* <RadzenButton ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large" Icon="play_circle" Text="Iniciar Viaje" />
+    <RadzenButton ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Large" Icon="stop_circle" Text="Finalizar Viaje" />
+    <RadzenButton ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Large" Icon="print" Text="Imprimir" /> *@
+    @* <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="Cerrar" Click="@Cancel" /> *@
+</RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+
+    [Parameter] public int IdReferencia { get; set; }
+
+    [Parameter] public int IdClienteReferencia { get; set; }
+
+    [Parameter] public string RazonSocialClienteReferencia { get; set; }
+
+    [Parameter] public int IdFacturarAReferencia { get; set; }
+
+    [Parameter] public string NombreFacturarAReferencia { get; set; }
+
+    [Parameter] public int ServicioPara { get; set; }
+
+    [Parameter] public List<MonitorTarja> listaMonitorTarjaSelected { get; set; }
+
+    [Parameter] public List<MonitorPartida> listaMonitorPartidaSelected { get; set; }
+
+    [Parameter] public List<RelacionInventarioServicio> listaRelacionInventarioServicioSelected { get; set; }
+
+    [Parameter] public MonitorFolioServicio monitorFolioServicioSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    ICollection<RespListarCoincidenciasDTO> listaCliente;
+    
+    ICollection<RespListarCoincidenciasDTO> listaFacturarA;
+
+    IList<MonitorTarja> selectedMonitorTarja;
+
+    IList<RelacionInventarioServicio> selectedRelacionInventarioServicio;
+
+    DateTime valFechaCaptura;
+
+    int totalRegistros = 0;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    string valFolioServicio = String.Empty;
+
+    bool valAplicaServicioAgrupado = false;
+
+    bool AplicaServicioTrasladoVisible = false;
+
+    bool _disableSolicitudTraslado = false;
+
+    DialogSettings _settings;
+
+    List<Paquete> listaPaquetes;
+
+    MonitorFolioServicio monitorFolioServicio = new MonitorFolioServicio();
+
+    private string usuario;
+    private string strCliente;
+    private string strNombreUsuario;
+
+    UsuarioTokenDTO _UsuarioTokenDTO;
+
+    [Inject] private ILoginService? _loginService { get; set; }
+
+    [Inject] private ICatClientesService? _clienteService { get; set; }
+
+    [Inject] private IPaqueteService? _paqueteService { get; set; }
+
+    [Inject] private IFolioServicioService? _folioServicioService { get; set; }
+
+    [Inject] private ISolicitudTrasladoService? _solicitudTrasladoService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+
+       //Console.WriteLine("-> OnParametersSetAsync --->>>>");
+
+        await base.OnParametersSetAsync();
+
+        _disableSolicitudTraslado = false;
+
+        totalRegistros = listaRelacionInventarioServicioSelected.Count();
+
+        selectedRelacionInventarioServicio = listaRelacionInventarioServicioSelected.Take(1).ToList();
+
+        monitorFolioServicio = new MonitorFolioServicio();
+
+        monitorFolioServicio.IdCliente = IdClienteReferencia;
+
+        monitorFolioServicio.RazonSocialCliente = RazonSocialClienteReferencia;
+
+        monitorFolioServicio.IdFacturarA = IdFacturarAReferencia;
+
+        monitorFolioServicio.NombreFacturarA = NombreFacturarAReferencia;
+
+        if (!monitorFolioServicioSelected.IdFolioServicio.Equals(0)) {
+
+            monitorFolioServicio.CRUDAction = ECRUDAction.Update;
+
+            monitorFolioServicio.IdFolioServicio = monitorFolioServicioSelected.IdFolioServicio;
+            monitorFolioServicio.Folio = monitorFolioServicioSelected.Folio;
+            monitorFolioServicio.EstadoFolioServicio = monitorFolioServicioSelected.EstadoFolioServicio;
+            monitorFolioServicio.IdPaquete = monitorFolioServicioSelected.IdPaquete;
+            monitorFolioServicio.DescripcionPaquete = monitorFolioServicioSelected.DescripcionPaquete;
+            monitorFolioServicio.FechaProgramada = monitorFolioServicioSelected.FechaProgramada;
+            monitorFolioServicio.FechaAlta = monitorFolioServicioSelected.FechaAlta;
+            monitorFolioServicio.InstruccionesDelServicio = monitorFolioServicioSelected.InstruccionesDelServicio;
+            monitorFolioServicio.Solicito = monitorFolioServicioSelected.Solicito;
+            monitorFolioServicio.TipoIngreso = monitorFolioServicioSelected.TipoIngreso;
+
+            strNombreUsuario = monitorFolioServicioSelected.Solicito;
+
+            if (monitorFolioServicio.TipoIngreso.Equals(TipoEntradaPaquete.Traslado)) {
+                AplicaServicioTrasladoVisible = true;
+
+                ConsultaCatalogoBase<ConsultaSolicitudTraslado> _consultaSolicitudTraslado = new ConsultaCatalogoBase<ConsultaSolicitudTraslado>();
+
+                _consultaSolicitudTraslado.Entidad = new ConsultaSolicitudTraslado();
+                _consultaSolicitudTraslado.Entidad.IdFolioServicio = monitorFolioServicio.IdFolioServicio;
+                
+                _consultaSolicitudTraslado.NumeroDePagina = 1;
+                _consultaSolicitudTraslado.RegistrosPorPagina = 3;
+
+                var _result = await _solicitudTrasladoService.ObtenerListaPaginada(_consultaSolicitudTraslado);
+
+                if (_result.Success) {
+
+                    if (!_result.Data.Count.Equals(0)) {
+
+                        _disableSolicitudTraslado = true;
+
+                    }
+                }
+
+            } else {
+                AplicaServicioTrasladoVisible = false;
+            }
+
+            valFolioServicio = monitorFolioServicio.Folio.ToString();
+
+            valFechaCaptura = (DateTime)monitorFolioServicio.FechaAlta;
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+          
+
+        AplicaServicioTrasladoVisible = false;
+
+        monitorFolioServicio = new MonitorFolioServicio();
+
+        _UsuarioTokenDTO = new UsuarioTokenDTO();
+
+        await ObtenerDatosCredeciales();
+
+       //Console.WriteLine("-> OnInitializedAsync --->>>>");
+
+        await base.OnInitializedAsync();     
+
+
+    }
+
+    async Task OnLoadDataPaquetes(LoadDataArgs args) {
+
+        var resultBase = await _paqueteService.ObtenerPorDescripcionContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaPaquetes = resultBase.Data;
+
+            if (listaPaquetes.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Paquete", Detail = "No se encontró el servicio solicitado.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Paquerte", Detail = "No se encontró el servicio solicitado.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+   
+    void OnChangePaquete(object value) {
+
+        ////Console.WriteLine("-> OnChangePaquete autocomplete : " + JsonSerializer.Serialize(value));
+
+        monitorFolioServicio.IdPaquete = 0;
+        monitorFolioServicio.DescripcionPaquete = null;
+        monitorFolioServicio.TipoIngreso = TipoEntradaPaquete.None;
+
+        if (listaPaquetes != null) {
+            if (!listaPaquetes.Count().Equals(0)) {
+
+                var selectedPaquete = listaPaquetes
+                .FirstOrDefault(c => c.Descripcion == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangePaquete selectePaquete : " + JsonSerializer.Serialize(selectedPaquete));
+
+                if (selectedPaquete != null)
+                {
+                    var selectedId = selectedPaquete.Id;
+                    monitorFolioServicio.IdPaquete = selectedPaquete.Id;
+                    monitorFolioServicio.DescripcionPaquete = selectedPaquete.Descripcion;
+                    monitorFolioServicio.TipoIngreso = (TipoEntradaPaquete)selectedPaquete.TipoIngreso;
+
+                    ////Console.WriteLine("OnChangeManiobristaOrigen IdManiobrista:" + monitorFolioServicio.IdPaquete);
+                }
+
+            }
+        }
+
+    }
+
+    async void Submit(MonitorFolioServicio monitorFolioServicio)
+    {
+        string _mensaje = String.Empty;
+        bool _confirmar = false;
+
+        ////Console.WriteLine("-> Submit - monitorFolioServicio : " + JsonSerializer.Serialize(monitorFolioServicio));
+
+        ResultBase resultBase = new ResultBase();
+
+        resultBase = ValidarDatosFolioServicio(monitorFolioServicio);
+
+        if (resultBase.Success) {
+
+            if (!monitorFolioServicioSelected.IdFolioServicio.Equals(0)) {
+                monitorFolioServicio.IdFolioServicio = monitorFolioServicioSelected.IdFolioServicio;
+            }
+
+            monitorFolioServicio.CRUDAction = ECRUDAction.Create;
+
+            if (!monitorFolioServicio.IdFolioServicio.Equals(0)) {
+                monitorFolioServicio.CRUDAction = ECRUDAction.Update;
+            }
+
+            monitorFolioServicio.IdEmpresaLogin = 1;
+
+            monitorFolioServicio.Solicito = strNombreUsuario;
+
+            monitorFolioServicio.IdReferencia = IdReferencia;
+
+            monitorFolioServicio.ServicioPara = ServicioPara;
+
+            monitorFolioServicio.EstadoFolioServicio = monitorFolioServicio.EstadoFolioServicio.Equals(EstadoFolioServicio.None) ? EstadoFolioServicio.Pendiente : monitorFolioServicio.EstadoFolioServicio;
+
+            monitorFolioServicio.AplicaServicioAgrupado = valAplicaServicioAgrupado;
+
+            //monitorFolioServicio.ListIdMonitorTarja = listaRelacionInventarioServicioSelected.Select(c => c.IdTarja).Distinct().ToList();
+            //TODO: Enviar la relacion de identificador;
+
+
+            monitorFolioServicio.ListaRelacionInventarioServicio = listaRelacionInventarioServicioSelected;
+
+            //InvokeAsync(async () =>
+            //{
+
+                var _result = await _folioServicioService.Guardar(monitorFolioServicio);
+
+                if (_result.Success) {
+
+                    monitorFolioServicio.IdFolioServicio = _result.Data.IdFolioServicio;
+                    monitorFolioServicio.Folio = _result.Data.Folio;
+                    monitorFolioServicio.FechaAlta = _result.Data.FechaAlta;
+                    monitorFolioServicio.IdReferencia = IdReferencia;
+
+                    valFolioServicio = monitorFolioServicio.Folio.ToString();
+                    valFechaCaptura = Convert.ToDateTime(monitorFolioServicio.FechaAlta);
+
+                    listaRelacionInventarioServicioSelected = _result.Data.ListaRelacionInventarioServicio;
+
+                    selectedRelacionInventarioServicio = listaRelacionInventarioServicioSelected.Where(p => p.IdFolioServicio.Equals(monitorFolioServicio.IdFolioServicio)).ToList();
+
+                    ////Console.WriteLine("-> OnChangePaquete autocomplete : " + JsonSerializer.Serialize(monitorFolioServicio));
+
+                    if (monitorFolioServicio.TipoIngreso.Equals(TipoEntradaPaquete.Traslado)) {
+                        AplicaServicioTrasladoVisible = true;
+                    } else {
+                        AplicaServicioTrasladoVisible = false;
+                    }
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, 
+                    Summary = "Guardar Servicio", 
+                    Detail = "Se creo correctamente el Servicio: " + _result.MensajeRespuesta, Duration = 4000 });
+
+                } else {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+                    Summary = "Guardar Servicio", 
+                    Detail = _result.MensajeRespuesta, Duration = 4000 });
+
+                } 
+
+                //BusyDialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+                await InvokeAsync(SaveStateAsync);
+
+             //});
+
+            //await BusyDialog("Procesando Solicitud...");
+
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+                Summary = "Guardar Servicio", 
+                Detail = resultBase.MensajeRespuesta, Duration = 4000 });
+        }
+
+        
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    private ResultBase ValidarDatosFolioServicio(MonitorFolioServicio monitorFolioServicio) {
+
+        var resultBase = new ResultBase();
+
+        //TODO: Validar que exista registrado el paquete
+        if (monitorFolioServicio.IdPaquete.Equals(0)) {
+            resultBase.MensajeRespuesta = "Favor de seleccionar el Paquete Servicio";
+            return resultBase;
+        }
+
+        if (monitorFolioServicio.FechaProgramada.Equals(DateTime.MinValue)) {
+            resultBase.MensajeRespuesta = "Favor de registrar la Fecha de Programación del Servicio";
+            return resultBase;
+        }
+
+        return resultBase;
+
+    }
+
+    protected async Task gridDoubleClickEventSelected(DataGridRowMouseEventArgs<RelacionInventarioServicio> args) {
+
+        ////Console.WriteLine("-> gridDoubleClickEventSelected - args : " + JsonSerializer.Serialize(args));
+
+        if (args.Data != null) {
+
+            var _result = await _folioServicioService.ObtenerPorId(args.Data.IdFolioServicio);
+
+            if (_result.Success) {
+
+                valFolioServicio = _result.Data.Folio.ToString();
+                valFechaCaptura = Convert.ToDateTime(_result.Data.FechaAlta);
+
+                monitorFolioServicio = _result.Data;
+            }
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+        
+    }
+
+    void OnChangeCliente(object value) {
+        monitorFolioServicio.IdCliente = 0;
+        monitorFolioServicio.RazonSocialCliente = null;
+
+        if (listaCliente != null) {
+            if (!listaCliente.Count().Equals(0)) {
+
+                var selectedCliente = listaCliente
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedCliente != null)
+                {
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    var selectedId = selectedCliente.Id;
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    monitorFolioServicio.IdCliente = selectedCliente.Id;
+                    monitorFolioServicio.RazonSocialCliente = selectedCliente.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    async Task OnLoadDataCliente(LoadDataArgs args) {
+
+        listaCliente = await _clienteService.GetClientesConincidencia(args.Filter);
+
+        //////Console.WriteLine("->  OnLoadDataCliente _result : " + JsonSerializer.Serialize(listaCliente));
+
+        if (listaCliente.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Folio Servicio", Detail = "No se encontró el Cliente solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeFacturarA(object value) {
+        monitorFolioServicio.IdFacturarA = 0;
+        monitorFolioServicio.NombreFacturarA = null;
+
+        if (listaCliente != null) {
+            if (!listaFacturarA.Count().Equals(0)) {
+
+                var selectedFacturarA = listaFacturarA
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedFacturarA != null)
+                {
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    var selectedId = selectedFacturarA.Id;
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    monitorFolioServicio.IdFacturarA = selectedFacturarA.Id;
+                    monitorFolioServicio.NombreFacturarA = selectedFacturarA.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    async Task OnLoadDataFacturarA(LoadDataArgs args) {
+
+        listaFacturarA = await _clienteService.GetClientesConincidencia(args.Filter);
+
+        //////Console.WriteLine("->  OnLoadDataCliente _result : " + JsonSerializer.Serialize(listaCliente));
+
+        if (listaFacturarA.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Folio Servicio", Detail = "No se encontró el Facturar A solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    public async Task ConfirmarServicio(MonitorFolioServicio monitorFolioServicio) {
+
+        string _mensaje = String.Empty;
+        bool _accionConfirmar = false;
+
+        if (monitorFolioServicio != null) {
+
+            if (!monitorFolioServicio.IdFolioServicio.Equals(0)) 
+            {
+
+                if (monitorFolioServicio.EstadoFolioServicio.Equals(EstadoFolioServicio.Pendiente)) {
+
+                    _accionConfirmar = true;
+
+                    var result = await DialogServiceConfirm.Confirm("Desea Confirmar el Servicio?", "Servicio " + monitorFolioServicio.Folio.ToString(), new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                    bool _confirmar = result.HasValue ? (bool)result : false;
+
+                    if (_confirmar) {
+
+                        var _result = await _folioServicioService.Confirmar(monitorFolioServicio.IdFolioServicio);
+
+                        if (_result.Success) {
+
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "El Servicio, se confirmó correctamente", Detail = _mensaje, Duration = 4000 });
+                            
+
+                        } else {
+
+                            _mensaje = _result.MensajeRespuesta;
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Confirmar Servicio", Detail = _mensaje, Duration = 4000 });
+
+                        }
+
+                    } 
+
+                } else {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Confirmar Servicio", Detail = "El Servicio se encuentra actualmente confirmado", Duration = 4000 });
+
+                }
+
+            } 
+
+        }
+
+
+    }
+
+    public async Task OpenModalRegistroSolicitudTraslado()
+    {
+
+        List<RelacionInventarioServicio> _listaRelacionInventarioServicio = new List<RelacionInventarioServicio>();
+
+        _listaRelacionInventarioServicio = listaRelacionInventarioServicioSelected;
+
+        await DialogService.OpenAsync<VistaModalRegistroSolictudTraslado>($"Solicitud Traslado",
+               new Dictionary<string, object>() { { "listaRelacionInventarioServicio", _listaRelacionInventarioServicio }, 
+                {"IdReferencia", IdReferencia}, {"monitorFolioServicioSelected", monitorFolioServicio} },
+               new DialogOptions() 
+               {
+                   Resizable = true, 
+                   Draggable = true,
+                   Resize = OnResize,
+                   Drag = OnDrag,
+                   Width = "929px", 
+                   Height = "592px",
+                   Left = Settings != null ? Settings.Left : null, 
+                   Top = Settings != null ? Settings.Top : null
+                });
+
+            
+            await LoadStateAsync();
+
+            //selectedRelacionInventarioServicio = listaRelacionInventarioServicioSelected.Where(p => p.IdFolioServicio.Equals(monitorFolioServicio.IdFolioServicio)).ToList();
+
+            await InvokeAsync(StateHasChanged);
+
+    }
+
+    void OnDrag(System.Drawing.Point point)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog drag. Left:{point.X}, Top:{point.Y}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Left = $"{point.X}px";
+        Settings.Top = $"{point.Y}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+
+    void OnResize(System.Drawing.Size size)
+    {
+        //JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog resize. Width:{size.Width}, Height:{size.Height}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Width = $"{size.Width}px";
+        Settings.Height = $"{size.Height}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+    public DialogSettings Settings 
+    { 
+        get
+        {
+            return _settings;
+        }
+        set
+        {
+            if (_settings != value)
+            {
+                _settings = value;
+                InvokeAsync(SaveStateAsync);
+            }
+        }
+    }
+
+    async Task ObtenerDatosCredeciales() {
+
+        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "JWT Token");
+        //Console.WriteLine("Userservice:" + token);
+        if (!string.IsNullOrEmpty(token))
+        {
+           //Console.WriteLine($"INIT MAIN:" + _UsuarioTokenDTO.IdCatUsuario);
+            if (_UsuarioTokenDTO.IdCatUsuario==0)
+            {
+               //Console.WriteLine($"INIT MAIN2 ENTRO CERO");
+                //Console.WriteLine($"ENTRO MAIN VACIO");
+                _UsuarioTokenDTO = await _loginService.ObtenerdatosToken();
+
+                if (_UsuarioTokenDTO.catUsuarios.catUsuariosClientes == null || _UsuarioTokenDTO.catUsuarios.catUsuariosClientes.Count>0)
+                {
+                    strNombreUsuario = _UsuarioTokenDTO.catUsuarios.catUsuariosClientes.FirstOrDefault().catClientes.RazonSocial;
+
+                }else
+                {
+                    //strCliente = UsuarioTokenDTO.catUsuarios.catUsuariosEmpresas.FirstOrDefault().catEmpresas.RazonSocial;
+                    strNombreUsuario = "Usuario Interno ALO/INCOM";
+                }
+                //strNombreUsuario = _UsuarioTokenDTO.catUsuarios.Nombre;
+               //Console.WriteLine($"SALIO strNombreUsuario {strNombreUsuario}");
+        }
+            else
+            {
+               //Console.WriteLine($"INIT MAIN {_UsuarioTokenDTO.Nombre}");
+            }
+        }
+
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "DialogSettings");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _settings = System.Text.Json.JsonSerializer.Deserialize<DialogSettings>(result);
+        }
+
+        var resultIdReferencia = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "IdReferencia");
+        if (!string.IsNullOrEmpty(result))
+        {
+            IdReferencia = System.Text.Json.JsonSerializer.Deserialize<int>(resultIdReferencia);
+        }
+
+        var resultMonitorFolioServicio = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorFolioServicio");
+        if (!string.IsNullOrEmpty(resultMonitorFolioServicio))
+        {
+            monitorFolioServicio = System.Text.Json.JsonSerializer.Deserialize<MonitorFolioServicio>(resultMonitorFolioServicio);
+        }
+
+        var resultRelacionInventarioServicio = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "RelacionInventarioServicio");
+        if (!string.IsNullOrEmpty(resultRelacionInventarioServicio))
+        {
+            listaRelacionInventarioServicioSelected = System.Text.Json.JsonSerializer.Deserialize<List<RelacionInventarioServicio>>(resultRelacionInventarioServicio);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", System.Text.Json.JsonSerializer.Serialize<DialogSettings>(Settings));
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "IdReferencia", System.Text.Json.JsonSerializer.Serialize<int>(IdReferencia));
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorFolioServicio", System.Text.Json.JsonSerializer.Serialize<MonitorFolioServicio>(monitorFolioServicio));
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "RelacionInventarioServicio", System.Text.Json.JsonSerializer.Serialize<List<RelacionInventarioServicio>>(listaRelacionInventarioServicioSelected));
+    }
+
+    public class DialogSettings
+    {
+        public string Left { get; set; }
+        public string Top { get; set; }
+        public string Width { get; set; }
+        public string Height { get; set; }
+    }
+
+    void Cancel()
+    {
+        DialogService.Close(true);
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

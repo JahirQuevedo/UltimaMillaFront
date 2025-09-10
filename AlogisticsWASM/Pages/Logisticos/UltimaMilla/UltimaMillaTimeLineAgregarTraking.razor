@@ -1,0 +1,106 @@
+﻿@using ALOG.Modelos.Modelos.Logisticos
+@using ALOGRepositorios.Services.Logisticos
+@inject NavigationManager NavigationManager
+
+@inject NotificationService notificationService
+
+<RadzenTemplateForm Data="@TControlTerrestre" TItem="SLOTControlTerrestre" Submit="@Guardar">
+    <RadzenFieldset Text="Agregar Eventualidad" Style="border-radius: 12px; padding: 1rem;">
+        <RadzenRow>
+            
+            <RadzenLabel Text="Tipo de Evento" Component="DropDown" />
+            <RadzenDropDown @bind-Value="transporteCron.IdCatTipoEventoCron"
+                            Data="@listaTiposEventos"
+                            TextProperty="Nombre" ValueProperty="IdCatTipoEventoCron"
+                            Style="width: 100%;" Placeholder="Seleccione un evento"
+                            Name="IdCatTipoEventoCron" />
+
+            <RadzenLabel Text="Comentarios" Component="TextArea" />
+            <RadzenTextArea @bind-Value="transporteCron.Comentarios" Name="Comentarios"
+                            Style="width: 100%;" Rows="3" MaxLength="250" />
+
+            @* <RadzenLabel Text="Fecha de Registro" Component="DatePicker" />
+            <RadzenDatePicker @bind-Value="transporteCron.FechaRegistro" Name="FechaRegistro" Style="width: 100%;" ShowTime="true" /> *@
+
+            @* <RadzenLabel Text="Activo" Component="CheckBox" />
+            <RadzenCheckBox @bind-Value="transporteCron.Activo" Name="Activo" /> *@
+
+            <RadzenLabel Text="Fecha del Evento" Component="DatePicker" />
+            <RadzenDatePicker @bind-Value="transporteCron.FechaEvento" Name="FechaEvento" Style="width: 100%;" ShowTime="true" />
+
+            <RadzenLabel Text="URL Maps" Component="TextBox" />
+            <RadzenTextBox @bind-Value="transporteCron.URLMaps" Name="URLMaps" Style="width: 100%;" MaxLength="250" />
+            
+            
+
+            @*   <RadzenLabel Text="Usuario" Component="DropDown" />
+            <RadzenDropDown @bind-Value="transporteCron.IdCatUsuarios"
+                            Data="@listaUsuarios"
+                            TextProperty="Nombre" ValueProperty="IdCatUsuarios"
+                            Style="width: 100%;" Placeholder="Seleccione un usuario"
+                            Name="IdCatUsuarios" />
+
+            <RadzenLabel Text="Transporte Asignado" Component="DropDown" />
+            <RadzenDropDown @bind-Value="transporteCron.IdSLOTransporteAsignado"
+                            Data="@listaTransportes"
+                            TextProperty="Descripcion" ValueProperty="IdSLOTransporteAsignado"
+                            Style="width: 100%;" Placeholder="Seleccione transporte (opcional)"
+                            Name="IdSLOTransporteAsignado" /> *@
+
+            @* <div style="margin-top: 20px;">
+                <RadzenButton ButtonType="ButtonType.Submit" ButtonStyle="ButtonStyle.Primary" Text="Guardar" Style="margin-right:10px;" />
+                <RadzenButton ButtonType="ButtonType.Button" ButtonStyle="ButtonStyle.Light" Text="Cancelar" Click="@OnCancel" />
+            </div> *@
+           
+            <RadzenUpload @ref="uploadFiles"
+                          ChooseText="Agregar evidencia"
+                          Multiple="true"
+                          
+                          Auto="true"
+                          Change="@OnUploadChange"
+                          Style="width:40%;"
+                          InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})" />
+            
+            @if (lstCargarArchivos != null && lstCargarArchivos.Any())
+            {
+                <RadzenDataGrid @ref="documentosGrid" TItem="SLOCargarArchivo" Data="@lstCargarArchivos"
+                                ShowPagingSummary="false" AllowSorting="false" AllowFiltering="false" Responsive="true"
+                                AllowPaging="false" Style="max-height:200px; overflow-y:auto; font-size:0.85rem;">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="SLOCargarArchivo" Property="TipoDocumento" Title="Tipo" Resizable="true"/>
+                        <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Archivo" Resizable="true">
+                            <Template Context="doc">
+                                @doc.NombreArchivo (@(doc.SizeFile / 1024) KB)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Acciones" Width="80px">
+                            <Template Context="doc">
+                                <RadzenButton Icon="close"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Size="ButtonSize.Small"
+                                              Click="@(() => EliminarDocumento(doc))"/>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+                                
+            }
+            else
+            {
+                <span style="color:gray; font-size:0.85rem;margin-top:10px;">No hay documentos cargados</span>
+            }
+        </RadzenRow>
+
+        <RadzenButton Text="Guardar"
+                      Icon="save"
+                      ButtonType="ButtonType.Submit"
+                      
+                      Style="margin-top: 1rem; background-color: #4CAF50; color: white; border-radius: 8px;" />
+
+        <RadzenButton Text="Cancelar"
+                      ButtonStyle="ButtonStyle.Secondary"
+                      Icon="cancel"
+                      Click="OnCancel"
+                      Style="margin-left: 1rem; margin-top: 1rem;" />
+    </RadzenFieldset>
+</RadzenTemplateForm>

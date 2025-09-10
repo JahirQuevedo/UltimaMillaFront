@@ -1,0 +1,211 @@
+﻿@page "/AcarreosEditar/{IdEncabezado:int}/{strTipoAccion}"
+@using ALOG.Modelos.Modelos.DTLogistico
+
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOGRepositorios.Services.Login
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using AlogisticsWASM.Layout.Generics
+@using Microsoft.AspNetCore.Authorization
+@inject NotificationService NotificationService
+@inject UsuarioTokenDTO UsuarioTokenDTO
+@inject IConfiguration configuration
+
+@attribute [Authorize]
+
+@* <div class="content"> *@
+    @* <nav class="mb-3" aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/Acarreos">Acarreos</a></li>
+            <li class="breadcrumb-item active">Editar</li>
+        </ol>
+    </nav> *@
+
+    @* <div class="mb-9"> *@
+        @* <h2 class="mb-0">Orden <span>#@_objAcarreo?.IdOrden</span></h2> *@
+        @* <div class="d-sm-flex flex-between-center mt-3 mb-3">
+        <div class="d-flex">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+        <RadzenButton Click=@(args => OnClick("0")) Text="Crear" ButtonStyle="ButtonStyle.Primary" />
+        <RadzenButton Click=@(args => OnClick("1")) Text="Editar" ButtonStyle="ButtonStyle.Primary" />
+        <RadzenButton Click=@(args => OnClick("2")) Text="Cancelar" ButtonStyle="ButtonStyle.Secondary" />
+        </RadzenStack>
+
+        </div>
+
+        </div>  *@
+
+
+
+
+        @if (isLoading)
+        {
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Wrap="FlexWrap.Wrap" class="rz-m-12" Gap="2rem">
+
+                <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large">
+                    <Template>Wait</Template>
+                </RadzenProgressBarCircular>
+            </RadzenStack>
+        }
+        else
+        {
+            if (_objAcarreo != null)
+            {
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Wrap="FlexWrap.Wrap" class="rz-m" Gap="2rem">
+                    <RadzenTemplateForm Data="@_objAcarreo" Submit="@((DtAcarreos args) => { Submit(args); })">
+                        <RadzenRow Gap="1rem" class="rz-p-0 rz-p-lg-4">
+                            <RadzenColumn Size="12" SizeMD="12">
+                                <RadzenStack>
+                                    <RadzenFieldset Text="Ordenes de Acarreo" AllowCollapse="false" Style="width: 700px; margin: 0px auto;">
+                                        <RadzenStack Gap="1rem">
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Fecha Orden" Component="Orden" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenText Style="width: 100%;"> @_objAcarreo.IdOrden.ToString() </RadzenText>
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Fecha Orden" Component="FechaSolicitud" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenDatePicker Style="width: 100%;" Disabled="@_esDeshabilitadoFechaSolicitud" Name="FechaSolicitud" @bind-Value="_objAcarreo.FechaRegistro" DateFormat="dd/MM/yyyy" />
+                                                </RadzenColumn>
+                                            </RadzenRow>
+
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Servicio" Component="NServicio" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    @if (_objAcarreo.catServicios != null)
+                                                    {
+                                                        <RadzenTextBox Style="width: 100%;" Disabled="@_esDeshabilitadoServicio" @bind-Value="_objAcarreo.catServicios.Nombre" Name="NServicio" />
+                                                    }
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Contenedor" Component="NContenedor" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenTextBox Style="width: 100%;" Disabled="@_esDeshabilitadoContenedor" @bind-Value="_objAcarreo.Contenedor" Name="NContenedor" />
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Cliente" Component="CatClienteId2" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    @if (_objAcarreo.catClientes != null)
+                                                    {
+                                                        @if (!_esDeshabilitadoCliente)
+                                                        {
+                                                            <RadzenAutoComplete @bind-Value=_objAcarreo.catClientes.RazonSocial Data=@respListarCoincidencias TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                                                                ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" Change=@OnClienteChange LoadData=@OnLoadCliente Style="width: 100%" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})" Name="CatClienteId2" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <RadzenText Style="width: 100%;"> @_objAcarreo.catClientes.RazonSocial </RadzenText>
+                                                        }
+                                                    }
+                                                </RadzenColumn>
+                                            </RadzenRow>
+
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Proveedor" Component="ProveedorID" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+
+                                                    @if (!_esDeshabilitadoProveedor)
+
+                                                    {
+                                                        <RadzenAutoComplete @bind-Value=@strPproveedor Data=@respListarCoincidenciasProv TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" Change=@AutoCompleteOnProveedorChange LoadData=@AutoCompleteOnLoadProveedor
+                                                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                                                                            Name="CatProveedor" Style="width: 20rem" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @* <RadzenTextBox Name="txtProveedor" aria-label="gap" @bind-Value="objUltimaMillaEnc.catProveedores.RazonSocial" Disabled="true" Style="Width:30rem;font-size:10rem" /> *@
+
+                                                        <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">@_objAcarreo.catProveedores.RazonSocial</RadzenText>
+                                                    }
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Fecha Entrega" Component="FechaEntrega" />
+                                                </RadzenColumn>
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    <RadzenDatePicker Style="width: 100%;" Name="FechaEntrega" Disabled="@_esDeshabilitadoFechaEntrega" @bind-Value="_objAcarreo.Fecha" DateFormat="dd/MM/yyyy" />
+                                                </RadzenColumn>
+                                            </RadzenRow>
+                                            <RadzenRow AlignItems="AlignItems.Center">
+                                                <RadzenColumn Size="12" SizeMD="4">
+                                                    <RadzenLabel Text="Estado" Component="CatEstadoId" />
+                                                </RadzenColumn>
+
+                                                <RadzenColumn Size="12" SizeMD="8">
+                                                    @if (!_esDeshabilitadoEstado)
+                                                    {
+                                                        <RadzenDropDown @bind-Value="_objAcarreo.IdCatTipoEstado"  Placeholder="Abierto" Data="@objcatTipoEstados" Style="width: 100%;" TextProperty="Nombre" ValueProperty="IdCatTipoEstados" Name="CatEstadoId">
+                                                        </RadzenDropDown>
+                                                    }
+                                                    else
+                                                    {
+                                                        <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle(objcatTipoEstados.FirstOrDefault( x =>x.IdCatTipoEstados==_objAcarreo.IdCatTipoEstado).Nombre))" Shade="Shade.Darker" IsPill="true" Text="@objUtileriasPage.GetTipoEstado(_objAcarreo.IdCatTipoEstado)" class="rz-ms-2" />
+                                                    }
+                                                </RadzenColumn>
+                                            </RadzenRow>
+
+
+                                        </RadzenStack>
+                                    </RadzenFieldset>
+
+                                </RadzenStack>
+                            </RadzenColumn>
+
+                        </RadzenRow>
+
+                        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" class="rz-mt-8 rz-mb-4">
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="save" Text="Save" />
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="Cancel" Click="@Cancel" />
+
+                        </RadzenStack>
+                    </RadzenTemplateForm>
+                    </RadzenStack>
+                
+            }
+        }
+
+
+
+
+    @* </div> *@
+
+@* </div> *@
+@* <ModalErrores Errores="@_errores"/> *@
+
+
+@code {
+
+    // #region Modal
+    // async Task OpenModal(int pIdOrden)
+    // {
+    //     var parameters = new Dictionary<string, object> { { "paramIdOrden", pIdOrden } };
+    //     parameters.Add("paramstrTipoAccion", "C");
+    //     var options = new DialogOptions
+    //         {
+    //             Width = "90%", // Cambia el ancho del modal
+    //             Height = "90%" // Cambia la altura del modal
+    //         };
+    //     await DialogService.OpenAsync<ReferenciasDetallePage>("Detalle Referencias", parameters, options);
+    // }
+    // #endregion Modal
+
+}

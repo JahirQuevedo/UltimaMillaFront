@@ -1,0 +1,105 @@
+﻿@using ALOG.Modelos.Modelos.DTO.Respuestas
+
+@using AlogisticsWASM.Layout.Utilerias
+<RadzenDataGrid @ref="grid2" AllowFiltering="true" AllowPaging="true" PageSize="25" AllowSorting="true" RowRender="@RowRender" ExpandMode="@expandMode"
+                Data="@paramReferencias" TItem="RespObtenerReferenciasDTO" Render="OnCustomersDataGridRender">
+    <Template Context="referencias">
+
+        <RadzenBadge BadgeStyle="BadgeStyle.Base" Text="CONTENEDOR" />
+        <GridContenedoresCmp paramReferencia="@referencias"></GridContenedoresCmp>
+    </Template>
+    <Columns>
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.IdOrden)" Title="Orden" Width="50px" />
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.IdReferencia)" Title="Id.Ref." Width="50px" />
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.Ticket)" Title="Ticket" Width="50px" />
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.Aduana)" Title="Aduana" Width="50px" />
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.FechaSolicitud)" Title="F.Solicitud" FormatString="{0:d}" Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.ReferenciaALO)" Title="Ref.ALO" Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.Transporte_RazonSocial)" Title="Transporte" Width="100px" />
+        @* <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.EstadoReferencia)" Title="Estado" Width="100px" /> *@
+        <RadzenDataGridColumn Property="@nameof(RespObtenerReferenciasDTO.EstadoReferencia)" Filterable="false" Title="Estado" Width="80px">
+            <Template Context="data">
+                <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle(data.EstadoReferencia))" Shade="Shade.Darker" IsPill="true" Text="@data.EstadoReferencia" class="rz-ms-2" />
+            </Template>
+            <HeaderTemplate>
+                <span class="custom-header">Estado</span>
+            </HeaderTemplate>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Context="Referencia" Width="40px" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+            <Template Context="Referencia">
+                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Filled" Size="ButtonSize.Small" Click="@(args => VerDetalles(Referencia))" @onclick:stopPropagation="true">
+                </RadzenButton>
+                @* <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(order))" @onclick:stopPropagation="true">
+                </RadzenButton> *@
+            </Template>
+            @* <EditTemplate Context="order">
+            <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(order))" aria-label="Save">
+            </RadzenButton>
+            <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@((args) => CancelEdit(order))" aria-label="Cancel">
+            </RadzenButton>
+            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(order))" aria-label="Delete">
+            </RadzenButton>
+            </EditTemplate> *@
+        </RadzenDataGridColumn>
+        @* <RadzenDataGridColumn Property="@nameof(Customer.ContactName)" Title="ContactName" Width="200px" />
+        <RadzenDataGridColumn Property="@nameof(Customer.ContactTitle)" Title="ContactTitle" Width="200px" />
+        <RadzenDataGridColumn Property="@nameof(Customer.City)" Title="City" Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(Customer.Country)" Title="Country" Width="100px" /> *@
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+
+    [Parameter]
+    public IEnumerable<RespObtenerReferenciasDTO> paramReferencias { get; set; }
+    [Parameter]
+    public bool activaEditar { get; set; }
+    [Parameter]
+    public bool activaDetalleContenedor { get; set; }
+    [Parameter]
+    public bool activaDetalleServicio { get; set; }
+
+    [Inject] private NavigationManager _navigationManager { get; set; }
+
+    private UtileriasPage objUtileriasPage = new UtileriasPage();
+    IEnumerable<RespObtenerReferenciasDTO> _IEReferencias2;
+    RadzenDataGrid<RespObtenerReferenciasDTO> grid2;
+
+    void OnCustomersDataGridRender(DataGridRenderEventArgs<RespObtenerReferenciasDTO> args)
+    {
+        if (args.FirstRender)
+        {
+            InvokeAsync(() => args.Grid.ExpandRow(args.Grid.View.Where(c => c.peticionesContenedores.Any()).FirstOrDefault()));
+        }
+    }
+    DataGridExpandMode expandMode = DataGridExpandMode.Single;
+    bool? allRowsExpanded;
+
+    async Task ToggleRowsExpand(bool? value)
+    {
+        allRowsExpanded = value;
+
+        if (value == true)
+        {
+            await grid2.ExpandRows(grid2.PagedView);
+        }
+        else if (value == false)
+        {
+            await grid2.CollapseRows(grid2.PagedView);
+        }
+    }
+
+
+
+    void RowRender(RowRenderEventArgs<RespObtenerReferenciasDTO> args)
+    {
+        args.Expandable = args.Data.peticionesContenedores.Any();
+    }
+
+    private void VerDetalles(RespObtenerReferenciasDTO referencia)
+    {
+        //ObtenerReferenciaSeleccionada(referencia);
+        _navigationManager.NavigateTo($"/referenciasdet/{referencia.IdOrden}/C");
+    }
+
+}

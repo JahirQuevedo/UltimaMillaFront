@@ -1,0 +1,42 @@
+﻿@using ALOG.Modelos.Modelos.Vacios
+
+<script>
+    function downloadFile(fileName, fileUrl) {
+        var link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+<RadzenDataGrid @ref="_gridDocumentos"
+                Data="@_documentos"
+                ColumnWidth="150px"
+                AllowPaging="false"
+                AllowFiltering="false"
+                AllowSorting="false"
+                ShowPagingSummary="false"
+                ShowPagination="false">
+   <Columns>
+
+        <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Nombre documento">
+            <Template Context="documento">@documento?.NombreDocumento</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Tipo documento">
+            <Template Context="documento">@documento?.CatDocumento?.Nombre</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Fecha registro">
+            <Template Context="documento">@documento?.FechaRegistro.ToString("d/M/yyyy")</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Acciones">
+            <Template Context="doc">
+                <RadzenButton Icon="picture_as_pdf" Text="Ver" Click="@(args => AbrirDocumento(doc))" Style="margin-right: 10px;" />
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>

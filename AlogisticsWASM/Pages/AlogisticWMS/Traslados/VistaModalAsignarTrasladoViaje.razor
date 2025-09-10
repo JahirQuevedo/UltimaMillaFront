@@ -1,0 +1,214 @@
+﻿@page "/vistaModalAsignarTrasladoViaje"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+
+@inject DialogService BusyDialogService
+@inject DialogService DialogService
+@inject DialogService DialogServiceConfirm
+
+@attribute [Authorize]
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+    <RadzenStack>
+        <RadzenDataGrid class="rz-p-4"
+                    @ref="gridTraslados"
+                    Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" PagerHorizontalAlign="HorizontalAlign.Left"
+                    FilterMode="FilterMode.Simple"
+                    @bind-Value=@selectedSolicitudTraslado
+                    SelectionMode="DataGridSelectionMode.Multiple"
+                    AllowFiltering="true" AllowPaging="true" AllowSorting="false" 
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    Data="@(listaMonitorSolicitudTraslado)" LoadData="@ObtenerDatos"  
+                    IsLoading=@isLoading ColumnWidth="200px" Density="Density.Compact" AllowAlternatingRows="false">
+            <Columns>
+                <RadzenDataGridColumn Width="35px" Sortable="false" Filterable="false"  Frozen="true">
+                    <HeaderTemplate>
+                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                        Value="@(selectedSolicitudTraslado == null || selectedSolicitudTraslado?.Any() != true ? false : !listaMonitorSolicitudTraslado.All(i => selectedSolicitudTraslado.Contains(i)) ? null : listaMonitorSolicitudTraslado.Any(i => selectedSolicitudTraslado.Contains(i)))"
+                        Change="@(args => selectedSolicitudTraslado = args == true ? listaMonitorSolicitudTraslado.ToList() : null)" />
+                    </HeaderTemplate>
+                    <Template Context="data">
+                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedSolicitudTraslado != null && selectedSolicitudTraslado.Contains(data))" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                            TValue="bool" Change=@(args => { if(!allowRowSelectOnRowClick) { gridTraslados.SelectRow(data); }}) />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.FolioTraslado)" Title="Folio Traslado" Frozen="true" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.FechaSolicitudTraslado)" Title="Fecha Traslado" />
+                @* <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.TipoMercancia)" Title="Tipo Mercancía" /> *@
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.ManiobristaNombreCortoOrigen)" Title="Terminal Origen" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.ManiobristaNombreCortoDestino)" Title="Terminal Destino" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.Cliente)" Title="Cliente" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.EstadoTraslado)" Title="Estatus" Filterable="false" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.DescripcionFolioServicio)" Title="Servicio" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.EstadoFolioServicio)" Title="Estatus Servicio" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.Cantidad)" Title="Cantidad" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.Peso)" Title="Peso" />
+                <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.TipoOperacion)" Title="Tipo Operación" />
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Click=@(() => ConfirmarSolicitudTrasaldoSelected()) Variant="Variant.Flat" Text="Confirmar" Style="width: 120px" />
+    </RadzenStack>
+</RadzenStack>
+
+
+@code {
+
+    [Parameter] public MonitorCtrlTransporte monitorCtrlTransporteSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    List<MonitorSolicitudTraslado> listaMonitorSolicitudTraslado;
+
+    IList<MonitorSolicitudTraslado> selectedSolicitudTraslado;
+
+    MonitorSolicitudTraslado monitorSolicitudTraslado;
+
+    RadzenDataGrid<MonitorSolicitudTraslado> gridTraslados;
+
+    bool allowRowSelectOnRowClick = true;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    [Inject] private ISolicitudTrasladoService? _solicitudTrasladoService { get; set; }
+
+    [Inject] private IControlTransporteService? _controlTrasporteService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+
+    }
+
+    private ResultBase ValidarDatosSolicitudTrasladoSelected(List<MonitorSolicitudTraslado> listaMonitorSolicitudTraslado) {
+        
+        var _result = new ResultBase();
+
+        foreach(var item in listaMonitorSolicitudTraslado) {
+
+            if (monitorCtrlTransporteSelected.IdManiobristaOrigen != item.IdManiobristaOrigen) {
+
+                _result.MensajeRespuesta = "La Terminal Origen debe ser igual tanto en el Viaje como en el Traslado seleccionado.";
+                return _result;
+
+            }
+
+            if (monitorCtrlTransporteSelected.IdManiobristaDestino != item.IdManiobristaDestino) {
+
+                _result.MensajeRespuesta = "La Terminal Destino debe ser igual tanto en el Viaje como en el Traslado seleccionado.";
+                return _result;
+
+            }
+
+            
+
+        }
+
+        return _result;    
+        
+    }
+
+    private async void ConfirmarSolicitudTrasaldoSelected() {
+
+        List<MonitorSolicitudTraslado> listaMonitorTarjaSelected = selectedSolicitudTraslado.ToList();
+
+        ////Console.WriteLine("-> ConfirmarSolicitudTrasaldoSelected : " + JsonSerializer.Serialize(selectedSolicitudTraslado));
+
+        var _resultBase = new ResultBase();
+
+        _resultBase = ValidarDatosSolicitudTrasladoSelected(listaMonitorTarjaSelected);
+
+
+        if (_resultBase.Success) {
+
+            monitorCtrlTransporteSelected.CRUDAction = ECRUDAction.Update;
+
+            monitorCtrlTransporteSelected.listaSolicitudTraslado = listaMonitorTarjaSelected;
+
+            var _result = await _controlTrasporteService.GuardarRelacionSolicitudTraslado(monitorCtrlTransporteSelected);
+
+            if (_result.Success) {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, 
+                Summary = "Confirmar Traslado", Detail = "Traslados asignado correctamente: " + _result.MensajeRespuesta, Duration = 4000 });
+
+                DialogService.Close();
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+                Summary = "Confirmar Traslado", Detail = "Error: " + _result.MensajeRespuesta, Duration = 4000 });
+
+            }
+ 
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+            Summary = "Confirmar Traslado", Detail = _resultBase.MensajeRespuesta, Duration = 4000 });
+        }
+
+        void Cancel()
+        {
+            DialogService.Close(true);
+        }
+
+    
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaSolicitudTraslado> _consultaSolicitudTraslado = new ConsultaCatalogoBase<ConsultaSolicitudTraslado>();
+        _consultaSolicitudTraslado.Entidad = new ConsultaSolicitudTraslado();
+        _consultaSolicitudTraslado.Entidad.EstadoSolicitudTraslado = EstadoTraslado.Programado;
+
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+    
+        _consultaSolicitudTraslado.NumeroDePagina = numeroDePagina;
+        _consultaSolicitudTraslado.RegistrosPorPagina = registrosPorPagina;
+
+        var _result = await _solicitudTrasladoService!.ObtenerListaPaginada(_consultaSolicitudTraslado);
+
+        if (_result.Success) {
+
+            listaMonitorSolicitudTraslado = _result.Data;
+
+            totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+            listaMonitorSolicitudTraslado = _result.Data;
+
+            //selectedSolicitudTraslado = listaMonitorSolicitudTraslado.Take(1).ToList();
+
+        }
+
+        isLoading = false;
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message); 
+    }
+
+
+}

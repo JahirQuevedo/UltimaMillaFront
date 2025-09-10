@@ -1,0 +1,188 @@
+﻿@page "/vistaModalBuscarReferencia/{IdReferencia}"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services;
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject NavigationManager navigationManager
+@inject Radzen.DialogService dialogService
+@attribute [Authorize]
+@* <style>
+    .rz-column-title {
+
+        background-color: rgb(255, 204, 170);
+        padding: .5em .5em .5em .5em;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+    } 
+</style> *@
+
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+    <RadzenStack>
+    <RadzenDataGrid class="rz-p-4"
+                Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                PagerHorizontalAlign="HorizontalAlign.Left"
+                @bind-Value=@selectedReferencia
+                style="border-radius:7px;"
+                FilterMode="FilterMode.Simple"
+                AllowFiltering="true" AllowPaging="true" AllowSorting="false" 
+                FilterPopupRenderMode="PopupRenderMode.OnDemand" 
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                Data="@(listaMonitorReferencias)" LoadData="@ObtenerDatos"  
+                IsLoading=@isLoading ColumnWidth="200px" Density="Density.Compact" AllowAlternatingRows="false">
+        <Columns>
+            <RadzenDataGridColumn Property="@nameof(MonitorReferencia.Folio)" Title="Folio" Filterable="true" />
+            <RadzenDataGridColumn Property="@nameof(MonitorReferencia.TipoOperacion)" Title="Operación" FormatString="{0:P}" />
+            @* <RadzenDataGridColumn Property="@nameof(MonitorReferencia.EstadoReferencia)" Title="Estado" FormatString="{0:P}" /> *@
+            <RadzenDataGridColumn Title="Estado" Width="100px" Filterable="true" Property="@nameof(MonitorReferencia.EstadoReferencia)">
+                <Template Context="monitorReferencia">
+                    <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleEstadoReferencia(monitorReferencia.EstadoReferencia)" Text="@(monitorReferencia.EstadoReferencia.ToString())" />
+                </Template>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn Property="@nameof(MonitorReferencia.Cliente)" Title="Cliente" />
+            <RadzenDataGridColumn Property="@nameof(MonitorReferencia.Mercancias)" Title="Mercancias" />
+            <RadzenDataGridColumn Title="Fecha Captura" Property="@nameof(MonitorReferencia.FechaAlta)" Filterable="false">
+                <Template Context="monitorReferencia">
+                    @(monitorReferencia.FechaAlta == DateTime.MinValue ? "" : monitorReferencia.FechaAlta.ToString())
+                </Template>
+            </RadzenDataGridColumn>
+        </Columns>
+    </RadzenDataGrid>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Click=@(() => ObtenerReferenciaSelected()) Variant="Variant.Flat" Text="Seleccionar" Style="width: 120px" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+
+    [Parameter] public int IdReferencia { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    MonitorReferencia monitorReferencia;
+
+    ConsultaReferencia consultaReferencia;
+
+    List<MonitorReferencia> listaMonitorReferencias;
+
+    IList<MonitorReferencia> selectedReferencia;
+
+    int? valFolioReferencia;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    [Inject] private IReferenciaWMSService? _referenciaService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        monitorReferencia = new MonitorReferencia();
+
+        consultaReferencia = new ConsultaReferencia();
+
+        @* order = dbContext.Orders.Where(o => o.OrderID == OrderID)
+                          .Include("Customer")
+                          .Include("Employee").FirstOrDefault();
+
+        orderDetails = dbContext.OrderDetails.Where(o => o.OrderID == OrderID).Include("Order").ToList(); *@
+    }
+
+    async void OnSubmitFiltro(ConsultaReferencia consultaReferencia)
+    {
+        
+    }
+
+    private void ObtenerReferenciaSelected() {
+
+        var _referencia = selectedReferencia.FirstOrDefault();
+        navigationManager.NavigateTo($"/referencia-crear/{_referencia.IdReferencia}");
+        dialogService.Close(true);
+
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaReferencia> _consultaReferencia = new ConsultaCatalogoBase<ConsultaReferencia>();
+        _consultaReferencia.Entidad = new ConsultaReferencia();
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+            if (!args.Filters.Count().Equals(0)) {
+                var _filterFolio = args.Filters.Where(p => p.Property.Equals("Folio")).FirstOrDefault();
+                if (_filterFolio != null) {
+                    _consultaReferencia.Entidad.Folio = String.IsNullOrEmpty(_filterFolio.FilterValue.ToString()) ? null : _filterFolio.FilterValue.ToString();
+                }
+
+                var _filterEdoReferencia = args.Filters.Where(p => p.Property.Equals("EstadoReferencia")).FirstOrDefault();
+                if (_filterEdoReferencia != null) {
+                    _consultaReferencia.Entidad.Estado = (EstadoReferencia)(Convert.ToInt32(_filterEdoReferencia.FilterValue));
+                }
+
+                var _filterTipoOperacion = args.Filters.Where(p => p.Property.Equals("TipoOperacion")).FirstOrDefault();
+                if (_filterTipoOperacion != null) {
+                    _consultaReferencia.Entidad.TipoOperacionAduanera = (TipoOperacionAduanera)(Convert.ToInt32(_filterTipoOperacion.FilterValue));
+                }
+
+                var _filterCliente = args.Filters.Where(p => p.Property.Equals("Cliente")).FirstOrDefault();
+                if (_filterCliente != null) {
+                    _consultaReferencia.Entidad.RazonSocialCliente = Convert.ToString(_filterCliente.FilterValue);
+                }
+
+                var _filterMercancia = args.Filters.Where(p => p.Property.Equals("Mercancias")).FirstOrDefault();
+                if (_filterMercancia != null) {
+                    _consultaReferencia.Entidad.Mercancias = Convert.ToString(_filterMercancia.FilterValue);
+                }
+            }
+        }
+    
+        _consultaReferencia.NumeroDePagina = numeroDePagina;
+        _consultaReferencia.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorReferencias = await _referenciaService!.ObtenerListaPaginada(_consultaReferencia);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorReferencias.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listaMonitorReferencias = _listMonitorReferencias.Data;
+
+        selectedReferencia = listaMonitorReferencias.Take(1).ToList();
+
+        //selectedViaje = listaMonitorReferencias.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+    private BadgeStyle BadgeStyleEstadoReferencia(EstadoReferencia estadoReferencia) {
+
+        switch(estadoReferencia) {
+
+            case EstadoReferencia.Programado : return BadgeStyle.Info;
+            case EstadoReferencia.Cerrado : return BadgeStyle.Success;
+            case EstadoReferencia.Preliminar: return BadgeStyle.Warning;
+            case EstadoReferencia.Cancelado : return BadgeStyle.Danger;
+            case EstadoReferencia.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+}

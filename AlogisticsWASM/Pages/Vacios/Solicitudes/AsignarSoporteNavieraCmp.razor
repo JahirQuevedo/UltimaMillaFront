@@ -1,0 +1,64 @@
+﻿@using ALOG.Modelos.Modelos.DTO.Vacios
+@using ALOGRepositorios.Helpers
+@inject IJSRuntime JS
+
+
+<RadzenCard Variant="Variant.Outlined" class="rz-my-4">
+    <RadzenRow>
+        <RadzenColumn Size="4">
+            <RadzenUpload @ref="_uploadSoporte"
+                          Change="@((args) => CargarSoporteAsync(args))"
+                          Disabled="DisabledButton"
+                          ChooseText="Cargar soporte naviera"
+                          Accept="application/pdf"
+                          Multiple="false"
+                          Auto="true" />
+        </RadzenColumn>        
+        <RadzenColumn Size="8">
+            @if(_estaCargando){
+                <RadzenStack AlignItems="AlignItems.Center" Gap="2rem">
+                    <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Small">
+                        <Template>Wait</Template>
+                    </RadzenProgressBarCircular>
+                </RadzenStack>
+            }
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenCard>
+
+<RadzenDataGrid @ref="_grid"                
+                SelectionMode="DataGridSelectionMode.Single"
+                @bind-Value=@_contenedoresSeleccionados
+                AllowRowSelectOnRowClick="true"
+                Data="@_contenedoresCopia"
+                AllowColumnResize="true"
+                AllowFiltering="false"
+                AllowSorting="true"
+                AllowPaging="true"
+                ColumnWidth="200px"
+                PageSize="4">
+    <Columns>
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedoresClienteExternoDTO.Contenedor)" Title="Contenedor" Width="150px" />
+        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Nombre buque">
+            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().NombreBuque</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC Naviera" Width="150px">
+            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().NavieraRFC</Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Documento PDF">
+            <Template Context="contenedor">
+                @{var base64 = contenedor.Servicios.FirstOrDefault()?.SoporteNaviera?.Base64;}
+                @{var nombreArchivo = contenedor.Servicios.FirstOrDefault()?.SoporteNaviera?.Nombre;}
+                @if (!string.IsNullOrWhiteSpace(base64)) {
+                    <a href="javascript:void(0);" style="text-decoration: none;" title="Ver documento @nombreArchivo" @onclick="() => IJsHelper.AbrirDocumentoEnNuevaPestana(JS, base64)">
+                        @nombreArchivo
+                    </a>
+                }
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+<RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" class="rz-mt-8 rz-mb-4">
+    <RadzenButton Click=@(args => Aceptar()) Text="Aceptar" ButtonStyle="ButtonStyle.Primary" />
+    @* <RadzenButton Click=@(args => Cancelar()) Text="Cancelar" ButtonStyle="ButtonStyle.Secondary" /> *@
+</RadzenStack>

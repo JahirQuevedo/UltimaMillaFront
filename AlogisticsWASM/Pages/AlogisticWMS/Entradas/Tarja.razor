@@ -1,0 +1,928 @@
+﻿@page "/tarja-crear/{DataReferencia}"
+@page "/tarja-crear"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime;
+
+@inject NavigationManager navigationManager
+@inject NotificationService NotificationService
+@inject DialogService BusyDialogService
+@inject DialogService DialogServiceConfirm
+@inject DialogService DialogServiceRegistroPartida
+@inject DialogService DialogServiceBuscarTarja
+
+<script src="resources/js/general.js"></script>
+
+<style>
+
+    .rz-fileupload-files {
+        display: none !important;
+    }
+
+    .rz-grid-table {
+        width: unset;
+    }
+    .rz-button {
+        text-transform: none !important;
+    }
+
+</style>
+
+<div class="content mt-10">
+    <RadzenTemplateForm Data=@tarjaSelected Submit="@((MonitorTarja args) => { OnSubmit(args); })">
+    <div class="row g-3 flex-between-end mb-3">
+        <div class="col-4">
+            <h2 class="mb-2">Tarja</h2>
+            @* <h5 class="text-700 fw-semi-bold">Orders placed across your store</h5> *@
+        </div>
+        <div class="col-8 text-end">
+            <RadzenButton Click=@(args => EliminarTarja()) Text="Eliminar" Icon="delete" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+            <RadzenButton Click=@(() => OpenBuscarTarja()) Text="Buscar Tarja..." Icon="search" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />
+            @* <RadzenButton Click=@(args => OnClick("Imprimir button")) Text="Imprimir" Icon="print" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />
+            <RadzenButton Click=@(args => OnClick("Confirmar Tarja button")) Text="Confirmar" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" /> *@
+            @* <RadzenButton Click=@(args => OnClick("Cargar Inventario button")) Text="Cargar Inventario" Icon="upload_file" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" /> *@
+            <RadzenButton Text="Guardar" Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit" class="rz-background-color-danger" />
+        </div>
+    </div>
+    <div class="row g-3 flex-between-end mb-3">
+        <div class="col-12">
+            <RadzenStack Gap="0">
+                <RadzenRow Visible=@visibleTarjaFolioReferencia>
+                    <RadzenColumn Size="12" SizeMD="12">
+                        <RadzenText TextStyle="TextStyle.H5" class="rz-display-flex  rz-m-0" Style="color: var(--rz-danger);">
+                            REFERENCIA:&nbsp;<b>@(FolioReferencia)</b>
+                        </RadzenText>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenStack>
+             <div class="row flex-between-end mb-3">
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Folio" Component="TARJA_FOLIO" />
+                    <RadzenTextBox Style="width: 100%;" @bind-Value="tarjaSelected.ClaveReferencia" Disabled="true" Name="TARJA_FOLIO"/>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Fecha Ingreso" Component="TARJA_FECHA_INGRESO" />
+                    <RadzenDatePicker @bind-Value="valFechaIngreso" Disabled="true"
+                    ParseInput="@ParseDate" Name="TARJA_FECHA_INGRESO" Style="width: 100%;" />
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Estado" Component="TARJA_ESTATUS" />
+                    <RadzenDropDown @bind-Value=@valEstadoTarja ValueProperty="Key" 
+                                                Placeholder="Estado de la Tarja"
+                                                TextProperty="Value" Data=@listEstadoTarja
+                                                Style="width: 100%;"
+                                                Disabled=true
+                                                Name="TARJA_ESTATUS" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Tipo Servicio" Component="TARJA_TIPO_SERVICIO" />
+                    <RadzenDropDown @bind-Value=@valTipoServicio ValueProperty="Key" 
+                                                Placeholder="Tipo de Servicio"
+                                                Style="width: 100%;"
+                                                TextProperty="Value" Data=@listTipoServicio
+                                                Disabled=@disabledTipoServicio
+                                                Name="TARJA_TIPO_SERVICIO" />
+                </div>
+                <div class="col-sm-6 col-md-8">
+                    <RadzenLabel Text="Observaciones" Component="TARJA_OBSERVACIONES"/>
+                                        <RadzenTextArea Style="width: 100%" aria-label="TextArea" @bind-Value="tarjaSelected.Observaciones"
+                                        Name="TARJA_OBSERVACIONES" />
+                </div>
+            </div>
+            <div class="row">   
+                <div class="col-sm-6 col-md-4">
+                    <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Carga Masiva</RadzenText>
+                        <RadzenUpload Icon="upload" ChooseText=""  Multiple="false" Change=@OnClientChange Style="width: 100%"
+                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "select file" }})" 
+                            Disabled=@disabledBtnCargaMasiva />
+                </div>
+                <div class="col-sm-6 col-md-8 align-content-center text-end">
+                    <RadzenButton Click=@(args => OnImprimirTarjaRecepcion(tarjaSelected)) Text="Exportar" Icon="print" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />
+                    <RadzenButton Click=@(args => OnConfirmarTarjaRecepcion(tarjaSelected)) Text="Confirmar" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />
+                </div>
+            </div>
+        </div>  
+    </div>
+    @* <hr style="border: none; background-color: var(--rz-text-disabled-color); height: 1px; margin: 1rem 0;" /> *@
+    <div class="row g-3 flex-between-end">
+        <div class="col-12">
+            <RadzenTabs SelectedIndex="0">
+                    <Tabs>
+                        <RadzenTabsItem Text="Entradas">
+                            <RadzenStack>
+                                <div class="row g-3 flex-between-end">
+                                    <div class="col-12">                      
+                                        <RadzenButton Click=@(args => OnClick("Crear Partida button")) 
+                                            Disabled=@disabledBtnCrearPartida
+                                            Text="Crear Partida" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />      
+                                        <RadzenButton Click=@(args => OnClick("Copiar Partida button")) 
+                                            Disabled=@disabledBtnCrearPartida
+                                            Text="Copiar Partida" Icon="copy_all" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />  
+                                        <RadzenButton Click=@(args => OnClick("Mover Partida button")) 
+                                            Disabled=@disabledBtnCrearPartida
+                                            Text="Mover Partida" Icon="move_group" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />                                   
+                                    </div>  
+                                </div>
+                                <RadzenRow Visible=@visibleGridPartida>
+                                    <RadzenColumn Size="12" SizeMD="12">
+                                        <RadzenDataGrid style="border-radius:7px; height: 450px;" @ref="gridPartidas" IsLoading=@isLoading 
+                                            Count="@totalRegistros" Data="@listMonitorPartidas" LoadData="@ObtenerDatosPartidas" 
+                                            AllowColumnResize="true"
+                                            AllowSorting="false" AllowFiltering="true" AllowPaging="true" 
+                                            PageSize="@registrosPorPagina"
+                                            SelectionMode="DataGridSelectionMode.Single"
+                                            @bind-Value=@selectedPartida
+                                            PagerHorizontalAlign="HorizontalAlign.Left"
+                                            ShowPagingSummary="true"
+                                            FilterMode="FilterMode.Simple"
+                                            FilterCaseSensitivity="@filterCaseSensitivity" LogicalFilterOperator="@logicalFilterOperator"
+                                            ColumnWidth="300px">
+                                            <Columns>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.NumeroPartida)" Filterable="false" Title="N° Partida" Width="300px" Frozen="false" TextAlign="TextAlign.Center" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Marcas)" Filterable="false" Title="Marcas" Width="300px" Frozen="false" TextAlign="TextAlign.Center"/>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Modelo)" Filterable="false" Title="Modelo" Width="300px" Frozen="false" TextAlign="TextAlign.Center"/>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Numeros)" Filterable="false"  Title="Números" Width="120px" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Mercancia)" Filterable="false"  Title="Mercancía" Width="120px" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.BultosInicial)" Filterable="false"  Title="Cantidad" Width="120px" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.PesoInicial)" Filterable="false"  Title="Peso" Width="120px" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.SaldoBultos)" Filterable="false"  Title="Saldo Cantidad" Width="120px" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.SaldoPeso)" Filterable="false"  Title="Saldo Peso" Width="120px" />
+                                                <RadzenDataGridColumn Title="F. Entrega" Filterable="false" Width="180px">
+                                                    <Template Context="monitorPartida">
+                                                        @(monitorPartida.FechaRecoleccion == DateTime.MinValue ? "" : monitorPartida.FechaRecoleccion)
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                @* <RadzenDataGridColumn Title="F. Traslado" Filterable="false" Width="180px">
+                                                    <Template Context="monitorPartida">
+                                                        @(monitorPartida.FechaTraslado == DateTime.MinValue ? "" : monitorPartida.FechaTraslado)
+                                                    </Template>
+                                                </RadzenDataGridColumn> *@
+                                                <RadzenDataGridColumn Title="F. Ingreso" Filterable="false" Width="180px">
+                                                    <Template Context="monitorPartida">
+                                                        @(monitorPartida.FechaIngreso == DateTime.MinValue ? "" : monitorPartida.FechaIngreso)
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+
+                                                <RadzenDataGridColumn Title="F. Salida" Filterable="false" Width="180px">
+                                                    <Template Context="monitorPartida">
+                                                        @(monitorPartida.FechaTraslado == DateTime.MinValue ? "" : monitorPartida.FechaTraslado)
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.ClaveUbicacion)" Filterable="false"  Title="Ubicación" Width="120px" />
+                                                <RadzenDataGridColumn Title="Existencia" Filterable="false" Width="180px">
+                                                    <Template Context="monitorPartida">
+                                                        @(monitorPartida.Existencia ? "SI" : "NO")
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+
+                                                <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                                                    <Template Context="data">
+                                                        <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                                        title="Editar Partida"
+                                                        Click=@(() => OpenModalRegistroPartida(data))
+                                                        @onclick:stopPropagation="true">
+                                                        </RadzenButton>
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="my_location" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                                        title="Ubicación Partida"
+                                                        Click=@(() => OpenModalUbicacionPartida(data))
+                                                        class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="photo_library" Variant="Variant.Flat" 
+                                                            title="Fotos"
+                                                            Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>    
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" 
+                                                            title="Eliminar Partida"
+                                                            Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            </RadzenStack>
+                        </RadzenTabsItem>  
+                    </Tabs>
+                </RadzenTabs>
+        </div>
+    </div>
+    </RadzenTemplateForm>
+</div>
+
+@code {
+
+    [Parameter] public string DataReferencia { get; set; }
+
+    [Parameter] public int IdTarja { get; set; }
+
+    RadzenDataGrid<MonitorPartida> gridPartidas;
+
+    DialogSettings _settings;
+
+    LogicalFilterOperator logicalFilterOperator = LogicalFilterOperator.Or;
+    FilterCaseSensitivity filterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive;
+
+    string FolioReferencia = string.Empty;
+
+    PartidaAlmacen partidaAlmacenSelected;
+
+    MonitorPartida partidaSelected;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    List<MonitorPartida> listMonitorPartidas;
+
+    List<PartidaAlmacen> listPartidasAlmacen;
+
+    IList<MonitorPartida> selectedPartida;
+
+    RadzenUpload upload;
+
+    MonitorTarja tarjaSelected;
+
+    bool isLoading = false;
+
+    DateTime? valFechaIngreso = null;
+
+    string FolioTarja = string.Empty;
+
+    bool visibleTarjaFolioReferencia = false;
+
+    bool visibleGridPartida = false;
+
+    bool disabledBtnCrearPartida = true;
+
+    bool disabledTipoServicio = false;
+
+    bool disabledBtnCargaMasiva = true;
+
+    private LoadDataArgs _args;
+
+    SortedList<int, string> listEstadoTarja = new SortedList<int, string>
+        {
+            { 1, "Preliminar" },
+            { 2, "Confirmado" }, 
+            { 3, "Cancelado" }
+        };
+
+    SortedList<int, string> listTipoServicio = new SortedList<int, string>
+        {
+            { 3, "Entrada Almacen" },
+            { 8, "Entrada Por Transferencia" },
+            { 9, "Entrada a Patio Externo" }
+        };
+
+    TipoEntrada _tipoEntrada;
+
+    CargaMasiva cargaMasiva;
+
+    ReferenciaDTO referenciaDTO;
+
+    int valEstadoTarja = 1;
+
+    int valTipoServicio = 3;
+
+    TipoServicioTarja _tipoServicioTarja;
+
+    [Inject] private ITarjaService? _tarjaService { get; set; }
+
+    [Inject] private IPartidaService? _partidaService { get; set; }
+
+    [Inject] private IReporteTarjaServicie? _reporteTarjaServicie { get; set; }
+
+    async void OnClientChange(UploadChangeEventArgs args)
+    {
+        ////Console.WriteLine($"Client-side upload changed");
+
+        InvokeAsync(async () =>
+        {
+
+                string _mensaje = string.Empty;
+
+                byte[] bytes;
+
+                cargaMasiva = new CargaMasiva();
+
+                cargaMasiva.IdTarja = tarjaSelected.IdTarja;
+
+                cargaMasiva.ArchivoBase = new ArchivoBase();
+
+                foreach (var file in args.Files)
+                {
+                    ////Console.WriteLine($"File: {file.Name} / {file.Size} bytes");
+
+                    cargaMasiva.ArchivoBase.Archivo = file.Name;
+                    cargaMasiva.ArchivoBase.ContentType = file.ContentType;
+
+                    try
+                    {
+                        long maxFileSize = 10 * 1024 * 1024;
+                        // read file
+                        var stream = file.OpenReadStream(maxFileSize);
+                                        
+                        using var ms = new MemoryStream();
+                        await stream.CopyToAsync(ms);      
+
+                        stream.Close();
+
+                        bytes = ms.ToArray();
+            
+                        cargaMasiva.ArchivoBase.Content = bytes;
+
+                        var _resultBase = await _tarjaService!.GuardarCargaMasiva(cargaMasiva);
+
+                        if (_resultBase.Success) {
+                            ////Console.WriteLine("-> Carga de datos del inventario");
+
+                            _mensaje = _resultBase.MensajeRespuesta;
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Carga Masiva se completo correctamente.", Detail = _mensaje, Duration = 4000 });
+
+                            await ObtenerDatosPartidas(_args);
+
+                        } else {
+                            _mensaje = _resultBase.MensajeRespuesta;
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "La Carga Masiva no se completo correctamente.", Detail = _mensaje, Duration = 4000 });
+                            throw new Exception(_resultBase.MensajeRespuesta);
+                        }
+
+                    }
+                    catch (Exception ex)
+                    {
+                        ////Console.WriteLine($"Client-side file read error: {ex.Message}");
+                        BusyDialogService.Close();
+                    }
+                    finally 
+                    {
+
+                    }
+                }
+
+                BusyDialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+        });
+
+        await BusyDialog("Procesando Información...");
+
+        
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+         base.OnParametersSet();
+
+        //Console.WriteLine("--> OnParametersSet 4444 ");
+
+         if (!String.IsNullOrEmpty(DataReferencia)) {
+
+           //Console.WriteLine("--> OnParametersSet entra");
+
+            byte[] binaryData = Convert.FromBase64String(DataReferencia);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            ////Console.WriteLine("Decoded: " + decodedString);
+
+            referenciaDTO = new ReferenciaDTO();
+
+            referenciaDTO = JsonConvert.DeserializeObject<ReferenciaDTO>(decodedString);
+
+            tarjaSelected = new MonitorTarja();
+
+            if (!referenciaDTO.IdTarja.Equals(0)) {
+
+                visibleTarjaFolioReferencia = true;
+
+                var _resultBase = await _tarjaService.ObtenerPorId(referenciaDTO.IdTarja);
+
+                if (_resultBase.Success) {
+
+                    tarjaSelected.Folio = _resultBase.Data.Folio;
+                    tarjaSelected.TipoTarja = _resultBase.Data.TipoTarja;
+                    tarjaSelected.FolioReferencia = _resultBase.Data.FolioReferencia;
+                    tarjaSelected.FechaIngreso = _resultBase.Data.FechaIngreso;
+
+                    FolioTarja = tarjaSelected.ClaveReferencia;
+
+                    FolioReferencia = tarjaSelected.FolioReferencia;
+
+                    tarjaSelected.IdTarja = _resultBase.Data.IdTarja;
+                    tarjaSelected.Estado = _resultBase.Data.Estado;
+                    tarjaSelected.TipoTarja = _resultBase.Data.TipoTarja;
+                    tarjaSelected.TipoServicio = _resultBase.Data.TipoServicio;
+                    tarjaSelected.Observaciones = _resultBase.Data.Observaciones;
+                    tarjaSelected.ClaveReferencia = _resultBase.Data.ClaveReferencia;
+
+                    tarjaSelected.IdReferencia =  referenciaDTO.IdReferencia;
+
+                    disabledBtnCargaMasiva = false;
+                    disabledBtnCrearPartida = false;
+                    visibleGridPartida = true;
+
+                    _tipoServicioTarja = tarjaSelected.TipoServicio;
+
+                    valEstadoTarja = (int)tarjaSelected.Estado;
+
+                    valTipoServicio = (int)_tipoServicioTarja;
+
+                    valFechaIngreso = (DateTime)tarjaSelected.FechaIngreso;
+
+                    disabledTipoServicio = !tarjaSelected.Estado.Equals(EstadoTarja.Preliminar);
+
+
+                } else {
+
+                }
+            } else if (!referenciaDTO.IdReferencia.Equals(0)) {
+
+                visibleTarjaFolioReferencia = true;
+                
+                FolioReferencia = referenciaDTO!.FolioReferencia;    
+
+                tarjaSelected.FolioReferencia = FolioReferencia;
+
+                tarjaSelected.IdReferencia = referenciaDTO.IdReferencia;
+
+            }
+
+            await ObtenerDatosPartidas(_args);
+
+            await InvokeAsync(StateHasChanged);
+
+        } else {
+
+            tarjaSelected = new MonitorTarja();
+           //Console.WriteLine("--> OnParametersSet Se inicializar MonitorTarja ");
+
+        }
+
+        
+    }
+
+    private async Task ObtenerDatosPartidas(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+
+        ConsultaCatalogoBase<ConsultaPartida> _consultaPartida = new ConsultaCatalogoBase<ConsultaPartida>();
+        _consultaPartida.Entidad = new ConsultaPartida();
+        _consultaPartida.Entidad.IdTarja = tarjaSelected.IdTarja;
+        _consultaPartida.NumeroDePagina = numeroDePagina;
+        _consultaPartida.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorPartidas = await _partidaService!.ObtenerListaPaginadaPorIdTarja(_consultaPartida);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorPartidas.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listMonitorPartidas = _listMonitorPartidas.Data;
+
+        selectedPartida = listMonitorPartidas.Take(1).ToList();
+
+         
+        if (totalRegistros.Equals(0)) {
+            ////Console.WriteLine("--> visible Grid Partida: false");
+            visibleGridPartida = false;
+        } else {
+            ////Console.WriteLine("--> visible Grid Partida: true");
+            visibleGridPartida = true;
+
+        }
+
+        isLoading = false;
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    private  byte[] UseBinaryReader(Stream stream)
+    {
+        byte[] bytes;
+        using (var binaryReader = new BinaryReader(stream))
+        {
+            bytes = binaryReader.ReadBytes((int)stream.Length);
+        }
+        return bytes;
+    }
+
+    async void OnProgress(UploadProgressArgs args, string name)
+    {
+        ////Console.WriteLine($"{args.Progress}% '{name}' / {args.Loaded} of {args.Total} bytes.");
+
+        cargaMasiva = new CargaMasiva();
+
+        cargaMasiva.ArchivoBase = new ArchivoBase();
+
+        cargaMasiva.IdTarja = tarjaSelected.IdTarja;
+
+        if (args.Progress == 100)
+        {
+
+            byte[] buffer;
+
+            foreach (var file in args.Files)
+            {
+                ////Console.WriteLine($"Uploaded: {file.Name} / {file.Size} bytes");
+            }          
+
+            var _resultBase = await _tarjaService!.GuardarCargaMasiva(cargaMasiva);
+
+            if (_resultBase.Success) {
+                ////Console.WriteLine("-> Carga de datos del inventario");
+            }
+        }
+    }
+
+    void OnComplete(UploadCompleteEventArgs args)
+    {
+        ////Console.WriteLine($"Server response: {args.RawResponse}");
+    }
+
+    public DateTime? ParseDate(string input)
+    {
+        string[] formats = { "dd-MM-yyyy", "dd/MM/yyyy", "dd-MM-yy", "dd/MM/yy", "ddMMyyyy", "ddMMyy", "dd-MM", "dd/MM", "ddMM" };
+
+        foreach (var format in formats)
+        {
+            if (DateTime.TryParseExact(input, format, null, System.Globalization.DateTimeStyles.None, out var result))
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    protected override async Task OnInitializedAsync() 
+    {
+        await base.OnInitializedAsync();
+
+        if (tarjaSelected != null) {
+
+            tarjaSelected = new MonitorTarja();
+            FolioReferencia = string.Empty;
+            FolioTarja = string.Empty;
+            disabledTipoServicio = false;
+            disabledBtnCrearPartida = true;
+            disabledBtnCargaMasiva = true;
+            visibleTarjaFolioReferencia = false;
+            tarjaSelected.TipoTarja = TipoTarja.Entrada;
+            tarjaSelected.Estado = EstadoTarja.Preliminar;
+            _tipoEntrada = TipoEntrada.Carretero;
+            _tipoServicioTarja = TipoServicioTarja.EntradaAlmacen;
+
+            listEstadoTarja = new SortedList<int, string>
+            {
+                { 1, "Preliminar" },
+                { 2, "Confirmado" }, 
+                { 3, "Cancelado" }
+            };
+
+            listTipoServicio = new SortedList<int, string>
+            {
+                { 3, "Entrada Almacen" },
+                { 8, "Entrada Por Transferencia" },
+                { 9, "Entrada a Patio Externo" }
+            };
+
+        }
+
+       //Console.WriteLine("-> OnInitializedAsync ---- ");
+
+    }
+
+    async void OnConfirmarTarjaRecepcion(MonitorTarja monitorTarja) {
+
+        if (!monitorTarja.IdTarja.Equals(0)) {
+
+            var _result = await _tarjaService.Confirmar(monitorTarja);
+
+            if (_result.Success) {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Tarja, se confirmo correctamente", Detail = _result.MensajeRespuesta, Duration = 4000 });
+
+            } else {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Confirmar Tarja", Detail = _result.MensajeRespuesta, Duration = 4000 });
+            }
+
+        }
+
+    }
+
+    async void OnImprimirTarjaRecepcion(MonitorTarja monitorTarja) {
+
+        ConsultaTarjaReporteador _consultaTarjaReporte = new ConsultaTarjaReporteador();
+        _consultaTarjaReporte.IdTarja = monitorTarja.IdTarja;
+        
+        var _result = await _reporteTarjaServicie.ObtieneReporteTarjaPatioExterno(_consultaTarjaReporte);
+
+        if (_result.Success) {
+
+            await JSRuntime.InvokeVoidAsync("AbrirArchivoArregloByte", _result.Data.Archivo,  _result.Data.ContentType, Convert.ToBase64String(_result.Data.Content));
+            @* var pdfBase64 = $"data:{_result.Data.ContentType};base64, {Convert.ToBase64String(_result.Data.Content)}"; 
+            await JSRuntime.InvokeVoidAsync("window.open", pdfBase64, "_blank"); *@
+
+        }
+
+    }
+
+    async void OnSubmit(MonitorTarja monitorTarja)
+    {
+
+        ////Console.WriteLine("-> OnSubmit model : " + System.Text.Json.JsonSerializer.Serialize(monitorTarja));
+
+
+        string _mensaje = String.Empty;
+        
+        monitorTarja.FechaAlta = DateTime.Now;
+        monitorTarja.IdEmpresaLogin = 1;
+        monitorTarja.Estado = (EstadoTarja)valEstadoTarja;
+        monitorTarja.TipoTarja = TipoTarja.Entrada;
+        monitorTarja.TipoServicio = (TipoServicioTarja)valTipoServicio;
+
+        if (monitorTarja.IdTarja.Equals(0)) {
+                monitorTarja.Folio = 0;
+                monitorTarja.CRUDAction = ECRUDAction.Create;
+        } else {
+            monitorTarja.Folio = Convert.ToInt32(FolioTarja);
+            monitorTarja.CRUDAction = ECRUDAction.Update;
+        }
+
+        var _resultBase = await _tarjaService!.Guardar(monitorTarja);
+
+        if (_resultBase.Success) {
+
+            monitorTarja.IdTarja = _resultBase.Id;
+
+            monitorTarja.Folio = _resultBase.Data.Folio;
+
+            tarjaSelected.IdTarja = _resultBase.Id;
+
+            tarjaSelected.Folio = _resultBase.Data.Folio;
+
+            tarjaSelected.ClaveReferencia = _resultBase.Data.ClaveReferencia;
+
+            disabledTipoServicio = true;
+
+            disabledBtnCrearPartida = false;
+
+            disabledBtnCargaMasiva = false;
+
+            FolioTarja = monitorTarja.Folio.ToString();
+
+            ////Console.WriteLine("-> Folio Tarja: " + FolioTarja);
+            
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Tarja, se guardo correctamente", Detail = _mensaje, Duration = 4000 });
+            
+        } else {
+            _mensaje = _resultBase.MensajeRespuesta;
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Tarja", Detail = _mensaje, Duration = 4000 });
+            
+        }
+
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    public async Task OpenModalRegistroPartida(MonitorPartida monitorPartida)
+    {
+        await LoadStateAsync();
+
+        await DialogServiceRegistroPartida.OpenAsync<VistaModalRegistroPartida>($"Detalle Partida No.: {monitorPartida.NumeroPartida}",
+               new Dictionary<string, object>() { { "IdPartida", monitorPartida.IdPartida }, { "monitorPartidaSelected", monitorPartida } },
+               new DialogOptions() 
+               {
+                   Resizable = true, 
+                   Draggable = true,
+                   Resize = OnResize,
+                   Drag = OnDrag,
+                   Width = "820px", 
+                   Height = "440px",
+                   Left = Settings != null ? Settings.Left : null, 
+                   Top = Settings != null ? Settings.Top : null
+                });
+
+        await SaveStateAsync();
+    }
+
+    public async Task OpenModalUbicacionPartida(MonitorPartida monitorPartida)
+    {
+        await LoadStateAsync();
+
+        await DialogServiceRegistroPartida.OpenAsync<VistaModalUbicacionPartida>($"Ubicación Partida No.: {monitorPartida.NumeroPartida}",
+               new Dictionary<string, object>() { { "IdPartida", monitorPartida.IdPartida }, { "monitorPartidaSelected", monitorPartida } },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Drag = OnDrag,
+                   Width = "820px", 
+                   Height = "180px",
+                   Left = Settings != null ? Settings.Left : null, 
+                   Top = Settings != null ? Settings.Top : null
+                });
+
+        await ObtenerDatosPartidas(_args);
+
+        await InvokeAsync(StateHasChanged);
+
+        await SaveStateAsync();
+    }
+
+    async Task EliminarTarja() {
+
+        string _mensaje = String.Empty;
+        bool _accionEliminar = false;
+
+        if (tarjaSelected != null) {
+
+            if (!tarjaSelected.IdTarja.Equals(0)) 
+            {
+
+                _accionEliminar = true;
+
+                var result = await DialogServiceConfirm.Confirm("Desea Eliminar la Tarja?", "Tarja", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                bool _confirmar = result.HasValue ? (bool)result : false;
+
+                if (_confirmar) {
+
+                    var _result = await _tarjaService.Eliminar(tarjaSelected.IdTarja);
+
+                    if (_result.Success) {
+
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Tarja, se eliminó correctamente", Detail = _mensaje, Duration = 4000 });
+                        navigationManager.NavigateTo($"/tarja-crear");
+
+                    } else {
+
+                        _mensaje = _result.MensajeRespuesta;
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Eliminar Tarja", Detail = _mensaje, Duration = 4000 });
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        if (!_accionEliminar) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Eliminar Referencia", 
+                Detail = "No existe Referencia seleccionada", Duration = 4000 });
+
+        }
+
+
+    }
+
+    public async Task OpenBuscarTarja()
+    {
+        await LoadStateAsync();
+
+        await DialogServiceBuscarTarja.OpenAsync<VistaModalBuscarTarja>($"Buscar Tarja",
+               new Dictionary<string, object>() { { "FolioReferencia", tarjaSelected.FolioReferencia } },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Width = "920px", 
+                   Height = "570px",
+                   Left = Settings != null ? Settings.Left : null, 
+                   Top = Settings != null ? Settings.Top : null
+                });
+
+        await SaveStateAsync();
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Button Clicked", Detail = text });
+    }
+
+    void OnDrag(System.Drawing.Point point)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog drag. Left:{point.X}, Top:{point.Y}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Left = $"{point.X}px";
+        Settings.Top = $"{point.Y}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+
+    void OnResize(System.Drawing.Size size)
+    {
+        //JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog resize. Width:{size.Width}, Height:{size.Height}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Width = $"{size.Width}px";
+        Settings.Height = $"{size.Height}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+    public DialogSettings Settings 
+    { 
+        get
+        {
+            return _settings;
+        }
+        set
+        {
+            if (_settings != value)
+            {
+                _settings = value;
+                InvokeAsync(SaveStateAsync);
+            }
+        }
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "DialogSettings");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _settings = System.Text.Json.JsonSerializer.Deserialize<DialogSettings>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", System.Text.Json.JsonSerializer.Serialize<DialogSettings>(Settings));
+    }
+
+    public class DialogSettings
+    {
+        public string Left { get; set; }
+        public string Top { get; set; }
+        public string Width { get; set; }
+        public string Height { get; set; }
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}
+

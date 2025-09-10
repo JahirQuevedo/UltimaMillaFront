@@ -1,0 +1,166 @@
+﻿
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Login.ILogin
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using Radzen
+@using Radzen.Blazor
+@inherits LayoutComponentBase
+@inject CookieThemeService CookieThemeService
+@inject NavigationManager _navigationManager
+@inject ILoginService loginService
+@inject UsuarioTokenDTO _UsuarioTokenDTO
+@inject IJSRuntime _jsRuntime
+
+@* <style>
+    :root {
+        --rz-grid-header-color: white;
+        --rz-grid-header-background-color: darkred;
+    }
+
+
+    .rz-state-highlight td {
+        background-color: chocolate;
+    }
+
+    .rz-grid-table {
+        width: unset;
+    }
+
+    .custom-header {
+        font-weight: bold;
+        /*background-color: #f0f0f0; /* Color gris claro */
+    }
+</style> *@
+<RadzenComponents />
+@* <div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+        </div>
+
+        <article class="content px-4">
+            @Body
+
+        </article>
+    </main>
+</div>
+ *@
+<AuthorizeView>
+    <Authorized>
+
+        <RadzenLayout style="position: relative">
+            <RadzenHeader>
+                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="10px" Style="width: 100%;">
+                    <RadzenSidebarToggle Click="@(() => sidebarExpanded = !sidebarExpanded)" />
+
+                    <RadzenLabel Text="Alogistics - Automotive Logistics   "  />
+                    
+                    
+                    <RadzenLabel Text=@($"Bienvenido: {strNombreUsuario} - {strCliente}") />
+                    
+                </RadzenStack>
+
+
+            </RadzenHeader>
+            <RadzenSidebar Responsive="false" @bind-Expanded="@sidebarExpanded" style="position: absolute; z-index: 3">
+                <RadzenStack AlignItems="AlignItems.End" class="rz-p-2">
+                    <RadzenButton Icon="west" Variant="Variant.Text" ButtonStyle="ButtonStyle.Secondary" Click="@(() => sidebarExpanded = false)" />
+                </RadzenStack>
+                <NavMenu />
+
+            </RadzenSidebar>
+            <RadzenBody>
+
+                @Body
+
+            </RadzenBody>
+            @* <RadzenFooter>
+            Footer
+            </RadzenFooter> *@
+            @if (sidebarExpanded)
+            {
+                <div @onclick="@(() => sidebarExpanded = false)" class="rz-dialog-mask" style="position: absolute; z-index: 2"></div>
+            }
+        </RadzenLayout>
+
+    </Authorized>
+    <NotAuthorized>
+        @{
+            iralogin();
+        }
+
+    </NotAuthorized>
+</AuthorizeView>
+
+
+@code {
+    bool sidebarExpanded = false;
+    private string token;
+    private string usuario;
+    private string strCliente;
+    private string strNombreUsuario;
+
+    protected override async Task OnInitializedAsync()
+    {
+        #region ValidarAcceso
+        try
+        {
+            var token = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "JWT Token");
+            //////Console.WriteLine("Userservice:" + token);
+            if (!string.IsNullOrEmpty(token))
+            {
+                //Console.WriteLine($"INIT MAIN:" + _UsuarioTokenDTO.IdCatUsuario);
+                if (_UsuarioTokenDTO.IdCatUsuario==0)
+                {
+                    //Console.WriteLine($"INIT MAIN2 ENTRO CERO");
+                    //Console.WriteLine($"ENTRO MAIN VACIO");
+                    _UsuarioTokenDTO = await loginService.ObtenerdatosToken();
+                    if (_UsuarioTokenDTO.catUsuarios.catUsuariosClientes == null || _UsuarioTokenDTO.catUsuarios.catUsuariosClientes.Count>0)
+                    {
+                        strCliente = _UsuarioTokenDTO.catUsuarios.catUsuariosClientes.FirstOrDefault().catClientes.RazonSocial;
+
+                    }else
+                    {
+                        //strCliente = UsuarioTokenDTO.catUsuarios.catUsuariosEmpresas.FirstOrDefault().catEmpresas.RazonSocial;
+                        strCliente = "Usuario Interno ALO/INCOM";
+                    }
+                    strNombreUsuario = _UsuarioTokenDTO.catUsuarios.Nombre;
+                    //////Console.WriteLine($"SALIO MAIN {UsuarioTokenDTO.Nombre}");
+            }
+                else
+                {
+                    //Console.WriteLine($"INIT MAIN {_UsuarioTokenDTO.Nombre}");
+                }
+                // if (UsuarioTokenDTO.catUsuarios is null)
+                // {
+                //     ////Console.WriteLine($"ENTRO LAYOUT VACIO");
+                //     UsuarioTokenDTO = await loginService.ObtenerdatosToken();
+                //     ////Console.WriteLine($"SALIO LAYOUT {UsuarioTokenDTO.catUsuarios.Nombre}");
+                // }else
+                // {
+                //     ////Console.WriteLine($"INIT LAYOUT {UsuarioTokenDTO?.Email}");
+                // }
+            }
+
+        }
+        catch (Exception ex)
+        {
+            ////Console.WriteLine("APP.RAZOR:" + ex.Message);
+        }
+
+        #endregion ValidarAcceso
+
+
+
+
+    }
+    void iralogin()
+    {
+        _navigationManager.NavigateTo("/login");
+    }
+}
+

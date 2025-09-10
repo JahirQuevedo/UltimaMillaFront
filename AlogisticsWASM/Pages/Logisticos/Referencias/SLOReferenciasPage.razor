@@ -1,0 +1,273 @@
+﻿@page "/referenciasSLO"
+
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOG.Modelos.Modelos.Logisticos
+@using ALOG.Modelos.Modelos.Orden
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using AlogisticsWASM.Layout.Vacios.Referencias
+@using Microsoft.AspNetCore.Authorization
+@inject NotificationService NotificationService
+@inject SweetAlertService Swal;
+@inject IConfiguration configuration
+@inject Radzen.DialogService DialogService
+
+@attribute [Authorize]
+
+<style>
+
+    :root {
+        --rz-grid-header-color: white;
+        --rz-grid-header-background-color: darkred;
+    }
+
+    .auto-width-grid .rz-cell {
+        white-space: nowrap;
+        padding: 0.5rem 1rem;
+    }
+
+    .auto-width-grid .rz-header-cell {
+        white-space: nowrap;
+    }
+</style>
+
+@* <style>
+    :root {
+        --rz-grid-header-color: white;
+        --rz-grid-header-background-color: darkred;
+    }
+
+    .rz-grid-table {
+        width: unset;
+    }
+</style> *@
+
+@if (position == 0)
+{
+    <style>
+        .rz-panel-titlebar {
+        flex-direction: row-reverse;
+        justify-content: left;
+        }
+    </style>
+}
+
+<div class="content">
+    <div class="row g-3 mb-2">
+        <div class="rz-m-2">
+            <RadzenBreadCrumb>
+                <RadzenBreadCrumbItem Path="/" Text="Home" />
+                <RadzenBreadCrumbItem Text="S. Logistico" />
+            </RadzenBreadCrumb>
+        </div>
+        <div class="col-auto">
+            <h4 class="mb-0">Servicios Logisticos</h4>
+        </div>
+    </div>
+    <RadzenStack Gap="1rem">
+
+        <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+        Expand=@(() => Change("Panel expanded")) Collapse=@(() => Change("Panel collapsed"))>
+            <HeaderTemplate>
+                <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-display-flex rz-align-items-center rz-m-0">
+                    <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Filtros de Consulta</b>
+                </RadzenText>
+            </HeaderTemplate>
+            <ChildContent>
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                            @* <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Cliente a Fact.:" Component="CatClienteFact" />
+                                <RadzenAutoComplete @bind-Value=@strfactCliente Data=@respListarCoincidencias TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" Change=@OnClienteFactChange LoadData=@AutoCompleteOnLoadCliente Style="width: 100%"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                                Name="CatClienteFact" />
+
+                            </RadzenStack>  *@
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Cliente:" Component="CatCliente" />
+
+                                <RadzenAutoComplete @bind-Value=@strcliente 
+                                Data=@respListarCoincidencias 
+                                TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)" 
+                                Change=@OnClienteChange 
+                                LoadData=@AutoCompleteOnLoadCliente 
+                                Style="width: 100%"
+                                InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                                Name="CatCliente" />
+                            </RadzenStack>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Ref.Alo:" Component="refalo" />
+                                <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="refalo" @bind-Value="strRefalo" />
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Ref.Cliente:" Component="refcliente" />
+                                <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="refcliente" @bind-Value="strRefcliente" />
+                            </RadzenStack>
+
+                        </RadzenStack>
+                    </RadzenRow>
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="F.Registro" Component="FRegistro" />
+                                <RadzenDatePicker @bind-Value="@dFRegistro" DateFormat="dd/MM/yyyy" Name="FRegistro" />
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="F.Envio" Component="FEnvio" />
+                                <RadzenDatePicker @bind-Value="@dFEnvio" DateFormat="dd/MM/yyyy" Name="FEnvio" />
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Estado 1G" Component="estado1g" />
+                                <RadzenTextBox @bind-Value="strEnv1G" Name="estado1g" />
+                            </RadzenStack>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Aduana:" Component="DropDownAduana" />
+                                <RadzenDropDown @bind-Value=@strAduana Data=@lstAduanas.Select(x =>x.Nombre) Change=@DropDownOnAduanaChange Style="width: 100%; max-width: 200px;" Name="DropDownAduana" AllowClear=true />
+
+                            </RadzenStack>
+
+
+                            <RadzenButton Text="Enviar" Click="@FiltrarDatos" />
+                        </RadzenStack>
+                    </RadzenRow>
+                </RadzenCard>
+            </ChildContent>
+        </RadzenPanel>
+
+        <RadzenStack Orientation="Orientation.Horizontal" class=".rz-my-0">
+            <RadzenButton Text="Crear Referencia" Click="AbrirVentanaCrearReferencia" Icon="add_circle" ButtonStyle="ButtonStyle.Secondary" Style="width:200px;" />
+        </RadzenStack>
+
+        @if (isLoading)
+        {
+            <div class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12" style="max-width: 600px;">
+                <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" ProgressBarStyle="ProgressBarStyle.Primary">
+                    <Template>Wait</Template>
+                </RadzenProgressBarCircular>
+            </div>
+        }
+
+        @if (!isLoading)
+        {
+            @if (_lstOrdenes?.Any() == true)
+            {
+                @* ExpandMode = "DataGridExpandMode.Single" *@
+                <RadzenDataGrid @ref="grid" Data="@_lstOrdenes" TItem="Ordenes"
+                Editable="true"
+                EditMode="DataGridEditMode.Single"
+                RowUpdate="@GuardarCambios"                
+                ShowPagingSummary="true" AllowPaging="true" PageSize="10" AllowFiltering="false" AllowSorting="true"
+                class="rz-shadow-3 auto-width-grid">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="Ordenes" Property="ReferenciaALO" Title="Referencia ALO" />
+                        @* <RadzenDataGridColumn TItem="Ordenes" Title="Referencia Cliente">
+                            <Template Context="orden">
+                                @orden.SLOintegracionReferencias?.FirstOrDefault()?.ReferenciaClienteExterno
+                            </Template>
+                            <EditTemplate Context="orden">
+                                <RadzenTextBox @bind-Value="orden.SLOintegracionReferencias.FirstOrDefault().ReferenciaClienteExterno" Style="width:100%" Disabled="!puedeEditarRef" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn> *@
+                        <RadzenDataGridColumn TItem="Ordenes" Title="Cliente Solicitante">
+                            <Template Context="orden">
+                                @orden.catClientes.RazonSocial
+                            </Template>
+                            <EditTemplate Context="orden">
+                                <RadzenAutoComplete TValue="Ordenes"
+                                @bind-Value="_respListarCoincidenciasDTOSeleccionada.RazonSocial"
+                                Data="@respListarCoincidencias"
+                                TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                Placeholder="Escribe para buscar cliente"
+                                Name="ClienteSolicitante"
+                                Style="width:100%;"
+                                Disabled="!puedeEditarClientes"
+                                Change="@(args => OnClienteSeleccionado(args, orden))"
+                                LoadData="AutoCompleteOnLoadCliente" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+@*                         <RadzenDataGridColumn TItem="Ordenes" Title="Cliente a Facturar">
+                            <Template Context="orden">
+                                @{
+                                    string razonSocialFacturar = string.Empty;
+                                    var claveStr = orden.SLOintegracionReferencias?.FirstOrDefault()?.ClaveClienteExterno;
+
+                                    if (!string.IsNullOrWhiteSpace(claveStr) && int.TryParse(claveStr, out int idClienteFacturar))
+                                    {
+                                        var cliente = respListarCoincidencias2?.FirstOrDefault(c => c.Id == idClienteFacturar);
+                                        razonSocialFacturar = cliente?.RazonSocial ?? claveStr;
+                                    }
+                                    else
+                                    {
+                                        razonSocialFacturar = claveStr ?? "";
+                                    }
+                                }
+
+                                @razonSocialFacturar
+                               
+                            </Template>
+                            <EditTemplate Context="orden">
+                                <RadzenTextBox @bind-Value="orden.SLOintegracionReferencias.FirstOrDefault().ClaveClienteExterno" Style="width:100%" Disabled="!puedeEditarClientes" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn> *@
+                        <RadzenDataGridColumn TItem="Ordenes" Title="Aduana">
+                            <Template Context="orden">
+                                @orden.catAduana?.Nombre
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Ordenes" Title="No. Aduana">
+                            <Template Context="orden">
+                                @orden.catAduana?.Aduana
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Ordenes" Title="Fecha de Registro">
+                            <Template Context="orden">
+                                @orden.FechaRegistro.ToString("dd/MM/yyyy")
+                            </Template>
+                        </RadzenDataGridColumn>
+                        @* <RadzenDataGridColumn TItem="Ordenes" Title="Estado 1G">
+                            <Template Context="orden">
+                                @orden.SLOintegracionReferencias?.FirstOrDefault()?.Estado1G
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn TItem="Ordenes" Title="Fecha Envío 1G">
+                            <Template Context="orden">
+                                @orden.SLOintegracionReferencias?.FirstOrDefault()?.FechaEnvio?.ToString("dd/MM/yyyy")
+                            </Template>
+                        </RadzenDataGridColumn> *@
+                        <RadzenDataGridColumn TItem="Ordenes" Context="orden" Width="70px">
+                            <Template Context="orden">
+                               @*  <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small"
+                                              Click="@(() => IniciarEdicion(orden))" /> *@
+                                <RadzenButton Icon="edit"
+                                              ButtonStyle="ButtonStyle.Light"
+                                              Size="ButtonSize.Small"
+                                              Disabled="@(orden.SLOintegracionReferencias?.Count > 0)"
+                                              Click="@(() => IniciarEdicion(orden))" />
+                                <RadzenButton Icon="visibility" ButtonStyle="ButtonStyle.Info" Size="ButtonSize.Small" title="Detalles"
+                                              Click="() => AbrirModalDetalles(orden)" />
+                            </Template>
+                            <EditTemplate Context="orden">
+                                <RadzenButton Icon="save" ButtonStyle="ButtonStyle.Primary" Size="ButtonSize.Small"
+                                              Click="@(() => GuardarCambios(orden))" />
+                                <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Class="ml-2"
+                                              Click="@(() => grid.CancelEditRow(orden))" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                    
+                </RadzenDataGrid>
+            }
+        }
+    </RadzenStack>
+</div>

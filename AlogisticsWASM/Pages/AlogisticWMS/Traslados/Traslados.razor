@@ -1,0 +1,792 @@
+﻿@page "/traslados"
+
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime;
+
+
+@inject NavigationManager navigationManager
+@inject DialogService DialogService
+@inject DialogService DialogRegistroViaje
+@inject DialogService DialogInicioFinViaje
+@inject DialogService DialogServiceAsignarSolicitudTraslado
+
+@inject NotificationService NotificationService
+@attribute [Authorize]
+
+<script src="resources/js/general.js"></script>
+
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+    .rz-button {
+        text-transform: none !important;
+    }
+
+</style>
+
+<div class="content">
+
+<div class="row g-3 flex-between-end mb-5">
+        <div class="col-12">
+            <RadzenTabs Change=@OnChangeTabTraslados SelectedIndex="0">
+                    <Tabs>
+                        <RadzenTabsItem Text="Viajes">
+                            <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+                                            Expand=@(() => ChangeFiltros("Panel expanded")) Collapse=@(() => ChangeFiltros("Panel collapsed"))>
+                                    <HeaderTemplate>
+                                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-display-flex rz-align-items-center rz-m-0">
+                                            <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Filtros de Consulta</b>
+                                        </RadzenText>
+                                    </HeaderTemplate>
+                                    <ChildContent>
+                                        <RadzenCard Variant="Variant.Outlined">
+                                            <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Fecha Inicio" Component="VIAJE_FECHA_INICIO" />
+                                                        <RadzenDatePicker @bind-Value="@_consultaCtrlTransporte.FechaInicio" DateFormat="dd/MM/yyyy" Name="VIAJE_FECHA_INICIO" />
+                                                    </RadzenStack>
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Fecha Fin" Component="VIAJE_FECJA_FIN" />
+                                                        <RadzenDatePicker @bind-Value="@_consultaCtrlTransporte.FechaFin" DateFormat="dd/MM/yyyy" Name="VIAJE_FECJA_FIN" />
+                                                    </RadzenStack>
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Estado" Component="VIAJE_ESTATUS" />
+                                                        <RadzenDropDown @bind-Value="valEstadoTurno" ValueProperty="Key" 
+                                                            TextProperty="Value" Data=@_listEstadoTurno
+                                                            Style="width: 100%;"
+                                                            Name="VIAJE_ESTATUS" />
+                                                    </RadzenStack>
+
+                                                    @* <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Estatus:" Component="DropDownEstatus" />
+                                                        <RadzenDropDown @bind-Value=@valEstadoTurno Data=@_listEstadoTurno Change=@DropDownOnEstatusChange 
+                                                        
+                                                        Style="width: 100%; max-width: 200px;" Name="DropDownEstatus" />
+                                                        
+                                                    </RadzenStack> *@
+                                                    <RadzenButton Text="Buscar" Icon="search" Click="@(args => BurcarViaje())" />
+                                                </RadzenStack>
+                                            </RadzenRow>
+                                        </RadzenCard>
+                                    </ChildContent>
+                                </RadzenPanel>
+                                <RadzenStack class="rz-mt-5">
+                                    <div class="row">
+                                        <div class="col-sm-12 col-md-12">
+                                            <RadzenButton Click=@(() => OpenRegistroViaje(null)) Text="Crear Viaje" Icon="add_circle"  />
+                                        </div>
+                                    </div>
+                                    @* <div class="row g-3 flex-between-end mb-5">
+                                        <div class="col-12">
+                                            <div class="row">
+                                                <div class="col-sm-6 col-md-4">
+                                                    &nbsp;
+                                                </div>
+                                                <div class="col-sm-6 col-md-4">
+                                                    &nbsp;
+                                                </div>
+                                                <div class="col-sm-6 col-md-4">
+                                                    &nbsp;
+                                                </div>
+                                            </div>
+                                        </div>  
+                                    </div> *@
+                                </RadzenStack>
+                                @* ------------------------------------------------------------------------------------ *@
+                                <RadzenStack class="rz-mt-5" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+                                    <RadzenStack>
+                                    
+                                        <RadzenDataGrid
+                                                    @ref="gridControlTransporteViajes"
+                                                    Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                                                    PagerHorizontalAlign="HorizontalAlign.Left"
+                                                    FilterMode="FilterMode.Simple"
+                                                    @bind-Value=@selectedControlTransporte style="border-radius:7px;"
+                                                    AllowFiltering="true" AllowPaging="true" AllowSorting="false" FilterPopupRenderMode="PopupRenderMode.OnDemand" 
+                                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                    Data="@(listaMonitorControlTransporte)" LoadData="@ObtenerDatosControlTransporte"  
+                                                    IsLoading=@isLoading ColumnWidth="200px" Density="Density.Compact" 
+                                                    TItem="MonitorCtrlTransporte"
+                                                    RowExpand="RowExpandControlTransporte"
+                                                    RowRender="@RowRenderControlTransporte"
+                                                    ExpandMode="DataGridExpandMode.Single"
+                                                    AllowAlternatingRows="false">
+                                            @* Listado de Traslados Asignados *@
+                                            @* ------------------------------------------------------------------------------------------------------------------------------------ *@
+                                            <Template Context="monitorControlTransporte">
+                                                <RadzenDataGrid AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                                                    style="border-radius:7px; width: 100%;"
+                                                    PagerHorizontalAlign="HorizontalAlign.Left"
+                                                    AllowColumnResize="true"
+                                                    ColumnWidth="200px"
+                                                    Count="@totalRegistrosTraslado" 
+                                                    PageSize="@registrosPorPaginaTraslado" ShowPagingSummary="true" 
+                                                    @bind-Value=@selectedSolicitudTraslado
+                                                    Data="@listaMonitorSolicitudTraslado">
+                                                    <Columns>
+                                                        <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.FolioTraslado)" Title="Folio Traslado" Width="80px"  />
+                                                        <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.FechaSolicitudTraslado)" Title="Fecha Traslado" />
+                                                        <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.ManiobristaNombreCortoOrigen)" Title="Origen" />
+                                                        <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.ManiobristaNombreCortoDestino)" Title="Destino" />
+                                                        @* <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.EstadoTraslado)" Title="Estatus" /> *@
+                                                        <RadzenDataGridColumn Title="Estatus" Width="100px" Property="@nameof(MonitorSolicitudTraslado.EstadoTraslado)" >
+                                                            <Template Context="monitorTraslado">
+                                                                <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleEstadoTraslado(monitorTraslado.EstadoTraslado)" Text="@(monitorTraslado.EstadoTraslado.ToString())" />
+                                                            </Template>
+                                                        </RadzenDataGridColumn>
+                                                        <RadzenDataGridColumn Width="160px" Property="FolioTarja" Title="Tarja">
+                                                            <Template Context="dataTraslado">
+                                                                <RadzenButton ButtonStyle="ButtonStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" Icon="info" class="rz-m-1" 
+                                                                Click=@(() => OpenaTarjaTraslado(dataTraslado)) Text="@dataTraslado.ClaveReferenciaTarja" />
+                                                            </Template>
+                                                        </RadzenDataGridColumn>
+                                                        
+                                                        <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.DescripcionFolioServicio)" Title="Servicio" />
+                                                        <RadzenDataGridColumn Title="Cantidad" />
+                                                        <RadzenDataGridColumn Title="Peso" />
+                                                        <RadzenDataGridColumn Property="@nameof(MonitorSolicitudTraslado.ClaveViaje)" Title="Viaje" />
+                                                        @* <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Frozen="false" 
+                                                            FrozenPosition="FrozenColumnPosition.Right" Width="80px">
+                                                        <Template Context="data">
+                                                            <RadzenButton Icon="home_repair_service" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                                                @onclick:stopPropagation="true">
+                                                            </RadzenButton>
+                                                        </Template>
+                                                        </RadzenDataGridColumn> *@
+                                                    </Columns>
+                                                </RadzenDataGrid>
+                                            </Template>
+                                            @* ------------------------------------------------------------------------------------------------------------------------------------ *@
+                                            <Columns>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.FolioTurno)" Title="Folio Viaje" Filterable="false" />
+                                                @* <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.Estado)" Title="Estatus" Filterable="false" /> *@
+                                                <RadzenDataGridColumn Title="Estatus" Width="100px" Property="@nameof(MonitorCtrlTransporte.Estado)" >
+                                                    <Template Context="monitorTurno">
+                                                        <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleControlTransporte(monitorTurno.Estado)" Text="@(monitorTurno.Estado.ToString())" />
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Title="Fecha Inicio" Filterable="false">
+                                                    <Template Context="monitorCtrlTransporte">
+                                                        @(monitorCtrlTransporte.FechaInicio == DateTime.MinValue ? "" : monitorCtrlTransporte.FechaInicio.ToString())
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Title="Fecha Fin" Filterable="false">
+                                                    <Template Context="monitorCtrlTransporte">
+                                                        @(monitorCtrlTransporte.FechaFin == DateTime.MinValue ? "" : monitorCtrlTransporte.FechaFin.ToString())
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Title="Fecha Captura" Filterable="false">
+                                                    <Template Context="monitorCtrlTransporte">
+                                                        @(monitorCtrlTransporte.FechaAlta == DateTime.MinValue ? "" : monitorCtrlTransporte.FechaAlta.ToString())
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.RazonSocialLineaTransporte)" Title="Transportista" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.PlacasLineaTransporte)" Title="Placas" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.NumEcoLineaTransporte)" Title="Num. Económico" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.ManiobristaNombreCortoOrigen)" Title="Origen" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorCtrlTransporte.ManiobristaNombreCortoDestino)" Title="Destino" />
+                                                <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                                                    <Template Context="data">
+                                                        <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                                        Click=@(() => OpenRegistroViaje(data))
+                                                        title="Editar Viaje"
+                                                        Disabled=@data.Estado.Equals(EstadoTurno.Cancelado)
+                                                        @onclick:stopPropagation="true">
+                                                        </RadzenButton>
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="play_circle" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                                        Click=@(() => SetEstadoTurnoViaje(data, EstadoTurno.Iniciado))
+                                                        title="Iniciar Viaje"
+                                                        Disabled=@data.Estado.Equals(EstadoTurno.Cancelado)
+                                                        class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>  
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="stop_circle" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                                                        title="Finalizar Viaje"
+                                                        Click=@(() => SetEstadoTurnoViaje(data, EstadoTurno.Completado))
+                                                        Disabled=@data.Estado.Equals(EstadoTurno.Cancelado)
+                                                        class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>
+                                                        @* <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="print" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton> *@
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="swap_driving_apps" Variant="Variant.Flat" 
+                                                        Click=@(() => OpenAsignarSolicitudTraslado(data))
+                                                        title="Asignar Traslado"
+                                                        Disabled=@data.Estado.Equals(EstadoTurno.Cancelado)
+                                                        Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>  
+                                                        <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" 
+                                                        Click=@(() => SetEstadoTurnoViaje(data, EstadoTurno.Cancelado))
+                                                        title="Cancelar Viaje"
+                                                        class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                                        </RadzenButton>
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </RadzenStack>
+                                </RadzenStack>
+                                @* ------------------------------------------------------------------------------------ *@
+                        </RadzenTabsItem>  
+                        <RadzenTabsItem Text="Traslados">
+                            <VistaListadoSolicitudTraslado />
+                        </RadzenTabsItem>
+                        @* <RadzenTabsItem Text="Ingresos">
+                            <RadzenStack>
+                                <div class="row g-3 flex-between-end mb-5">
+                                    <div class="col-12">
+                                        <div class="row">
+                                            <div class="col-sm-6 col-md-4">
+                                                &nbsp;
+                                            </div>
+                                            <div class="col-sm-6 col-md-4">
+                                                &nbsp;
+                                            </div>
+                                            <div class="col-sm-6 col-md-4">
+                                                &nbsp;
+                                            </div>
+                                        </div>
+                                    </div>  
+                                </div>
+                            </RadzenStack>
+                        </RadzenTabsItem>   *@
+                    </Tabs>
+                </RadzenTabs>
+        </div>
+    </div>
+
+</div>
+
+@code {
+
+    DialogSettings _settings;
+
+    ConsultaCtrlTransporte _consultaCtrlTransporte;
+
+    MonitorCtrlTransporte _monitorControlTransporte;
+
+    List<MonitorCtrlTransporte> listaMonitorControlTransporte;
+
+    List<MonitorSolicitudTraslado> listaMonitorSolicitudTraslado;
+
+    RadzenDataGrid<MonitorCtrlTransporte> gridControlTransporteViajes;
+
+    int valEstadoTurno = 0;
+
+    //IEnumerable<EstadoTurno> _listEstadoTurno;
+
+    SortedList<int, string> _listEstadoTurno = new SortedList<int, string>
+        {
+            { 0, "Ninguno" },
+            { 1, "Creado" },
+            { 2, "Iniciado" }, 
+            { 3, "Completado" },
+            { 4, "Cancelado" }
+        };
+
+    IList<MonitorCtrlTransporte> selectedControlTransporte;
+
+    IList<MonitorSolicitudTraslado> selectedSolicitudTraslado;
+
+    int? valFolioReferencia;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    int totalRegistrosTraslado;
+
+    int registrosPorPaginaTraslado = 10;
+
+    int numeroDePaginaTraslado = 1;
+
+    int IdMonitorControlTransporteSelected = 0;
+
+    private LoadDataArgs _args;
+
+    [Inject] private IControlTransporteService? _controlTransporteService { get; set; }
+
+    [Inject] private ISolicitudTrasladoService? _solicitudTrasladoService { get; set; }
+
+    protected override async Task OnInitializedAsync() 
+    {
+        
+        await base.OnInitializedAsync();
+
+        try 
+        {
+
+            _monitorControlTransporte = new MonitorCtrlTransporte();
+
+            _consultaCtrlTransporte = new ConsultaCtrlTransporte();
+
+            valEstadoTurno = 0;
+
+            //_listEstadoTurno = Enum.GetValues(typeof(EstadoTurno)).Cast<EstadoTurno>();
+
+            _listEstadoTurno = new SortedList<int, string>
+            {
+                { 0, "Ninguno" },
+                { 1, "Creado" },
+                { 2, "Iniciado" }, 
+                { 3, "Completado" },
+                { 4, "Cancelado" }
+            };
+
+            ////Console.WriteLine("-> _listEstadoTurno : " + JsonSerializer.Serialize(_listEstadoTurno));
+
+            }
+            catch {
+
+            }
+
+    }
+
+    private async Task ObtenerDatosSolicitudTraslado(LoadDataArgs args) {
+
+        isLoading = true;
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaCtrlTransporte> _consultaControlTransporte = new ConsultaCatalogoBase<ConsultaCtrlTransporte>();
+        _consultaControlTransporte.Entidad = new ConsultaCtrlTransporte();
+        _consultaControlTransporte.Entidad.EstadoTurno = (EstadoTurno)valEstadoTurno;
+
+        _consultaControlTransporte.Entidad.FechaInicio = _consultaCtrlTransporte.FechaInicio;
+        _consultaControlTransporte.Entidad.FechaFin = _consultaCtrlTransporte.FechaFin;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+    
+        _consultaControlTransporte.NumeroDePagina = numeroDePagina;
+        _consultaControlTransporte.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorControlTransporte = await _controlTransporteService!.ObtenerListaPaginada(_consultaControlTransporte);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorControlTransporte.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listaMonitorControlTransporte = _listMonitorControlTransporte.Data;
+
+        selectedControlTransporte = listaMonitorControlTransporte.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+    private async Task ObtenerDatosControlTransporte(LoadDataArgs args) {
+
+        isLoading = true;
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaCtrlTransporte> _consultaControlTransporte = new ConsultaCatalogoBase<ConsultaCtrlTransporte>();
+        _consultaControlTransporte.Entidad = new ConsultaCtrlTransporte();
+        _consultaControlTransporte.Entidad.EstadoTurno = (EstadoTurno)valEstadoTurno;
+        _consultaControlTransporte.Entidad.TipoViaje = TipoViaje.Entrada;
+
+        _consultaControlTransporte.Entidad.FechaInicio = _consultaCtrlTransporte.FechaInicio;
+        _consultaControlTransporte.Entidad.FechaFin = _consultaCtrlTransporte.FechaFin;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+
+            var _filterPlacas = args.Filters.Where(p => p.Property.Equals("PlacasLineaTransporte")).FirstOrDefault();
+            if (_filterPlacas != null) {
+                _consultaControlTransporte.Entidad.Placas = String.IsNullOrEmpty(_filterPlacas.FilterValue.ToString()) ? null : _filterPlacas.FilterValue.ToString();
+            }
+
+            var _filterNumEco = args.Filters.Where(p => p.Property.Equals("NumEcoLineaTransporte")).FirstOrDefault();
+            if (_filterNumEco != null) {
+                _consultaControlTransporte.Entidad.NumeroEconomico = String.IsNullOrEmpty(_filterNumEco.FilterValue.ToString()) ? null : _filterNumEco.FilterValue.ToString();
+            }
+
+            var _filterTermOrig = args.Filters.Where(p => p.Property.Equals("ManiobristaNombreCortoOrigen")).FirstOrDefault();
+            if (_filterTermOrig != null) {
+                _consultaControlTransporte.Entidad.TerminalOrigen = String.IsNullOrEmpty(_filterTermOrig.FilterValue.ToString()) ? null : _filterTermOrig.FilterValue.ToString();
+            }
+
+            var _filterTransportista = args.Filters.Where(p => p.Property.Equals("RazonSocialLineaTransporte")).FirstOrDefault();
+            if (_filterTransportista != null) {
+                _consultaControlTransporte.Entidad.NombreTransportista = String.IsNullOrEmpty(_filterTransportista.FilterValue.ToString()) ? null : _filterTransportista.FilterValue.ToString();
+            }
+            
+            var _filterEstadoTurno = args.Filters.Where(p => p.Property.Equals("Estado")).FirstOrDefault();
+            if (_filterEstadoTurno != null) {
+                _consultaControlTransporte.Entidad.EstadoTurno = (EstadoTurno)_filterEstadoTurno.FilterValue;
+            }
+
+        }
+    
+        _consultaControlTransporte.NumeroDePagina = numeroDePagina;
+        _consultaControlTransporte.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorControlTransporte = await _controlTransporteService!.ObtenerListaPaginada(_consultaControlTransporte);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorControlTransporte.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listaMonitorControlTransporte = _listMonitorControlTransporte.Data;
+
+        selectedControlTransporte = listaMonitorControlTransporte.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+    public async Task SetEstadoTurnoViaje(MonitorCtrlTransporte monitorCtrlTransporte, EstadoTurno estadoTurno) {
+
+        bool _confirmar = false;
+
+        if (monitorCtrlTransporte.Estado.Equals(EstadoTurno.Cancelado)) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", 
+            Detail = $"El Viaje ya se encuentra cancelado", 
+            Duration = 4000 });
+
+        } else {
+
+            if (monitorCtrlTransporte.Estado.Equals(EstadoTurno.Creado) || !monitorCtrlTransporte.Estado.Equals(estadoTurno))
+            {
+                if (!monitorCtrlTransporte.Estado.Equals(EstadoTurno.Iniciado) && estadoTurno.Equals(EstadoTurno.Completado)) {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", 
+                    Detail = $"No se puede Finalizar un Viaje que no ha sido Iniciado", 
+                    Duration = 4000 });
+
+                } else {
+
+                    var result = await DialogInicioFinViaje.Confirm("Desea " + (estadoTurno.Equals(EstadoTurno.Iniciado) ? "iniciar" : estadoTurno.Equals(EstadoTurno.Completado) ? "finalizar" : "cancelar") + " el Viaje ?", 
+                                        "Folio de Viaje: " + monitorCtrlTransporte.FolioTurno.ToString(), new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                    _confirmar = result.HasValue ? (bool)result : false;
+
+                    if (_confirmar) {
+
+                        monitorCtrlTransporte.IdEmpresaLogin = 1;
+                        monitorCtrlTransporte.Estado = estadoTurno;
+                        if (estadoTurno.Equals(EstadoTurno.Iniciado)) {
+                            monitorCtrlTransporte.FechaInicio = DateTime.Now;
+                        } else if (estadoTurno.Equals(EstadoTurno.Completado)) {
+                            monitorCtrlTransporte.FechaFin = DateTime.Now;
+                        } else if (estadoTurno.Equals(EstadoTurno.Cancelado)) {
+                            monitorCtrlTransporte.FechaCancelacion = DateTime.Now;
+                        }
+                        monitorCtrlTransporte.CRUDAction = ECRUDAction.Update;
+                        
+                        var resultBase = await _controlTransporteService.Guardar(monitorCtrlTransporte);
+
+                        if (resultBase.Success) {
+                            
+                            await ObtenerDatosControlTransporte(_args);
+
+                            await InvokeAsync(StateHasChanged);
+
+                        } else {
+
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", 
+                                Detail = $"Error: {resultBase.MensajeRespuesta}", 
+                                Duration = 4000 });
+
+                        }
+
+                    }
+
+                }
+
+            } else {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", 
+                Detail = $"El Viaje ya se encuentra {(EstadoTurno)estadoTurno}", 
+                Duration = 4000 });
+            }
+
+        }
+
+    }
+
+    public async Task OpenRegistroViaje(MonitorCtrlTransporte monitorCtrlTransporte)
+    {
+        await LoadStateAsync();
+
+        if (monitorCtrlTransporte != null)
+            _monitorControlTransporte = monitorCtrlTransporte;
+        else {
+            _monitorControlTransporte = new MonitorCtrlTransporte();
+        }
+
+        _monitorControlTransporte.TipoViaje = TipoViaje.Entrada;
+
+        await DialogRegistroViaje.OpenAsync<VistaModalRegistroViajeTurno>($"Viaje",
+               new Dictionary<string, object>() { { "IdControlTransporte", _monitorControlTransporte.IdControlTransporte }, { "monitorCtrlTransporte", _monitorControlTransporte} },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Resize = OnResize,
+                   Drag = OnDrag,
+                   Width = "860px", 
+                   Height = "550px"
+                });
+
+        await ObtenerDatosControlTransporte(_args);
+
+        await InvokeAsync(StateHasChanged);
+
+        await SaveStateAsync();
+    }
+
+    async void  OnChangeTabTraslados(int index)
+    {
+        ////Console.WriteLine($"Tab with index {index} was selected.");
+
+        @* if (index.Equals(0)) {
+
+            await ObtenerDatosControlTransporte(_args);
+            
+        } *@
+
+    }
+
+    private async void OpenAsignarSolicitudTraslado(MonitorCtrlTransporte monitorCtrlTransporte) {
+
+        await DialogServiceAsignarSolicitudTraslado.OpenAsync<VistaModalAsignarTrasladoViaje>($"Traslados",
+                new Dictionary<string, object>() { { "monitorCtrlTransporteSelected", monitorCtrlTransporte } },
+                new DialogOptions() 
+                {
+                    Resizable = true, 
+                    Draggable = true,
+                    Width = "800px", 
+                    Height ="500px"
+                });
+
+        await ObtenerDatosControlTransporte(_args);
+
+
+    }
+
+    void RowRenderControlTransporte(RowRenderEventArgs<MonitorCtrlTransporte> args)
+    {
+        if (args.Data != null)
+            args.Expandable = args.Data.TieneTrasladosAsignado;
+    }
+
+    async void RowExpandControlTransporte(MonitorCtrlTransporte monitorCtrlTransporte)
+    {
+
+            IdMonitorControlTransporteSelected = monitorCtrlTransporte.IdControlTransporte;
+
+            InvokeAsync(async () =>
+            {
+                await LoadStateAsync();
+
+                ConsultaCatalogoBase<ConsultaSolicitudTraslado> _consultaTraslado = new ConsultaCatalogoBase<ConsultaSolicitudTraslado>();
+                _consultaTraslado.Entidad = new ConsultaSolicitudTraslado();
+                _consultaTraslado.Entidad.IdControlTransporte = monitorCtrlTransporte.IdControlTransporte;
+                _consultaTraslado.NumeroDePagina = numeroDePaginaTraslado;
+                _consultaTraslado.RegistrosPorPagina = registrosPorPaginaTraslado;
+                _consultaTraslado.Entidad.FechaInicio = DateTime.MinValue;
+                _consultaTraslado.Entidad.FechaFin = DateTime.MinValue;
+
+                var result = await _solicitudTrasladoService!.ObtenerListaPaginada(_consultaTraslado);
+
+                if (result.Success) {
+
+                    listaMonitorSolicitudTraslado = result.Data;
+
+                    totalRegistrosTraslado = (int)result.Paginado.TotalRegistros;
+                }
+
+                DialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+                await SaveStateAsync();
+
+             });
+
+            await BusyDialog("Cargando Información...");
+
+            
+    }
+
+    async Task OpenaTarjaTraslado(MonitorSolicitudTraslado monitorSolicitudTraslado) {
+
+        ////Console.WriteLine("--> monitorTarja: " + JsonSerializer.Serialize(monitorSolicitudTraslado));
+
+        ReferenciaDTO referenciaDTO = new ReferenciaDTO();
+        referenciaDTO.FolioReferencia = monitorSolicitudTraslado.FolioReferencia;
+        referenciaDTO.IdReferencia = monitorSolicitudTraslado.IdReferencia;
+        referenciaDTO.IdTarja = monitorSolicitudTraslado.IdTarja;
+
+        string _referenciaDTO = JsonSerializer.Serialize(referenciaDTO);
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_referenciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        //navigationManager.NavigateTo($"/tarja-crear/{base64EncodedData}");
+        await JSRuntime.InvokeVoidAsync("abrirEnNuevaVentana", $"/tarja-crear/{base64EncodedData}");
+
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Button Clicked", Detail = text });
+    }
+
+    @* ----------------------------------------------------------------------------------------------------------- *@
+
+    void OnDrag(System.Drawing.Point point)
+    {
+        //JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog drag. Left:{point.X}, Top:{point.Y}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Left = $"{point.X}px";
+        Settings.Top = $"{point.Y}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+
+    void OnResize(System.Drawing.Size size)
+    {
+        //JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog resize. Width:{size.Width}, Height:{size.Height}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Width = $"{size.Width}px";
+        Settings.Height = $"{size.Height}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+    public DialogSettings Settings 
+    { 
+        get
+        {
+            return _settings;
+        }
+        set
+        {
+            if (_settings != value)
+            {
+                _settings = value;
+                InvokeAsync(SaveStateAsync);
+            }
+        }
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "DialogSettings");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _settings = JsonSerializer.Deserialize<DialogSettings>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+    }
+
+    public class DialogSettings
+    {
+        public string Left { get; set; }
+        public string Top { get; set; }
+        public string Width { get; set; }
+        public string Height { get; set; }
+    }
+
+    void ChangeFiltros(string text)
+    {
+        //////Console.WriteLine.Log($"{text}");
+    }
+
+    private async Task BurcarViaje()
+    {
+
+        await ObtenerDatosControlTransporte(_args);
+
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await DialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+    private BadgeStyle BadgeStyleControlTransporte(EstadoTurno estadoTurno) {
+
+        switch(estadoTurno) {
+
+            case EstadoTurno.Creado : return BadgeStyle.Warning;
+            case EstadoTurno.Iniciado : return BadgeStyle.Info;
+            case EstadoTurno.Completado : return BadgeStyle.Success;
+            case EstadoTurno.Cancelado : return BadgeStyle.Danger;
+            case EstadoTurno.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+    private BadgeStyle BadgeStyleEstadoTraslado(EstadoTraslado estadoTraslado) {
+
+        switch(estadoTraslado) {
+
+            case EstadoTraslado.Completado : return BadgeStyle.Success;
+            case EstadoTraslado.Programado : return BadgeStyle.Info;
+            case EstadoTraslado.Asignado : return BadgeStyle.Warning;
+            case EstadoTraslado.Cancelado : return BadgeStyle.Danger;
+            case EstadoTraslado.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}

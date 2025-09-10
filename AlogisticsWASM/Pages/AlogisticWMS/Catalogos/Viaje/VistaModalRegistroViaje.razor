@@ -1,0 +1,279 @@
+﻿@page "/viewModalRegistroViaje/{IdViaje}"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@attribute [Authorize]
+@inject DialogService dialogService
+<RadzenTemplateForm Data="@monitorViajeSelected" Submit="@((MonitorViaje args) => { Submit(args); })">
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; height: 100%;">
+    <RadzenStack>
+    <div class="row">
+        <div class="col-sm-6">
+            <RadzenLabel Text="Folio Viaje" Component="REF_FOLIO_VIAJE" />
+            <RadzenTextBox Name="REF_FOLIO_VIAJE" 
+            Style="width: 100%; max-width: 400px;"
+            @bind-Value="monitorViajeSelected.FolioViaje" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Operación" Component="REF_TIPO_OPERACION" />
+            <RadzenDropDown @bind-Value=@valTipoOperacion ValueProperty="Key" 
+                                            Placeholder="Seleccione la Operación"
+                                            TextProperty="Value" Data=@listTipoOperacion Style="width: 100%; max-width: 400px;" 
+                                            Name="REF_TIPO_OPERACION" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Buque" Component="REF_NOMBRE_BARCO" />
+            <RadzenAutoComplete @bind-Value=@monitorViajeSelected.Barco.Nombre Data=@listMonitorBarco 
+                        Name="REF_NOMBRE_BARCO" Change=@OnChange class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorBarco.IdBarco)"
+                        TextProperty="@nameof(MonitorBarco.Nombre)" LoadData=@OnLoadDataBarco Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Nombre Barco" }})" />
+            @* <RadzenAutoComplete @bind-Value=@nombreBarcoSelected Data=@listMonitorBarco 
+            Name="REF_NOMBRE_BARCO" Change=@OnChange
+            TextProperty="@nameof(MonitorBarco.Nombre)" LoadData=@OnLoadDataBarco Style="width: 100%; max-width: 400px;" 
+            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Nomrbre Barco" }})" /> *@
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Fecha Arribo/Salida" Component="REF_FECHA_ARRIBOSALIDA" />
+            <RadzenDatePicker @bind-Value=@monitorViajeSelected.FechaArriboSalida ParseInput="@ParseDate"
+                Style="width: 100%; max-width: 400px;" 
+                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm"
+                Name="REF_FECHA_ARRIBOSALIDA" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Fecha Fondeo" Component="REF_FECHA_FONDEO" />
+            <RadzenDatePicker @bind-Value=@monitorViajeSelected.FechaFondeo ParseInput="@ParseDate" 
+                Style="width: 100%; max-width: 400px;"
+                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm"
+                Name="REF_FECHA_FONDEO" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Fecha Atraque" Component="REF_FECHA_ATRAQUE" />
+            <RadzenDatePicker @bind-Value=@monitorViajeSelected.FechaAtraque ParseInput="@ParseDate" 
+                Style="width: 100%; max-width: 400px;"
+                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm"
+                Name="REF_FECHA_ATRAQUE" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Fecha Desatraque" Component="REF_FECHA_DESATRAQUE" />
+            <RadzenDatePicker @bind-Value=@monitorViajeSelected.FechaDesatraque ParseInput="@ParseDate" 
+                Style="width: 100%; max-width: 400px;"
+                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm"
+                Name="REF_FECHA_DESATRAQUE" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Fecha Inicio Carga/Descarga" Component="REF_FECHA_INICIO_CARGADESCARGA" />
+            <RadzenDatePicker @bind-Value=@monitorViajeSelected.FechaDesatraque ParseInput="@ParseDate" 
+                Style="width: 100%; max-width: 400px;"
+                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm"
+                Name="REF_FECHA_INICIO_CARGADESCARGA" />
+        </div>
+        <div class="col-sm-6">
+            <RadzenLabel Text="Fecha Fin Carga/Descarga" Component="REF_FECHA_FIN_CARGADESCARGA" />
+            <RadzenDatePicker @bind-Value=@monitorViajeSelected.FechaFinCargaDescarga ParseInput="@ParseDate" 
+                Style="width: 100%; max-width: 400px;"
+                ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm"
+                Name="REF_FECHA_FIN_CARGADESCARGA" />
+        </div>
+         <div class="col-sm-6">
+            <RadzenLabel Text="Peso BL" Component="REF_PESO_BL" />
+            <RadzenNumeric TValue="decimal" Format="#.000" ShowUpDown="false" Style="width: 100%;" Name="REF_PESO_BL" @bind-Value="monitorViajeSelected.PesoBl" />
+        </div> 
+    </div>
+    </RadzenStack>
+    <RadzenStack Visible="@ShowClose" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="Guardar" />
+        <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="Cerrar" Click="@Cancel" />
+    </RadzenStack>
+</RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+
+    [Parameter] public int IdViaje { get; set; }
+
+    [Parameter] public MonitorViaje monitorViajeSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    MonitorViaje monitorViaje;
+
+    MonitorBarco monitorBarco;
+
+    int valTipoOperacion = 1;
+
+    List<MonitorBarco> listMonitorBarco;
+
+    SortedList<int, string> listTipoOperacion = new SortedList<int, string>
+        {
+            { 1, "Importación" },
+            { 2, "Exportación" }
+        };
+        
+    DateTime? value = DateTime.Now;
+
+    [Inject] private IBarcoService? _barcoService { get; set; }
+
+    [Inject] private IViajeService? _viajeService { get; set; }
+
+    string nombreBarcoSelected = String.Empty;
+
+    public DateTime? ParseDate(string input)
+    {
+        string[] formats = { "dd-MM-yyyy", "dd/MM/yyyy", "dd-MM-yy", "dd/MM/yy", "ddMMyyyy", "ddMMyy", "dd-MM", "dd/MM", "ddMM" };
+
+        foreach (var format in formats)
+        {
+            if (DateTime.TryParseExact(input, format, null, System.Globalization.DateTimeStyles.None, out var result))
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync(); 
+
+        valTipoOperacion = monitorViajeSelected.TipoOperacion.Equals(TipoOperacionAduanera.Importacion) ? 1 : 2;
+
+        nombreBarcoSelected = monitorViajeSelected.Barco.Nombre;
+
+        monitorViajeSelected.CRUDAction = monitorViajeSelected.IdViaje.Equals(0) ? ECRUDAction.Create : ECRUDAction.Update;
+
+        listTipoOperacion = new SortedList<int, string>
+        {
+            { 1, "Importación" },
+            { 2, "Exportación" }
+        };
+
+    }
+
+    async Task OnLoadDataBarco(LoadDataArgs args)
+    {
+        listMonitorBarco = new List<MonitorBarco>();
+        var resultBase = await _barcoService.ObtenerPorNombreContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listMonitorBarco = resultBase.Data;
+
+            if (listMonitorBarco.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Viaje", Detail = "No se encontró el barco solicitado", Duration = 4000 });
+                nombreBarcoSelected = String.Empty;
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Viaje", Detail = "No se encontró el barco solicitado", Duration = 4000 });
+            nombreBarcoSelected = String.Empty;
+        }
+    }
+
+    async void Submit(MonitorViaje monitorViaje)
+    {
+        string _mensaje = String.Empty;
+        ////Console.WriteLine("-> Guardar Datos Viaje args : " + JsonSerializer.Serialize(monitorViaje));
+        _mensaje = valTipoOperacion.ToString();
+
+        var _result = ValidarRegistroViaje(monitorViaje);
+
+        if (_result.Success) {
+        
+            monitorViaje.IdEmpresaLogin = 1;
+            monitorViaje.TipoOperacion = valTipoOperacion.Equals(1) ? TipoOperacionAduanera.Importacion : TipoOperacionAduanera.Exportacion;
+            ////Console.WriteLine("-> Barco Selected : " + nombreBarcoSelected);
+            ////Console.WriteLine("-> Guardar Datos Viaje args : " + JsonSerializer.Serialize(monitorViaje));
+
+            @* if (nombreBarcoSelected.Equals(string.Empty)) {
+                monitorViaje.Barco = null;
+            } else {
+                monitorViaje.Barco = new MonitorBarco();
+                monitorViaje.Barco.Nombre = nombreBarcoSelected;
+            } *@
+
+            var _resultBase = await _viajeService!.Guardar(monitorViaje);
+
+            ////Console.WriteLine("-> Viaje : " + JsonSerializer.Serialize(_resultBase));
+            if (_resultBase.Success) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Registro de Viaje", Detail = "Se Guardo el Viaje de forma correcta", Duration = 4000 });
+            } else {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Viaje", Detail = _resultBase.MensajeRespuesta, Duration = 4000 });
+            }
+
+            dialogService.Close(true);
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+            Summary = "Registro de Viaje", Detail = _result.MensajeRespuesta, Duration = 4000 });
+
+
+        }
+        
+        //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Viaje", Detail = _mensaje, Duration = 4000 });
+
+    }
+
+    private ResultBase ValidarRegistroViaje(MonitorViaje monitorViaje) {
+
+        var _result = new ResultBase();
+
+        if (String.IsNullOrEmpty(monitorViaje.FolioViaje)) {
+            _result.MensajeRespuesta = "Favor de Introducir el Folio de Viaje";
+        }
+
+
+        return _result;
+
+    }
+
+    void Cancel()
+    {
+        dialogService.Close(true);
+    }
+
+    void OnChange(object value)
+    {
+        ////Console.WriteLine("-> OnChangeManiobristaOrigen autocomplete : " + JsonSerializer.Serialize(value));
+
+        monitorViajeSelected.Barco = new MonitorBarco();
+        monitorViajeSelected.Barco.IdBarco = 0;
+        monitorViajeSelected.Barco.Nombre = null;
+
+        if (listMonitorBarco != null) {
+            if (!listMonitorBarco.Count().Equals(0)) {
+
+                var selectedMonitorBarco = listMonitorBarco
+                .FirstOrDefault(c => c.Nombre == value?.ToString());
+
+                if (selectedMonitorBarco != null)
+                {
+                    var selectedId = selectedMonitorBarco.IdBarco;
+                    monitorViajeSelected.Barco.IdBarco = selectedMonitorBarco.IdBarco;
+                    monitorViajeSelected.Barco.Nombre = selectedMonitorBarco.Nombre;
+                }
+
+            }
+        }
+    }
+
+    void OnChangeExterior(bool? value, string name)
+    {
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}
+

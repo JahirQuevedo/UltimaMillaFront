@@ -1,0 +1,66 @@
+﻿@using ALOG.Modelos.Modelos.Vacios
+@using ALOG.Modelos.Modelos.Catalogos
+@using ClienteBlazorWASM.Helpers
+@using Radzen
+@inject HttpClient Http
+@inject IJSRuntime JS
+<script>
+    function downloadFile(fileName, fileUrl) {
+        var link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+<RadzenDataGrid AllowFiltering="true" AllowPaging="true" AllowSorting="true"
+                Data="@paramDocumentos">
+
+    <Columns>
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.FechaRegistro)" FormatString="{0:d}" Title="F.Solicitud" Width="80px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.CatDocumento)" Title="Tipo" Width="120px">
+            <Template Context="data">
+                @(data.CatDocumento.Nombre)
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.TipoDocumentoNombre)" Title="Documento" Width="80px"/>
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.DocumentoUUID)" Title="UUID" Width="80px" />
+        <RadzenDataGridColumn Width="40px" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+            <Template Context="documento">
+                <RadzenButton Icon="picture_as_pdf" ButtonStyle="ButtonStyle.Dark" Variant="Variant.Filled" Size="ButtonSize.Small" Click="@(args => DownloadFile(documento.DocumentoUUID,documento.NombreDocumento))" @onclick:stopPropagation="true">
+                </RadzenButton>
+              
+            </Template>
+           
+        </RadzenDataGridColumn>
+       
+    </Columns>
+</RadzenDataGrid>
+
+@code {
+
+    [Parameter]
+    public IEnumerable<PeticionesDocumentos> paramDocumentos { get; set; }
+
+    //private string fileName;
+
+    private async Task DownloadFile(string pUUID, string pFileName)
+    {
+                 
+        var response = await Http.GetAsync($"{Inicializar.UrlApiLogistico}Documentos/obtenerArchivo/{pUUID}");
+        if (response.IsSuccessStatusCode)
+        {
+
+            var fileBytes = await response.Content.ReadAsByteArrayAsync();
+            var base64 = Convert.ToBase64String(fileBytes);
+            var fileUrl = $"data:application/octet-stream;base64,{base64}";
+            await JS.InvokeVoidAsync("downloadFile", pFileName, fileUrl);
+        }
+        else
+        {
+            // Manejar el error
+        }
+    }
+}

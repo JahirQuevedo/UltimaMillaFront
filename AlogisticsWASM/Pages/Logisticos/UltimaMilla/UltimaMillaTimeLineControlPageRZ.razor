@@ -1,0 +1,613 @@
+﻿    @using ALOG.Modelos.Modelos.Logisticos
+@using ALOGRepositorios.Services.Logisticos.ILogisticos
+@using System.Linq
+@using Radzen.Blazor 
+@using ALOG.Modelos.Modelos.Catalogos
+
+@inject Radzen.DialogService DialogService
+@inject ISLOTControlTerrestreService servicioControl
+
+
+<style>
+    :root {
+        --rz-grid-header-color: white;
+        --rz-grid-header-background-color: darkred;
+    }
+
+    .rz-tabview-nav li a {
+        color: black !important;
+        border-radius: 8px;
+        padding: 8px 16px;
+    }
+
+    .rz-tabview-nav li.rz-state-active a {
+        background-color: rgba(255, 204, 0, 0.3);
+        color: black !important;
+    }
+
+    .rz-tabview-nav {
+        border-bottom: none;
+    }
+
+    .icon-container {
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+    }
+
+    /* Contenedor específico para no romper otros layouts */
+    .two-col-form .rz-column {
+        padding-bottom: 0.75rem;
+    }
+
+    /* Alineación y separación de botones */
+    .two-col-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        align-items: center;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+
+        .two-col-actions .left,
+        .two-col-actions .right {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+    /* En pantallas pequeñas forcemos una columna (cada RadzenColumn ocupará 100%) */
+    /*  (max-width: 768px) {
+        .two-col-form .rz-column
+
+    {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    
+    .two-col-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+        .two-col-actions .right {
+            margin-left: 0;
+            justify-content: flex-end;
+        }
+
+    } */
+/* sq */
+  /*   .timeline-normal {
+        padding: 0.5rem 0;
+    }
+    /* Opcional: para ocultar el punto del timeline original en eventos eventuales */
+    /* .timeline-item-eventual .rz-timeline-point {
+        display: none !important;
+    } */ 
+
+</style>
+
+@* <strong>Usuario: @UsuarioDTO.Nombre</strong> *@
+@* <strong>Torre de Control: @TControlTerrestre.IdTControlTerrestre</strong> *@
+<div class="modal-wrapper" style="position: relative; padding: 1rem;">
+<!-- Cards Laterales -->
+<RadzenRow>
+        <RadzenColumn Size="2">
+            @foreach (var card in cards)
+            {
+                <RadzenCard @onclick="() => SelectCard(card.Id)"
+                            Style="@(selectedCardId == card.Id
+                                ? "border-radius: 12px; margin-bottom: 0.5rem; border: 2px solid #4CAF50; box-shadow: 0 4px 8px rgba(0,0,0,0.1); cursor:pointer; padding:0.5rem;"
+                                                            : "border-radius: 12px; margin-bottom: 0.5rem; cursor:pointer;padding:0.5rem;")">
+                    <div class="modal-header" style="background-color: darkred; padding: 0.5rem;">
+                        @* <RadzenText Style="color: white;">@card.Title</RadzenText> *@
+                        @if (card.MostrarGrid)
+                        {
+                            <RadzenText Style="color:white;">Información del Transporte</RadzenText>
+                        }
+                        else
+                        {
+                            <RadzenText Style="color:white;">Carga Transportada</RadzenText>
+                        }
+                    </div>
+                    <RadzenFieldset Style="padding:-2.5rem;">
+
+                        @if (card.MostrarGrid)
+                            {
+                                @* <RadzenDataGrid Data="@TControlTerrestre" TItem="SLOTControlTerrestre" AllowPaging="true" PageSize="5" Responsive="true" Style="border-radius:12px;">
+                                    <Columns>
+                                        <RadzenDataGridColumn TItem="SLOTControlTerrestre" Property="sloTransporteAsignado.Placas" Title="Placas" Width="150px" />
+                                        <RadzenDataGridColumn TItem="SLOTControlTerrestre" Title="Acción" Width="100px">
+                                            <Template Context="item">
+                                                <button class="btn btn-sm btn-primary" @onclick="() => BotonClickeado(item)">Ver</button>
+                                            </Template>
+                                        </RadzenDataGridColumn>
+                                    </Columns>
+                                </RadzenDataGrid> *@
+                                <RadzenDataGrid Data="@TControlTerrestre"
+                                                TItem="SLOTControlTerrestre"
+                                                AllowPaging="true"
+                                                PageSize="5"
+                                                Responsive="true"
+                                                AllowColumnResize="true"
+                                                Style="padding:-2rem; margin:0; border-radius:12px; width:100%;"
+                                                RowSelect="@(item => BotonClickeado(item))"
+                                                >
+
+                                    <Columns>
+                                        <!-- Columna del ojo -->
+                                        <RadzenDataGridColumn Title="Ver">
+                                            <Template Context="data">
+                                                <div class="icon-container" 
+                                                     @onclick='() => VerDetalle("R",data)' 
+                                                     @onclick:stopPropagation
+                                                     style="cursor:pointer;">
+                                                    <img src="img/UltimaMilla/eye.svg"/>
+                                                </div>
+                                            </Template>
+                                        </RadzenDataGridColumn>
+
+                                        <!-- Columna Placas -->
+                                        <RadzenDataGridColumn TItem="SLOTControlTerrestre"
+                                                              Property="sloTransporteAsignado.Placas"
+                                                              Title="Vehículo"
+                                                              Width="150px"/>
+        
+                                        <!-- Columna Transportista -->
+                                        @* <RadzenDataGridColumn TItem="SLOTControlTerrestre" Title="Transportista">
+                                            <Template Context="data">
+                                                @(data?.sloTransporteAsignado?.sloTransporteSolicitud?.catTransportistas?.RazonSocial ?? "N/A")
+                                            </Template>
+                                        </RadzenDataGridColumn> *@
+                                    </Columns>
+                                </RadzenDataGrid>
+
+
+
+                            }
+                            else if(lstDetallesAsignados == null)
+                            {
+                            <RadzenDataGrid Data="@lstDetallesAsignados" TItem="SLOTransporteDetalle" Style="padding:-1.5rem; margin:0; border-radius:12px; width:100%;" Responsive="true" AllowColumnResize="true">
+                                <Columns>
+                                    
+                                    <RadzenDataGridColumn TItem="SLOTransporteDetalle" Title="Mercancia">
+                                        <Template Context="data">
+                                            @(data?.sloSolicitudes?.sloSOlicitudesDetalle?
+                                                .FirstOrDefault(det => det.IdSLOSolicitudDet == data.IdSLOSolicitudDet)
+                                                ?.catTipoMercancia?.Nombre ?? "N/A")
+
+                                        </Template>
+                                    </RadzenDataGridColumn>
+
+                                    <RadzenDataGridColumn TItem="SLOTransporteDetalle" Title="Cantidad">
+                                        <Template Context="data">
+                                            @(data.sloSolicitudes?.sloSOlicitudesDetalle?
+                                                .FirstOrDefault(det => det.IdSLOSolicitudDet == data.IdSLOSolicitudDet)?.Cantidad ?? 0)
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="SLOTransporteDetalle" Title="Peso">
+                                        <Template Context="data">
+                                            @(data.sloSolicitudes?.sloSOlicitudesDetalle?
+                                                .FirstOrDefault(det => det.IdSLOSolicitudDet == data.IdSLOSolicitudDet)?.Peso ?? 0)
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                </Columns>
+                                </RadzenDataGrid>
+
+
+                            }
+                            else
+                            {
+                                <RadzenText>No ha datos seleccionados</RadzenText>
+                            }
+<div class="card-content">
+                        </div>
+                    </RadzenFieldset>
+                </RadzenCard>
+            }
+        </RadzenColumn>
+
+        <!-- Timeline Central -->
+        <RadzenColumn Size="4">
+        <RadzenCard Style="border-radius: 12px; margin-bottom: 0.5rem; position: relative;">
+        <div class="modal-header" style="background-color: darkred; padding: 0.5rem;">
+            @* <RadzenText Style="color: white;">Solicitud de Transporte: @if(objTControlTerrestre != null){@objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO}</RadzenText> *@
+            <RadzenText Style="color: white;">
+                Solicitud de Transporte: 
+                @if (objTControlTerrestre != null 
+                     && objTControlTerrestre.sloSolicitudes != null 
+                     && objTControlTerrestre.sloSolicitudes.Orden != null)
+                {
+                    @objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO
+                }
+            </RadzenText>
+
+            @* <RadzenText Style="color: white;">Referencia ALO: @TControlTerrestre.sloSolicitudes.Orden.ReferenciaALO</RadzenText>
+                    <RadzenText Style="color: white;">Fecha de Solicitud: @TControlTerrestre.FechaRegistro</RadzenText> *@
+        </div>
+
+
+        @if (objTControlTerrestre.IdSLOTransporteAsignado != null)
+        {
+            <RadzenFieldset>
+                <RadzenRow Class="two-col-form">
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Confirmación de Booking">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FConfirmaBooking"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"                                              
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Fin de proceso de despacho aduanal">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinDespachoAA"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad en Sitio de Carga">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FUnidensitiocarga"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad inicia tránsito a destino (lado estadounidense)">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FIniciaTransitoEXPO"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad en Proceso de Carga">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FUnidadencarga"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad en punto de descarga">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FPuntoDescarga"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Finalización de Carga">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinalizaCarga"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad en proceso de descarga">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FEnProcesoDescarga"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad inicia tránsito a destino (lado mexicano)">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FIniciaTransito"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Finalización de descarga">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinDescarga"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Unidad en frontera mexicana para exportación">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FEnFrontera"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Prueba de entrega (cargar documentos sellados y firmados)">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FRecepcionPOD"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Inicio de proceso de despacho aduanal">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FInicioDespachoAA"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                            
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Fin de la operación">
+                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinOperacion"
+                                              ShowTime="true"
+                                              DateFormat="dd/MM/yyyy HH:mm"
+                                              HourFormat="24"
+                                              TimeOnly="false"
+                                              Style="width:100%;"                                              
+                                              />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="12">
+                        <div class="two-col-actions">
+                            <div class="left">
+                                <RadzenButton ButtonType="ButtonType.Button"
+                                              ButtonStyle="ButtonStyle.Primary"
+                                              Style="border-radius:8px;"
+                                              Click="@GuardarCambiosTimeLine">
+                                    Guardar cambios
+                                </RadzenButton>
+                            </div>
+
+                            <div class="right">
+                                <RadzenButton ButtonType="ButtonType.Button"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Style="border-radius:8px;"
+                                              Click="@(() => FinalizarOperacion())"
+                                >
+                                    Fin de la operación
+                                </RadzenButton>
+                            </div>
+                        </div>
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenFieldset>
+        }
+
+        else
+        {
+            <p style="
+    font-size: 1.5rem; 
+    font-weight: bold; 
+    color: #2c3e50; 
+    background-color: #ecf0f1; 
+    padding: 0.5rem; 
+    border-radius: 8px; 
+    text-align: center; 
+    border: 2px solid #3498db;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+">
+                🚚 Seleccione un transporte para obtener la información del recorrido y booking
+            </p>
+
+        }
+
+                
+
+        </RadzenCard>
+        
+        @* 2️⃣ Renderizado condicional *@
+            @if (objTControlTerrestre.IdSLOTransporteAsignado == null)
+            {
+                <RadzenText>Seleccione un transporte para ver los documentos relacionados</RadzenText>
+            }
+            else
+            {
+                <!-- Botón siempre visible mientras haya transporte -->
+                <RadzenUpload @ref="uploadFiles"
+                              ChooseText="Agregar documentos"
+                              Multiple="true"
+                              Accept="application/pdf"
+                              Auto="true"
+                              Change="@OnUploadChange"
+                              Style="width:40%;"
+                              InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
+                              Disabled="true"/>   <!-- <‑‑ aquí -->
+
+                @if (lstDocumentos == null)   @* lista aún no cargada → spinner *@
+                {
+                    <div style="display:flex;justify-content:center;align-items:center;
+                            flex-direction:column;height:200px;">
+                        <em class="mb-3">Cargando registros…</em>
+
+                        <RadzenProgressBarCircular ShowValue="true"
+                                                   Mode="ProgressBarMode.Indeterminate"
+                                                   Size="ProgressBarCircularSize.Large"
+                                                   ProgressBarStyle="ProgressBarStyle.Primary">
+                            <Template>Cargando</Template>
+                        </RadzenProgressBarCircular>
+                    </div>
+                }
+                else if (!lstDocumentos.Any())
+       @* lista vacía → mensaje *@
+                {
+                    <div class="text-center mt-4" style="font-style:italic;color:#6c757d;">
+                        No existen documentos relacionados al transporte.
+                    </div>
+                }
+                else
+       @* lista con datos → grid *@
+                {
+                    <RadzenDataGrid @ref="gridArchivos"
+                                    TItem="SLOSolicitudesDocumentos"
+                                    Data="@lstDocumentos"
+                                    AllowPaging="true" PageSize="4"
+                                    Style="border-radius:12px;">
+                        <Columns>
+                            <RadzenDataGridColumn Title="T. Documento">
+                                <Template Context="item">@item?.catDocumentos?.Nombre</Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn Title="N. Documento">
+                                <Template Context="item">@item.NombreDocumento</Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn Title="Fecha de subida">
+                                <Template Context="item">@item.FechaRegistro.ToString("dd/MM/yyyy")</Template>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn Title="Acciones">
+                                <Template Context="item">
+                                    <RadzenButton Icon="visibility"
+                                                  Size="ButtonSize.Small"
+                                                  ButtonStyle="ButtonStyle.Info"
+                                                  Click="@(args => AbrirDocumentoCont(item))" />
+                                    <RadzenButton Icon="delete"
+                                                  Size="ButtonSize.Small"
+                                                  ButtonStyle="ButtonStyle.Danger"
+                                                  Click="@(() => BajaDocumento(item))" />
+                                </Template>
+                            </RadzenDataGridColumn>
+                        </Columns>
+                    </RadzenDataGrid>
+                }
+            }
+
+
+        </RadzenColumn>
+
+        <RadzenColumn Size="4">
+            <div style="height: 600px; overflow-y: auto; padding-right: 8px;">
+
+                <RadzenCard Style="border-radius: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); width: 100%;">
+
+                    <!-- Contenedor sticky: encabezado + botones -->
+                    <div style="
+                position: sticky;
+                top: 0;
+                z-index: 10;
+                background-color: white;
+                border-top-left-radius: 12px;
+                border-top-right-radius: 12px;
+                padding: 0.5rem;
+                display: flex;
+                flex-direction: column;
+                gap: 0.5rem;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            ">
+                        <!-- Encabezado -->
+                        <div style="background-color: darkred; padding: 0.5rem; border-radius: 6px;">
+                            <RadzenText Style="color: white;">Puntos de control de viaje</RadzenText>
+                        </div>
+
+                        <!-- Botones -->
+                        @if (objTControlTerrestre?.FConfirmaBooking.HasValue == true)
+                        {
+                            <div style="display:flex; justify-content:space-between; gap:1rem;">
+                                
+
+                                <RadzenButton ButtonType="ButtonType.Button"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Icon="add_circle"
+                                              Style="border-radius: 12px; min-width: 140px;"
+                                              Click="@(() => AgregarTracking())">
+                                    Agregar Eventualidad
+                                </RadzenButton>
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Contenido: timeline -->
+                    <RadzenFieldset Style="padding-top: 0;">
+                        <RadzenTimeline>
+                            <Items>
+                                @foreach (var e in lstEventos)
+                                {
+                                    @if (e.Tipo == "Fijo")
+                                    {
+                                        <RadzenTimelineItem PointSize="PointSize.Medium" PointStyle="PointStyle.Success">
+                                            <LabelContent>
+                                                <RadzenText>@e.Titulo</RadzenText>
+                                                <RadzenText>@e.Fecha.ToString("dd/MM/yyyy HH:mm")</RadzenText>
+                                            </LabelContent>
+                                        </RadzenTimelineItem>
+                                    }
+                                    else if (e.Tipo == "Eventualidad")
+                                    {
+                                        <RadzenTimelineItem PointSize="PointSize.Small" PointStyle="PointStyle.Danger">
+                                            <ChildContent>
+                                                <RadzenText>@e.Titulo</RadzenText>
+                                                <RadzenText>@e.Fecha.ToString("dd/MM/yyyy HH:mm")</RadzenText>
+                                            </ChildContent>
+                                        </RadzenTimelineItem>
+                                    }
+                                }
+                            </Items>
+                        </RadzenTimeline>
+                    </RadzenFieldset>
+
+                </RadzenCard>
+
+            </div>
+        </RadzenColumn>
+
+
+
+        </RadzenRow>
+</div>

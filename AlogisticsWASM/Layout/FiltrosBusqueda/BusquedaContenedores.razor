@@ -1,0 +1,39 @@
+﻿<div class="col-sm-12 col-md-4">
+    <div class="form-floating">
+        <input class="form-control" id="floatingInputGrid" type="text" placeholder="Referencia del cliente" @bind:get="ReferenciaCliente" @bind:set="SetReferenciaCliente" @bind:event="oninput" />
+        <label for="floatingInputGrid">Referencia del cliente</label>
+    </div>
+</div>
+<div class="col-sm-12 col-md-12">
+    <div class="form-floating">
+        <select class="form-select" id="floatingSelectCliente" @bind="IdCliente">
+            <option value="0" selected="selected">Selecciona un cliente</option>
+            @foreach (var cliente in clientes) {
+                <option value="@cliente.IdCatCliente">@cliente.RazonSocial</option>
+            }
+        </select>
+        <label for="floatingSelectCliente">Clientes</label>
+    </div>
+</div>
+<div class="col-sm-12 col-md-12">
+    <div class="form-floating">
+        <select class="form-select" id="floatingSelectPatio" @bind="@IdPatio">
+            <option value="0" selected="selected">Selecciona un patio</option>
+            @foreach (var patio in patios) {
+                <option value="@patio.IdCatPatios">@patio.RazonSocial</option>
+            }
+        </select>
+        <label for="floatingSelectPatio">Patios</label>
+    </div>
+</div>
+<div class="col-sm-12 col-md-12">
+    <div class="form-floating">
+        <select class="form-select" id="floatingSelectNaviera" @bind="IdNaviera">
+            <option value="0" selected="selected">Selecciona una naviera</option>
+            @foreach (var naviera in navieras) {
+                <option value="@naviera.IdCatNaviera">@naviera.RazonSocial</option>
+            }
+        </select>
+        <label for="floatingSelectNaviera">Navieras</label>
+    </div>
+</div>

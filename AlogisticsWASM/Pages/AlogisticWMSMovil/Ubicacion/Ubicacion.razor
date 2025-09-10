@@ -1,0 +1,231 @@
+﻿@page "/ubicacion"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using AlogisticsWASM.Pages.AlogisticWMSMovil.Recepcion
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject DialogService BusyDialogService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+<RadzenStack AlignItems="AlignItems.Normal" class="rz-p-0 rz-mt-10" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.SpaceAround" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+                <RadzenText TextStyle="TextStyle.H5">Ubicación</RadzenText>
+         </RadzenColumn>
+    </RadzenRow>
+    
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="10" SizeMD="10" SizeLG="10">
+            <RadzenFormField Text="ID Mercancía" Variant="Variant.Text" Style="width: 100%;" Component="UBICACION_ID_MERCANCIA">
+                 <RadzenTextBox Style="width: 100%;" Name="UBICACION_ID_MERCANCIA" 
+                    @bind-Value="IdMercanciaSelected" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="2" SizeMD="2" SizeLG="2" class="text-center">
+            <RadzenButton Icon="qr_code_scanner" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnBuscarInventario()) />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+
+
+
+@code {
+
+    public ConsultaRecepcion _consultaRecepcionSelected { get; set; }
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia;
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO;
+
+    List<MonitorRecepcionMercancia> _listaMonitorRecepcionMercancia { get; set; }
+    private  string  IdMercanciaSelected = String.Empty;
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; } 
+    private async void OnBuscarInventario() {
+
+        IdMercanciaSelected = IdMercanciaSelected.Trim();
+
+        if (!String.IsNullOrEmpty(IdMercanciaSelected)) {
+
+            _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+            ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+            _consultaRecepcion.Entidad = new ConsultaRecepcion();
+            _consultaRecepcion.Entidad.TipoClasificacionRecepcion = TipoClasificacionRecepcion.Ingresados;
+            _consultaRecepcion.NumeroDePagina = 1;
+            _consultaRecepcion.RegistrosPorPagina = 50;
+            _consultaRecepcion.Entidad.IdMercancia = IdMercanciaSelected;
+
+            var tipoBusquedaRecepcion = TipoBusquedaRecepcion.Partida;
+
+            var _result = await _recepcionService.ObtenerListaPaginada(_consultaRecepcion);
+
+            if (_result.Success) {
+
+                if (!_result.Data.Count.Equals(0)) {
+
+                    _listaMonitorRecepcionMercancia = _result.Data;
+
+                    var totalRegistros = _result.Paginado.TotalRegistros;
+
+                    await SaveStateRecepcionAsync();
+
+                    _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+                    _monitorRecepcionMercancia = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+                    OnUbicacionZonaAlmacenaje();
+
+                    @* _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+                    if (tipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Partida)) {
+
+                        _recepcionMercanciaDTO.IdMercancia = _monitorRecepcionMercancia.IdMercancia;
+
+                        _recepcionMercanciaDTO.IdInventario = _monitorRecepcionMercancia.IdInventario;
+
+                    }
+
+                    _recepcionMercanciaDTO.TipoBusquedaRecepcion = tipoBusquedaRecepcion;
+
+                    string _monitorRecepcionMercanciaDTO = JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+                    byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+                    string base64EncodedData = Convert.ToBase64String(binaryData);
+
+                    navigationManager.NavigateTo($"/reubicacion/{base64EncodedData}"); *@
+
+                    IdMercanciaSelected = String.Empty;
+
+                } else {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Ubicación", Detail = "No se encontró el dato solicitado.", Duration = 4000 });
+
+                }
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Ubicación", Detail = "No se encontró el dato solicitado.", Duration = 4000 });
+
+            } 
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Ubicación", Detail = "Favor de registrar el identificador de la mercancía.", Duration = 4000 });
+
+        }
+
+    
+        await InvokeAsync(StateHasChanged);
+
+
+    }
+
+    async void OnUbicacionZonaAlmacenaje() {
+
+        MonitorPartida monitorPartida = new MonitorPartida();
+        
+        var _result = await DialogService.OpenAsync<VistaModalUbicacion>($"Ubicación Zona Almacenaje",
+            new Dictionary<string, object>() { 
+                    { "IdInventario", _monitorRecepcionMercancia.IdInventario }, 
+                    { "monitorRecepcionMercancia", _monitorRecepcionMercancia },
+                    { "nTipoUbicacion", 2 }
+            },
+            new DialogOptions() 
+            {
+                Resizable = false, 
+                Draggable = false,
+                Width = "400px", 
+                Height ="710px"
+                });
+
+            IdMercanciaSelected = String.Empty;
+        @* if (_result != null) {
+            monitorPartida = (MonitorPartida)_result;
+           //Console.WriteLine("-> OnUbicacionZonaAlmacenaje monitorPartida : " + System.Text.Json.JsonSerializer.Serialize(monitorPartida));
+            if (!monitorPartida.IdUbicacion.Equals(0)) {
+
+                _monitorRecepcionMercancia.IdUbicacionAlmacen = monitorPartida.IdUbicacion;
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "No hay registro de Ubicación de Mercancía", Duration = 4000 });
+
+            }
+        } else {
+           //Console.WriteLine("-> OnUbicacionZonaAlmacenaje sin respuesta : ");
+        } *@
+
+            
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    private async Task LoadStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultListRecepcion = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "ListaMonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(resultListRecepcion))
+        {
+            _listaMonitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<List<MonitorRecepcionMercancia>>(resultListRecepcion);
+        }
+    }
+
+    private async Task SaveStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "ListaMonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<List<MonitorRecepcionMercancia>>(_listaMonitorRecepcionMercancia));
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

@@ -1,0 +1,12 @@
+﻿@* <div class="col-sm-12 col-md-4">
+    <div class="form-floating">
+        <select class="form-select" id="floatingSelectTeam" @bind="@TipoContenedorSeleccionado.Id">
+            <option value="0">Selecciona un tipo de contenedor</option>
+            <p>@tiposContenedor.Count()</p>
+            @foreach (var tipo in tiposContenedor) {
+                <option value="@tipo.Id" @onclick="@(() => ObtenerTipoContenedorSeleccionado(tipo))">@tipo.Acronimo</option>
+            }
+        </select>
+        <label for="floatingInputGrid">Tipo de contenedor</label>
+    </div>
+</div> *@

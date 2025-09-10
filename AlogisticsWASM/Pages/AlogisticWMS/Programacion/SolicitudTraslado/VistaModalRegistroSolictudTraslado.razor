@@ -1,0 +1,362 @@
+﻿@page "/vistaModalRegistroSolicitudTraslado"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Login.ILogin
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject NavigationManager _navigationManager
+@inject DialogService BusyDialogServiceSolicitudTraslado
+@inject DialogService DialogServiceSolicitudTraslado
+@inject DialogService DialogServiceConfirm
+@attribute [Authorize]
+<RadzenTemplateForm Data="@monitorSolicitudTraslado" Submit="@((MonitorSolicitudTraslado args) => { Submit(args); })">
+    <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" class="rz-p-3"
+        JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; height: 100%;">
+        <RadzenStack>
+            <div class="row">
+                <div class="col-sm-4">
+                    <RadzenLabel Text="Folio" Component="SOLICITUD_TRASLADO_FOLIO" />
+                    <RadzenTextBox Name="SOLICITUD_TRASLADO_FOLIO" Disabled="true"
+                    Style="width: 100%; max-width: 400px;"
+                     />
+                </div>
+                <div class="col-sm-4">
+                    <RadzenLabel Text="Boleta Liberación" Component="SOLICITUD_TRASLADO_BOLETA_LIBERACION" />
+                    <RadzenTextBox Name="SOLICITUD_TRASLADO_BOLETA_LIBERACION" 
+                    Style="width: 100%; max-width: 400px;"
+                     />
+                </div>
+                <div class="col-sm-4">
+                    <RadzenLabel Text="Estatus" Component="SOLICITUD_TRASLADO_ESTATUS" />
+                    <RadzenTextBox Name="SOLICITUD_TRASLADO_ESTATUS" Disabled="true"
+                    @bind-Value="valEstadoTraslado"
+                    Style="width: 100%; max-width: 400px;"
+                     />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Terminal Origen" Component="SOLICITUD_TRASLADO_RECINTO_ORIGEN" />
+                    <RadzenAutoComplete @bind-Value=@monitorSolicitudTraslado.ManiobristaOrigen Data=@listaManiobristaOrigen 
+                        Name="SOLICITUD_TRASLADO_RECINTO_ORIGEN" Change=@OnChangeManiobristaOrigen class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorManiobrista.IdManiobrista)"
+                        TextProperty="@nameof(MonitorManiobrista.RazonSocial)" LoadData=@OnLoadDataManiobristaOrigen Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Terminal Origen" }})" />
+                </div>
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Terminal Destino" Component="SOLICITUD_TRASLADO_RECINTO_DESTINO" />
+                    <RadzenAutoComplete @bind-Value=@monitorSolicitudTraslado.ManiobristaDestino Data=@listaManiobristaDestino 
+                        Name="SOLICITUD_TRASLADO_RECINTO_DESTINO" Change=@OnChangeManiobristaDestino class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorManiobrista.IdManiobrista)"
+                        TextProperty="@nameof(MonitorManiobrista.RazonSocial)" LoadData=@OnLoadDataManiobristaDestino Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Terminal Destino" }})" />
+                </div>
+                
+            </div>
+
+            <div class="row">
+                <div class="col-sm-4">
+                    <RadzenLabel Text="Fecha:Hora Programada" Component="SOLICITUD_TRASLADO_FECHA_TRASLADO" />
+                    <RadzenDatePicker @bind-Value="monitorSolicitudTraslado.FechaSolicitudTraslado"
+                    Style="width: 100%; max-width: 400px"
+                    Disabled="false"
+                    ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" 
+                    DateFormat="dd/MM/yyyy HH:mm" Name="SOLICITUD_TRASLADO_FECHA_TRASLADO" />
+                </div>
+                <div class="col-sm-4">
+                    <RadzenLabel Text="Prioridad" Component="SOLICITUD_TRASLADO_PRIORIDAD" />
+                    <RadzenDropDown @bind-Value=@valTipoPrioridad ValueProperty="Key" 
+                                                Placeholder="Seleccione la Prioridad"
+                                                TextProperty="Value" Data=@listTipoPrioridad
+                                                Style="width: 100%;" 
+                                                Name="SOLICITUD_TRASLADO_PRIORIDAD" />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-12">
+                    <RadzenLabel Text="Observaciones" Component="SOLICITUD_TRASLADO_OBSERVACIONES"/>
+                    <RadzenTextArea Style="width: 100%;" aria-label="TextArea" Rows="5"
+                        Name="SOLICITUD_TRASLADO_OBSERVACIONES" />
+                </div>
+            </div>
+            
+            
+        </RadzenStack>
+        <RadzenStack Visible="@ShowClose" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="Guardar" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+
+    [Parameter] public List<RelacionInventarioServicio> listaRelacionInventarioServicio { get; set; }
+
+    [Parameter] public int IdReferencia { get; set; }
+
+    [Parameter] public MonitorFolioServicio monitorFolioServicioSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    MonitorSolicitudTraslado monitorSolicitudTraslado;
+
+    string valEstadoTraslado = EstadoTraslado.Programado.ToString();
+
+    string terminalOrigenSelected = String.Empty;
+
+    string terminalDestinoSelected = String.Empty;
+
+    List<MonitorManiobrista> listaManiobristaOrigen;
+
+    List<MonitorManiobrista> listaManiobristaDestino;
+
+    int valTipoPrioridad = 1;
+
+    private string usuario;
+    private string strCliente;
+    private string strNombreUsuario;
+
+    UsuarioTokenDTO _UsuarioTokenDTO;
+
+
+    SortedList<int, string> listTipoPrioridad = new SortedList<int, string>
+    {
+        { 1, "Alta" },
+        { 2, "Media" },
+        { 3, "Baja" }
+    };
+
+    [Inject] private IManiobristaService? _maniobristaService { get; set; }
+
+    [Inject] private ISolicitudTrasladoService? _solicitudTrasladoService { get; set; }
+
+    [Inject] private ILoginService? _loginService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        monitorSolicitudTraslado = new MonitorSolicitudTraslado();
+
+        monitorSolicitudTraslado.FechaSolicitudTraslado = monitorFolioServicioSelected.FechaProgramada;
+
+        monitorSolicitudTraslado.ListaInventarioServicios = listaRelacionInventarioServicio;
+
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();       
+
+        monitorSolicitudTraslado = new MonitorSolicitudTraslado();
+
+        monitorSolicitudTraslado.ListaInventarioServicios = listaRelacionInventarioServicio;
+
+        monitorSolicitudTraslado.FechaSolicitudTraslado = DateTime.Now.AddDays(1);
+
+        await InvokeAsync(StateHasChanged);
+
+        ////Console.WriteLine("-> OnInitializedAsync ");
+
+    }
+
+    async void Submit(MonitorSolicitudTraslado monitorSolicitudTraslado)
+    {
+        string _mensaje = String.Empty;
+        ////Console.WriteLine("-> Guardar Datos monitorSolicitudTraslado args : " + JsonSerializer.Serialize(monitorSolicitudTraslado));
+
+        monitorSolicitudTraslado.ListaInventarioServicios = listaRelacionInventarioServicio;
+
+        monitorSolicitudTraslado.IdEmpresaLogin = 1;
+
+        monitorSolicitudTraslado.CRUDAction = ECRUDAction.Create;
+
+        InvokeAsync(async () =>
+            {
+
+            var _result = await _solicitudTrasladoService.GuardarServicioSolicitudTraslado(monitorSolicitudTraslado);
+
+            if (_result.Success) {
+
+                _navigationManager.NavigateTo($"/referencia-crear/{IdReferencia}");
+
+            }
+
+            BusyDialogServiceSolicitudTraslado.Close();
+
+             });
+
+            await BusyDialog("Procesando ...");
+
+    }
+
+    void OnChangeManiobristaOrigen(object value)
+    {
+        ////Console.WriteLine("-> OnChangeManiobristaOrigen autocomplete : " + JsonSerializer.Serialize(value));
+
+        monitorSolicitudTraslado.IdManiobristaOrigen = 0;
+        monitorSolicitudTraslado.ManiobristaOrigen = null;
+
+        if (listaManiobristaOrigen != null) {
+            if (!listaManiobristaOrigen.Count().Equals(0)) {
+
+                var selectedManiobristaOrigen = listaManiobristaOrigen
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeManiobristaOrigen selectedManiobristaOrigen : " + JsonSerializer.Serialize(selectedManiobristaOrigen));
+
+                if (selectedManiobristaOrigen != null)
+                {
+                    var selectedId = selectedManiobristaOrigen.IdManiobrista;
+                    monitorSolicitudTraslado.IdManiobristaOrigen = selectedManiobristaOrigen.IdManiobrista;
+                    monitorSolicitudTraslado.ManiobristaOrigen = selectedManiobristaOrigen.RazonSocial;
+
+                    ////Console.WriteLine("OnChangeManiobristaOrigen IdManiobrista:" + monitorSolicitudTraslado.IdManiobristaOrigen);
+                }
+
+            }
+        }
+
+    }
+
+    async Task OnLoadDataManiobristaOrigen(LoadDataArgs args)
+    {
+
+        var resultBase = await _maniobristaService.ObtenerPorRazonSocialContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaManiobristaOrigen = resultBase.Data;
+
+            if (listaManiobristaOrigen.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+    void OnChangeManiobristaDestino(object value)
+    {
+        ////Console.WriteLine("-> OnChangeManiobristaDestino autocomplete : " + JsonSerializer.Serialize(value));
+
+        ////Console.WriteLine("-> OnChangeManiobristaDestino autocomplete : " + JsonSerializer.Serialize(value));
+
+        monitorSolicitudTraslado.IdManiobristaDestino = 0;
+        monitorSolicitudTraslado.ManiobristaDestino = null;
+
+        if (listaManiobristaDestino != null) {
+            if (!listaManiobristaDestino.Count().Equals(0)) {
+
+                var selectedManiobristaDestino = listaManiobristaDestino
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                ////Console.WriteLine("-> OnChangeManiobristaDestino selectedManiobristaDestino : " + JsonSerializer.Serialize(selectedManiobristaDestino));
+
+                if (selectedManiobristaDestino != null)
+                {
+                    var selectedId = selectedManiobristaDestino.IdManiobrista;
+                    monitorSolicitudTraslado.IdManiobristaDestino = selectedManiobristaDestino.IdManiobrista;
+                    monitorSolicitudTraslado.ManiobristaDestino = selectedManiobristaDestino.RazonSocial;
+
+                    ////Console.WriteLine("OnChangeManiobristaDestino IdManiobrista:" + monitorSolicitudTraslado.IdManiobristaDestino);
+                }
+
+            }
+        }
+    }
+
+    async Task OnLoadDataManiobristaDestino(LoadDataArgs args)
+    {
+
+        var resultBase = await _maniobristaService.ObtenerPorRazonSocialContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaManiobristaDestino = resultBase.Data;
+
+            if (listaManiobristaDestino.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+                //lineaTransporteSelected = String.Empty;
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Maniobrista", Detail = "No se encontró el maniobrista solicitado.", Duration = 4000 });
+            //lineaTransporteSelected = String.Empty;
+        }
+
+    }
+
+    async void ObtenerDatosCredeciales() {
+
+        var token = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "JWT Token");
+            //Console.WriteLine("Userservice:" + token);
+            if (!string.IsNullOrEmpty(token))
+            {
+               //Console.WriteLine($"INIT MAIN:" + _UsuarioTokenDTO.IdCatUsuario);
+                if (_UsuarioTokenDTO.IdCatUsuario==0)
+                {
+                   //Console.WriteLine($"INIT MAIN2 ENTRO CERO");
+                    //Console.WriteLine($"ENTRO MAIN VACIO");
+                    _UsuarioTokenDTO = await _loginService.ObtenerdatosToken();
+                    if (_UsuarioTokenDTO.catUsuarios.catUsuariosClientes == null || _UsuarioTokenDTO.catUsuarios.catUsuariosClientes.Count>0)
+                    {
+                        strCliente = _UsuarioTokenDTO.catUsuarios.catUsuariosClientes.FirstOrDefault().catClientes.RazonSocial;
+
+                    }else
+                    {
+                        //strCliente = UsuarioTokenDTO.catUsuarios.catUsuariosEmpresas.FirstOrDefault().catEmpresas.RazonSocial;
+                        strCliente = "Usuario Interno ALO/INCOM";
+                    }
+                    strNombreUsuario = _UsuarioTokenDTO.catUsuarios.Nombre;
+                    //Console.WriteLine($"SALIO MAIN {UsuarioTokenDTO.Nombre}");
+            }
+                else
+                {
+                   //Console.WriteLine($"INIT MAIN {_UsuarioTokenDTO.Nombre}");
+                }
+            }
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    void Cancel()
+    {
+        DialogServiceSolicitudTraslado.Close(true);
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogServiceSolicitudTraslado.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

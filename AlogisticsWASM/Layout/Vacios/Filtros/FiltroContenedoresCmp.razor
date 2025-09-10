@@ -1,0 +1,134 @@
+﻿@page "/filtroo"
+
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+
+<style>
+    .style-panel{
+        border-radius: 10px;
+    }
+    .style-radzen-text {
+        margin-top: 1rem;
+        margin-bottom: 1rem;
+    }
+    .styles-button {
+        width: 200px;
+        border-radius: 10px;
+    }
+</style>
+
+<RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto style-panel" Style="width: 100%;"
+             Expand=@(() => Change("Panel expanded")) Collapse=@(() => Change("Panel collapsed"))>
+    <HeaderTemplate>
+        <div class="style-radzen-text">
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-display-flex rz-align-items-center rz-m-0 style-radzen-text">
+                <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Filtros de Consulta</b>
+            </RadzenText>
+        </div>
+    </HeaderTemplate>
+    <ChildContent>
+        <RadzenCard class="rz-shadow-0">
+
+            <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="2rem">
+                <RadzenColumn SizeMD="4" SizeLG="2">
+                    <RadzenFormField Text="Contenedor" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="strPcontenedor" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="4">
+                    <RadzenFormField Text="Cliente" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenAutoComplete InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            Change=@AutoCompleteOnClienteChange
+                                            LoadData=@AutoCompleteOnLoadCliente
+                                            Data=@respListarCoincidencias
+                                            @bind-Value=@strPcliente
+                                            Style="width: 100%"
+                                            Name="CatClienteId2"/>
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="3">
+                    <RadzenFormField Text="Referencia Alo" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="refalo" @bind-Value="strPrefalo" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="3">
+                    <RadzenFormField Text="Referencia cliente" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="refcliente" @bind-Value="strPrefcliente" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="2">
+                    <RadzenFormField Text="Aduanas" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenDropDown AllowClear="true"
+                                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                        ValueProperty="@nameof(CatAduana.IdCatAduana)"
+                                        TextProperty="@nameof(CatAduana.Nombre)"
+                                        Style="width: 100%; max-width: 400px;"
+                                        @bind-Value=_aduana.IdCatAduana
+                                        Name="DropDownVirtualization"
+                                        AllowVirtualization="true"
+                                        AllowFiltering="true"
+                                        Data=@_aduanas />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="2" SizeLG="2">
+                    <RadzenFormField Text="Fecha inicio" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenDatePicker @bind-Value="@dFSolicitudIni" DateFormat="dd/MM/yyyy" Name="FSolicitudIni" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="2" SizeLG="2">
+                    <RadzenFormField Text="Fecha fin" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenDatePicker @bind-Value="@dFSolicitudFin" DateFormat="dd/MM/yyyy" Name="FSolicitudFin" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="3">
+                    <RadzenFormField Text="Naviera" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenAutoComplete InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Naviera de Operación" }})"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            TextProperty="@nameof(RespuestaGenericaCatalogosDTO.Nombre)"
+                                            ValueProperty="@nameof(RespuestaGenericaCatalogosDTO.Id)"
+                                            Data=@respListarCoincidenciasNavGen
+                                            Change=@AutoCompleteOnNavieraChange
+                                            LoadData=@AutoCompleteOnLoadNaviera
+                                            Name="AutoCompleteNaviera"
+                                            @bind-Value=@strPNaviera
+                                            Style="width: 100%"/>
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="3">
+                    <RadzenFormField Text="Patios" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenAutoComplete InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Patio de Operación" }})"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            TextProperty="@nameof(RespuestaGenericaCatalogosDTO.Nombre)"
+                                            ValueProperty="@nameof(RespuestaGenericaCatalogosDTO.Id)"
+                                            Data=@respListarCoincidenciasGen
+                                            Change=@AutoCompleteOnPatioChange
+                                            LoadData=@AutoCompleteOnLoadPatio
+                                            Name="AutoCompletepatio"
+                                            @bind-Value=strPPatio
+                                            Style="width: 100%" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn SizeMD="4" SizeLG="3" Style="margin-top: auto; height: 38px;">
+                    <RadzenButton class="styles-button" IsBusy="_isBusy" Click="@(args => EnviarDatos())">
+                        <RadzenIcon Icon="search" />
+                        Buscar
+                    </RadzenButton>
+                </RadzenColumn>
+
+            </RadzenRow>
+
+        </RadzenCard>
+    </ChildContent>
+</RadzenPanel>

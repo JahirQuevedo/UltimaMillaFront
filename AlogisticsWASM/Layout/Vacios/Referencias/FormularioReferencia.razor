@@ -1,0 +1,56 @@
+﻿@using AlogisticsWASM.Layout.Generics
+
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">@TituloFormulario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-xl-12">
+                        <form class="row g-3 mb-6">
+                            <div class="col-sm-6 col-md-6">
+                                <div class="form-floating">
+                                    <input class="form-control" id="floatingReferencia" type="text" placeholder="Referencia alo" @bind="@ReferenciaAlo" disabled />
+                                    <label for="floatingReferencia">Referencia Alo</label>
+                                </div>
+                            </div>
+                            <div class="col-sm-6 col-md-6">
+                                <div class="form-floating">
+                                    <input class="form-control" id="floatingInputGrid" type="text" placeholder="Ticket" @bind="@Referencia.Ticket" />
+                                    <label for="floatingInputGrid">Ticket</label>
+                                </div>
+                            </div>
+                            <div class="col-sm-12 col-md-12">
+                                <div class="form-floating">
+                                    <select class="form-select" id="floatingSelectTeam" @bind="Referencia.Transporte_RFC">
+                                        @if (transportistas.Count() > 0) {
+                                            <option value="0" selected="selected">Selecciona un transportista</option>
+                                            foreach (var transportista in transportistas) {
+                                                <option value=@transportista.RFC @onclick="@(() => ObtenerTransportista(transportista.RFC))">@transportista.RazonSocial</option>
+                                            }
+                                        }
+                                    </select>
+                                    <label for="floatingSelectTeam">Transportistas </label>
+                                </div>
+                            </div>
+                            <ListadoClientes onClienteSeleccionado="ObtenerClienteSeleccionado"></ListadoClientes>
+                            <div class="col-sm-12 col-md-12">
+                                <div class="form-floating">
+                                    <input class="form-control" id="floatingInputGrid" type="text" placeholder="Referencia del cliente" @bind="@Referencia.Comentarios" />
+                                    <label for="floatingInputGrid">Comentarios</label>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-phoenix-primary px-5" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-5 px-sm-15" data-bs-dismiss="modal" @onclick=@(() => GuardarDatos())>@TextBoton</button>
+            </div>
+        </div>
+    </div>
+</div>

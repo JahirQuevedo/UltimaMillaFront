@@ -1,0 +1,46 @@
+﻿@page "/filtros"
+
+@using ALOG.Modelos.Modelos.Catalogos
+
+<div>
+    <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Gap="2rem">
+        <RadzenColumn Size="12">
+            <RadzenStack>
+                <RadzenFormField Text="Clientes" Variant="Variant.Outlined">
+                    <RadzenDropDown AllowClear="true"
+                                    ValueProperty="@nameof(CatClientes.IdCatCliente)"
+                                    TextProperty="@nameof(CatClientes.RazonSocial)"
+                                    Style="width: 100%; max-width: 400px;"
+                                    @bind-Value=_idCatClienteSeleccionado
+                                    Name="DropDownVirtualization"
+                                    AllowVirtualization="true"
+                                    AllowFiltering="true"
+                                    Data=@_clientes />
+                </RadzenFormField>
+                
+                <RadzenFormField Text="Navieras" Variant="Variant.Outlined">
+                    <RadzenDropDown AllowClear="true"
+                                    ValueProperty="@nameof(CatNavieras.IdCatNaviera)"
+                                    TextProperty="@nameof(CatNavieras.RazonSocial)"
+                                    Style="width: 100%; max-width: 400px;"
+                                    @bind-Value=_idCatNavieraSeleccionado
+                                    Name="DropDownVirtualization"
+                                    AllowVirtualization="true"
+                                    AllowFiltering="true"
+                                    Data=@_navieras />
+                </RadzenFormField>
+
+                <RadzenFormField Text="Ref. Cliente" Variant="Variant.Outlined">
+                    <RadzenTextBox @bind-Value="@_referenciaCliente" />
+                </RadzenFormField>
+            </RadzenStack>
+        </RadzenColumn>
+
+
+        <RadzenColumn Size="12" class="rz-text-align-center rz-p-2">
+            <RadzenButton Click=@(args => Aceptar()) Text="Aceptar" ButtonStyle="ButtonStyle.Primary" />
+            <RadzenButton Click=@(args => Cancelar()) Text="Cancelar" ButtonStyle="ButtonStyle.Secondary" />
+        </RadzenColumn>
+
+    </RadzenRow>
+</div>

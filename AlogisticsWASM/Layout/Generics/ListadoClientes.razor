@@ -1,0 +1,11 @@
+﻿<div class="col-sm-12 col-md-12">
+    <div class="form-floating">
+        <select class="form-select" id="floatingSelectTeam" @bind="ClienteSeleccionado.IdCatCliente">
+        <option value="0">Selecciona un cliente</option>
+            @foreach (var cliente in clientes) {
+                <option value="@cliente.IdCatCliente" @onclick="@(() => ObtenerClienteSeleccionado(cliente))">@cliente.RazonSocial</option>
+            }
+        </select>
+        <label for="floatingSelectTeam">Clientes</label>
+    </div>
+</div>

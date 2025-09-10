@@ -1,0 +1,177 @@
+﻿@page "/embarque"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+
+@attribute [Authorize]
+@* <RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="12" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("embarque-consultaLiberacion")) />
+    </RadzenColumn>
+</RadzenRow> *@
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Embarque</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+<RadzenStack AlignItems="AlignItems.Center"  Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5 rz-mt-5">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextAlign="TextAlign.Justify" TextStyle="TextStyle.Body1">Seleccione el tipo de búsqueda y registre el valor correspondiente.</RadzenText>
+         </RadzenColumn>
+</RadzenRow>
+</RadzenStack>
+<div class="rz-pb-5 rz-text-align-center">
+    <RadzenRadioButtonList @bind-Value="valTipoBusqueda" TValue="int" Change=@(args => valTipoBusqueda = args) >
+        <Items>
+            <RadzenRadioButtonListItem Text="Viaje" Value="1" />
+            <RadzenRadioButtonListItem Text="Tarja Salida" Value="2" />
+        </Items>
+    </RadzenRadioButtonList>
+</div>
+<RadzenStack AlignItems="AlignItems.Center"  Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="10" SizeMD="12" SizeLG="12">
+            <RadzenFormField Text="Buscar..." Variant="Variant.Text" Component="EMBARQUE_TEXT_BUSCAR" Style="width: 100%;">
+                <RadzenTextBox @bind-Value="valTextoBusqueda" Name="EMBARQUE_TEXT_BUSCAR" @onkeypress=@(args => OnBuscarTarjaViajeKeyPressed(args)) />
+            </RadzenFormField>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow>
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenButton Click=@(args => OnBuscarTarjaViaje()) Text="BUSCAR LIBERACIÓN" Icon="search" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+
+    int valTipoBusqueda = 1;
+
+    string valTextoBusqueda = String.Empty;
+
+    MonitorLiberacionInventario _monitorLiberacionInventario = new MonitorLiberacionInventario();
+
+    List<MonitorLiberacionInventario> _listaMonitorLiberacioInventario = new List<MonitorLiberacionInventario>();
+
+    [Inject] private ILiberacionService? _liberacionService  { get; set; }
+
+    protected async Task OnBuscarTarjaViajeKeyPressed(KeyboardEventArgs args) { 
+
+        if (args.Key == "Enter")
+            {
+                var val = String.Empty;
+                val = await JSRuntime.InvokeAsync<string>("eval", $@"document.getElementById(""EMBARQUE_TEXT_BUSCAR"").value");
+                valTextoBusqueda = val;
+                OnBuscarTarjaViaje();
+            }
+
+    }
+
+    private async void OnBuscarTarjaViaje() {
+
+        bool _datosValidos = false;
+
+        if (!String.IsNullOrEmpty(valTextoBusqueda)) {
+
+            ConsultaCatalogoBase<ConsultaControlEmbarque> _consultaEmbarque = new ConsultaCatalogoBase<ConsultaControlEmbarque>();
+            _consultaEmbarque.Entidad = new ConsultaControlEmbarque();
+            _consultaEmbarque.Entidad.TipoBusquedaEmbarque = (TipoBusquedaEmbarque)valTipoBusqueda;
+            _consultaEmbarque.Entidad.ValorBusqueda = valTextoBusqueda;
+            _consultaEmbarque.NumeroDePagina = 1;
+            _consultaEmbarque.RegistrosPorPagina = 50;
+
+            var _resultBase = await _liberacionService.ObtenerLiberacionControlEmbarqueListaPaginada(_consultaEmbarque);
+            if (_resultBase.Success) {
+
+                List<MonitorLiberacionInventario> _listaMonitorRecepcionMercancia = new List<MonitorLiberacionInventario>();
+
+                if (!_resultBase.Data.Count.Equals(0)) {
+
+                    _listaMonitorRecepcionMercancia = _resultBase.Data;
+
+                    _monitorLiberacionInventario = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+                    await SaveStateEmbarqueAsync();
+
+                    ControlEmbarqueDTO _controlEmbarqueDTO = new ControlEmbarqueDTO();
+                    _controlEmbarqueDTO.IdLiberacion = _monitorLiberacionInventario.IdLiberacion;
+                    _controlEmbarqueDTO.IdTarjaSalida = _monitorLiberacionInventario.IdTarja;
+                    _controlEmbarqueDTO.IdControlTransporte = _monitorLiberacionInventario.IdControlTransporte;
+                    _controlEmbarqueDTO.tipoBusquedaEmbarque = (TipoBusquedaEmbarque)valTipoBusqueda;
+
+                    string _monitorRecepcionMercanciaDTO = JsonSerializer.Serialize(_controlEmbarqueDTO);
+                    byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+                    string base64EncodedData = Convert.ToBase64String(binaryData);
+
+                    navigationManager.NavigateTo($"/embarque-consultaLiberacion/{base64EncodedData}");
+
+                } else {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Embarque", Detail = "No se encontró información de salida para la consulta solicitada.", Duration = 4000 });
+
+                }
+
+            }
+            
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Embarque", Detail = "Favor de introducir los datos solicitados", Duration = 4000 });
+
+        }
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Style = "position: absolute; inset-inline-end: -.5em;",
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    private async Task LoadStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultList = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorLiberacionInventario");
+        if (!string.IsNullOrEmpty(resultList))
+        {
+            _monitorLiberacionInventario = System.Text.Json.JsonSerializer.Deserialize<MonitorLiberacionInventario>(resultList);
+        }
+    }
+
+    private async Task SaveStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorLiberacionInventario", System.Text.Json.JsonSerializer.Serialize<MonitorLiberacionInventario>(_monitorLiberacionInventario));
+    }
+
+
+
+}

@@ -1,0 +1,160 @@
+﻿@page "/barco"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject DialogService DialogService
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+    .rz-button {
+        text-transform: none !important;
+    }
+
+</style>
+
+<div class="content mt-7">
+    <div id="monitorViajeListaPaginada">
+        <div class="row mb-4 gx-6 gy-3 align-items-center">
+              <div class="col-auto">
+                <h2 class="mb-0">Buques<span class="fw-normal text-700 ms-3">(@totalRegistros)</span></h2>
+              </div>
+              <div class="col-auto">    
+                <RadzenButton Text="Agregar Nuevo Buque" Icon="add" ButtonStyle="ButtonStyle.Primary"
+                    Click=@(() => abrirRegistroBarco(1, @_monitorBarco))
+                 Size="ButtonSize.Large" />
+            </div>
+        </div>
+        <div class="col-12 col-sm-auto">
+            <div class="d-flex align-items-center">
+                <RadzenDataGrid style="border-radius:7px; height: 550px;" @ref="gridBarcos" IsLoading=@isLoading 
+                    Count="@totalRegistros" Data="@listMonitorBarcos" LoadData="@ObtenerDatos" 
+                    AllowColumnResize="true"
+                    AllowSorting="false" AllowFiltering="true" AllowPaging="true" 
+                    PageSize="@registrosPorPagina"
+                    SelectionMode="DataGridSelectionMode.Single"
+                    @bind-Value=@selectedBarco
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    ShowPagingSummary="true"
+                    FilterMode="FilterMode.Simple"
+                    FilterCaseSensitivity="@filterCaseSensitivity" LogicalFilterOperator="@logicalFilterOperator"
+                    ColumnWidth="300px">
+                    <Columns>
+                        <RadzenDataGridColumn Property="@nameof(MonitorBarco.Nombre)" Filterable="true" Title="Buque" Width="300px" Frozen="false" TextAlign="TextAlign.Center" />
+                        <RadzenDataGridColumn Property="@nameof(MonitorBarco.Naviera)" Filterable="false" Title="Naviera" Width="400px" Frozen="false" TextAlign="TextAlign.Center" />
+                        <RadzenDataGridColumn Property="@nameof(MonitorBarco.Pais)" Filterable="false" Title="Pais" Width="400px" Frozen="false" TextAlign="TextAlign.Center" />
+                        <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                            <Template Context="data">
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                    Click=@(() => abrirRegistroBarco(2, data))
+                                  @onclick:stopPropagation="true">
+                                </RadzenButton>
+                                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                </RadzenButton>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </div>
+        </div>
+    </div>
+</div>
+@code {
+    RadzenDataGrid<MonitorBarco> gridBarcos;
+
+    LogicalFilterOperator logicalFilterOperator = LogicalFilterOperator.Or;
+    FilterCaseSensitivity filterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive;
+
+    MonitorBarco _monitorBarco;
+
+    List<MonitorBarco> listMonitorBarcos;
+
+    IList<MonitorBarco> selectedBarco;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    bool isLoading = false;
+
+    private readonly ILogger _logger;
+
+    private LoadDataArgs _args;
+
+    [Inject] private IBarcoService? _barcoService { get; set; }
+
+    async Task abrirRegistroBarco(int opcion, MonitorBarco monitorBarco)
+    {
+            
+        if (opcion.Equals(1)) {
+            monitorBarco = new MonitorBarco();
+            monitorBarco.CRUDAction = ECRUDAction.Create;
+        } else {
+            monitorBarco.CRUDAction = ECRUDAction.Update;
+        }
+
+        await DialogService.OpenAsync<VistaModalRegistroBarco>($"Registro de Buque",
+               new Dictionary<string, object>() { 
+                    { "IdBarco", monitorBarco.IdBarco },
+                    { "monitorBarcoSelected", monitorBarco }
+                },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Width = "500px", 
+                   Height = "435px"
+                });
+    } 
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaBarco> _consultaBarco = new ConsultaCatalogoBase<ConsultaBarco>();
+        _consultaBarco.Entidad = new ConsultaBarco(); 
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+
+            if (!args.Filters.Count().Equals(0)) {
+                var _filter = args.Filters.Where(p => p.Property.Equals("Nombre")).FirstOrDefault();
+                if (_filter != null) {
+                    _consultaBarco.Entidad.Nombre = String.IsNullOrEmpty(_filter.FilterValue.ToString()) ? null : _filter.FilterValue.ToString();
+                }
+            }
+
+        }
+
+        _consultaBarco.NumeroDePagina = numeroDePagina;
+        _consultaBarco.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorBarcos = await _barcoService!.ObtenerListaPaginada(_consultaBarco);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorBarcos.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listMonitorBarcos = _listMonitorBarcos.Data;
+
+        selectedBarco = listMonitorBarcos.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+}

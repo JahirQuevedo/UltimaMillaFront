@@ -1,0 +1,655 @@
+﻿@page "/monitorInventarioCliente"
+
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using ALOGRepositorios.Services.Peticiones.IPeticiones
+@using ALOG.Modelos.Modelos.DTO.Solicitudes
+@using ALOGRepositorios.Services.Login.ILogin
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime;
+@inject DialogService BusyDialogService
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+<script src="resources/js/general.js"></script>
+
+<div class="content mt">
+    <div class="row g-3 mb-2">
+        <div class="col-auto">
+            <h4 class="mb-0">Monitor Inventario</h4>
+        </div>
+    </div>
+    <div class="row g-3 flex-between-end mb5">
+
+        <div class="col">
+
+            <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+                                            Expand=@(() => ChangeFiltros("Panel Búsqueda expanded")) Collapse=@(() => ChangeFiltros("Panel Búsqueda collapsed"))>
+                                    <HeaderTemplate>
+                                        <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-display-flex rz-align-items-center rz-m-0">
+                                            <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Filtros de Consulta</b>
+                                        </RadzenText>
+                                    </HeaderTemplate>
+                                    <ChildContent>
+                                        <RadzenCard Variant="Variant.Outlined">
+                                            <RadzenRow JustifyContent="JustifyContent.Normal">
+                                                <RadzenStack>
+                                                    <RadzenRadioButtonList @bind-Value=@valTipoFecha TValue="int">
+                                                        <Items>
+                                                            <RadzenRadioButtonListItem Text="Fecha Recolección" Value="1" />
+                                                            <RadzenRadioButtonListItem Text="Fecha Recepción" Value="2" />
+                                                        </Items>
+                                                    </RadzenRadioButtonList>
+                                                </RadzenStack>
+                                            </RadzenRow>
+                                            <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Fecha Inicio" Component="MONITOR_INVENTARIO_FECHA_INICIO" />
+                                                        <RadzenDatePicker @bind-Value="@_consultaMonitorInventario.FechaInicio" DateFormat="dd/MM/yyyy" Name="MONITOR_INVENTARIO_FECHA_INICIO" />
+                                                    </RadzenStack>
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Fecha Fin" Component="MONITOR_INVENTARIO_FECHA_FIN" />
+                                                        <RadzenDatePicker @bind-Value="@_consultaMonitorInventario.FechaFin" DateFormat="dd/MM/yyyy" Name="MONITOR_INVENTARIO_FECHA_FIN" />
+                                                    </RadzenStack>
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                                                        <RadzenLabel Text="Buscar Por" Component="MONITOR_INVENTARIO_BUSCARPOR" />
+                                                        <RadzenDropDown @bind-Value=@valBuscarPor ValueProperty="Key" 
+                                                                                    Placeholder="Estado de la Tarja"
+                                                                                    TextProperty="Value" Data=@listBuscarPor
+                                                                                    Style="width: 150px;"
+                                                                                    Disabled=false
+                                                                                    Change="@OnSelectionChanged"
+                                                                                    Name="MONITOR_INVENTARIO_BUSCARPOR" />
+                                                    </RadzenStack>
+                                                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center">
+                                                        <RadzenTextBox Style="width: 200px;" @bind-Value="_consultaMonitorInventario.ValorBusqueda" Disabled="false" Name="MONITOR_INVENTARIO_VALOR_BUSQUEDA"/>
+                                                    </RadzenStack>
+
+                                                    @* <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                                        <RadzenLabel Text="Estatus:" Component="DropDownEstatus" />
+                                                        <RadzenDropDown @bind-Value=@valEstadoTurno Data=@_listEstadoTurno Change=@DropDownOnEstatusChange 
+                                                        
+                                                        Style="width: 100%; max-width: 200px;" Name="DropDownEstatus" />
+                                                        
+                                                    </RadzenStack> *@
+
+
+                                                    <RadzenButton Text="Buscar" Icon="search" Click="@(args => BurcarInventarioAlmacen())" />
+                                                </RadzenStack>
+                                            </RadzenRow>
+                                        </RadzenCard>
+                                    </ChildContent>
+                                </RadzenPanel>
+                                 <RadzenStack class="rz-mt-5">
+                                    <div class="row">
+                                        <div class="col-sm-12 col-md-12">
+                                            <RadzenButton Click=@(args => OnExportarReporteInventario()) Text="Exportar Excel" Icon="grid_on"  />
+                                            <RadzenButton Click=@(args => DescargaExpedienteExcel()) Text="Descargar Expediente" Icon="download"  />
+                                        </div>
+                                    </div>
+                                </RadzenStack>
+                                <RadzenStack class="rz-mt-5" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+
+                                    <RadzenStack>
+
+                                        <RadzenDataGrid class="rz-p-4"
+                                                    @ref="gridInventarioAlmacen"
+                                                    Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" PagerHorizontalAlign="HorizontalAlign.Left"
+                                                    @bind-Value=@selectedInventarioAlmacen
+                                                    SelectionMode="DataGridSelectionMode.Multiple"
+                                                    AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                                                    FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                    Data="@(listaMonitorInventarioAlmacen)" LoadData="@ObtenerDatos"  
+                                                    IsLoading=@isLoading ColumnWidth="200px" 
+                                                    Density="Density.Compact" 
+                                                    TItem="MonitorInventarioAlmacen"
+                                                    RowExpand="RowExpandInventarioAlmacen"
+                                                    RowRender="@RowRenderInventarioAlmacen"
+                                                    ExpandMode="DataGridExpandMode.Single"
+                                                    AllowAlternatingRows="false">
+                                            <Template Context="inventarioAlmacen">
+                                                @* <RadzenCard Variant="Variant.Text" class="rz-background-color-primary-lighter rz-color-on-primary-lighter rz-m-4">
+                                                    Company:
+                                                    <b>@customer.CompanyName</b>
+                                                </RadzenCard> *@
+                                                <RadzenTabs>
+                                                    <Tabs>
+                                                        <RadzenTabsItem Text="Recepción">
+
+                                                            <RadzenCard>
+
+                                                                <h3>Galería de Fotos</h3>
+                                                                @if (isLoadingFotosRecepcion) {
+
+                                                                    <RadzenProgressBar style="margin-bottom: 20px;" Mode="ProgressBarMode.Indeterminate"/>
+
+                                                                } else if(listadoServicioFotografico == null || !listadoServicioFotografico.Any()) {
+
+                                                                    <RadzenAlert Text="No se encontraron Fotos de Recepción." AlertStyle="AlertStyle.Warning" />
+
+                                                                } else {
+
+                                                                    <RadzenDataList @ref="dataListRecepcion" Data="@listadoServicioFotografico" WrapItems="true" TItem="MonitorServicioFotografico" 
+                                                                        PageSize="@registrosPorPagina" AllowPaging="true" AllowVirtualization="false">
+                                                                        <Template Context="monitorServicioFotografico">
+                                                                            <RadzenCard Style="margin: 10px; width: 240px; cursor: pointer;" @onclick="() => ShowImageDetail(monitorServicioFotografico)">
+                                                                                <div class="image-card">
+                                                                                    <RadzenImage Path="@monitorServicioFotografico.ArchivoBase?.ContenidoBase64"  AlternateText="url image" />
+                                                                                </div>
+                                                                            </RadzenCard>
+                                                                        </Template>
+                                                                        <EmptyTemplate>
+                                                                            <div class="empty-gallery">
+                                                                                <RadzenIcon Icon="image" Style="font-size: 48px; color: #ccc;" />
+                                                                                <p>No se encontraron imágenes</p>
+                                                                            </div>
+                                                                        </EmptyTemplate>
+                                                                    </RadzenDataList>
+
+                                                                }
+
+                                                            </RadzenCard>
+                                                            
+                                                        </RadzenTabsItem>
+                                                        <RadzenTabsItem Text="Evidencia de Daños">
+
+
+                                                            <RadzenCard>
+
+                                                                <h3>Galería de Fotos</h3>
+                                                                @if (isLoadingFotosEvidenciaDannios) {
+
+                                                                    <RadzenProgressBar style="margin-bottom: 20px;" Mode="ProgressBarMode.Indeterminate"/>
+
+                                                                } else if(listadoServicioFotograficoEvidenciaDannios == null || !listadoServicioFotograficoEvidenciaDannios.Any()) {
+
+                                                                    <RadzenAlert Text="No se encontraron Fotos con Evidencia de Daños." AlertStyle="AlertStyle.Warning" />
+                                                                
+                                                                } else {
+
+                                                                    <RadzenDataList @ref="dataListEvidenciaDannios" Data="@listadoServicioFotograficoEvidenciaDannios" WrapItems="true" TItem="MonitorServicioFotografico" 
+                                                                        PageSize="@registrosPorPagina" AllowPaging="true" AllowVirtualization="false">
+                                                                        <Template Context="monitorServicioFotografico">
+                                                                            <RadzenCard Style="margin: 10px; width: 280px; cursor: pointer;" @onclick="() => ShowImageDetail(monitorServicioFotografico)">
+                                                                                <div class="image-card">
+                                                                                    <RadzenImage Path="@monitorServicioFotografico.ArchivoBase?.ContenidoBase64" Style="width: 17rem;" AlternateText="url image" />
+                                                                                </div>
+                                                                            </RadzenCard>
+                                                                        </Template>
+                                                                        <EmptyTemplate>
+                                                                            <div class="empty-gallery">
+                                                                                <RadzenIcon Icon="image" Style="font-size: 48px; color: #ccc;" />
+                                                                                <p>No se encontraron imágenes</p>
+                                                                            </div>
+                                                                        </EmptyTemplate>
+                                                                    </RadzenDataList>
+
+                                                                }
+
+                                                            </RadzenCard>
+                                                            
+                                                        </RadzenTabsItem>
+                                                    </Tabs>
+                                                </RadzenTabs>
+                                            </Template>
+                                            
+                                            <Columns>
+                                                <RadzenDataGridColumn Width="60px" Sortable="false" Filterable="false" Frozen="true">
+                                                    <HeaderTemplate>
+                                                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                                                        Value="@(selectedInventarioAlmacen == null || selectedInventarioAlmacen?.Any() != true ? false : !listaMonitorInventarioAlmacen.All(i => selectedInventarioAlmacen.Contains(i)) ? null : listaMonitorInventarioAlmacen.Any(i => selectedInventarioAlmacen.Contains(i)))"
+                                                        Change="@(args => selectedInventarioAlmacen = args == true ? listaMonitorInventarioAlmacen.ToList() : null)" />
+                                                    </HeaderTemplate>
+                                                    <Template Context="data">
+                                                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedInventarioAlmacen != null && selectedInventarioAlmacen.Contains(data))" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                                                            TValue="bool" Change=@(args => { if(!allowRowSelectOnRowClick) { gridInventarioAlmacen.SelectRow(data); }}) />
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Numeros)" Title="ID Mercancía" Frozen="true" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Marcas)" Title="Marcas" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Modelo)" Title="Modelo" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.RazonSocialCliente)" Title="Cliente" />
+                                                <RadzenDataGridColumn Title="F. Recolección" Filterable="false" Width="180px">
+                                                    <Template Context="monitorInventarioAlmacen">
+                                                        @(monitorInventarioAlmacen.FechaRecoleccion == DateTime.MinValue ? "" : monitorInventarioAlmacen.FechaRecoleccion)
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Title="F. Recepción" Filterable="false" Width="180px">
+                                                    <Template Context="monitorInventarioAlmacen">
+                                                        @(monitorInventarioAlmacen.FechaIngreso == DateTime.MinValue ? "" : monitorInventarioAlmacen.FechaIngreso)
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Title="Tipo Operación" Filterable="false" Width="100px">
+                                                    <Template Context="monitorInventarioAlmacen">
+                                                        @(monitorInventarioAlmacen.TipoOperacionAduanera.Equals(TipoOperacionAduanera.Importacion) ? "IMP" : "EXP")
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Observaciones)" Title="Observaciones" />
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                        
+                                    </RadzenStack>
+
+                                </RadzenStack>
+
+        </div>
+
+    </div>
+</div>
+
+@code {
+
+    public ConsultaMonitorInventario _consultaMonitorInventario;
+
+    public MonitorInventarioAlmacen _monitorInventarioAlmacen;
+
+    List<MonitorInventarioAlmacen> listaMonitorInventarioAlmacen;
+
+    IList<MonitorInventarioAlmacen> selectedInventarioAlmacen;
+
+    private RadzenDataList<MonitorServicioFotografico> dataListRecepcion;
+
+    private RadzenDataList<MonitorServicioFotografico> dataListEvidenciaDannios;
+
+    int valTipoFecha = 1;
+
+    bool allowRowSelectOnRowClick = true;
+
+    RadzenDataGrid<MonitorInventarioAlmacen> gridInventarioAlmacen;
+
+    RadzenDataGrid<MonitorServicioFotografico> gridFotosRecepcion;
+
+    SortedList<int, string> listBuscarPor = new SortedList<int, string>
+        {
+            { 0, "Ninguno" },  
+            { 9, "Booking-BL" },
+            { 10, "Viaje" },
+        };
+
+    int valBuscarPor = 0;
+
+    bool isLoading = false;
+
+    bool isLoadingFotosRecepcion = true;
+
+    bool isLoadingFotosEvidenciaDannios = true;
+
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    List<MonitorServicioFotografico> listadoServicioFotografico;
+
+    List<MonitorServicioFotografico> listadoServicioFotograficoEvidenciaDannios;
+
+    int totalRegistrosFotoRecepcion;
+
+    int numeroDePaginaFotoRecepcion = 1;
+
+    int registrosPorPaginaFotoRecepcion = 10;
+
+    int totalRegistrosFotoEvidenciaDannios;
+
+    int numeroDePaginaFotoEvidenciaDannios = 1;
+
+    int registrosPorPaginaFotoEvidenciaDannios = 10;
+
+    public UsuarioTokenDTO UsuarioTokenDTO;
+
+
+    @inject ILoginService? loginService;
+
+    [Inject] private IReporteInventarioService? _reporteInventarioService { get; set; }
+
+
+    @inject IInventarioAlmacenService? _inventarioAlmacenService;
+
+
+    @inject IServicioFotograficoService? _servicioFotograficoService;
+
+
+    @inject IOrdenService? _ordenservice;
+
+    private LoadDataArgs _args;
+
+    protected override async void OnParametersSet()
+    {
+
+    }
+
+    protected override async Task OnInitializedAsync() 
+    {
+
+        _monitorInventarioAlmacen = new MonitorInventarioAlmacen();
+
+        _consultaMonitorInventario = new ConsultaMonitorInventario();
+
+        UsuarioTokenDTO = new UsuarioTokenDTO();
+
+        if (!UsuarioTokenDTO.IdCatUsuario.Equals(0))
+        {
+            UsuarioTokenDTO = await loginService.ObtenerdatosToken();
+            ////Console.WriteLine($"UsuarioTokenDTO.Rol: {UsuarioTokenDTO.Rol}");
+            ////Console.WriteLine($"UsuarioTokenDTO.IdCatUsuario: {UsuarioTokenDTO.IdCatUsuario}");
+
+            var catUsuariosEmpresas = UsuarioTokenDTO.catUsuarios.catUsuariosEmpresas;
+
+            ////Console.WriteLine($"-> catUsuariosEmpresas : {catUsuariosEmpresas.Count}");
+
+            foreach(var catEmpresa in catUsuariosEmpresas) {
+
+                ////Console.WriteLine($"-> catEmpresa.IdCatCliente : {catEmpresa.IdCatCliente}");
+
+            }
+        }
+
+    }
+
+    private void ShowImageDetail(MonitorServicioFotografico image)
+    {
+
+    }
+
+    private async Task BurcarInventarioAlmacen()
+    {
+        await ObtenerDatos(_args);
+
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) 
+    {
+
+        isLoading = true;
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+         ConsultaCatalogoBase<ConsultaMonitorInventario> _consultaInventario = new ConsultaCatalogoBase<ConsultaMonitorInventario>();
+        _consultaInventario.Entidad = new ConsultaMonitorInventario();
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+
+        //TODO: Se asigna el identificador del Cliente que se encuentra en la sesión
+        //_consultaInventario.Entidad.IdCatCliente = 5;
+        _consultaInventario.Entidad.TipoFecha = valTipoFecha;
+        _consultaInventario.Entidad.BuscarPorConsultaInventario = (BuscarPorConsultaInventario)valBuscarPor;
+        _consultaInventario.Entidad.ValorBusqueda = _consultaMonitorInventario.ValorBusqueda;
+        _consultaInventario.Entidad.FechaInicio = _consultaMonitorInventario.FechaInicio;
+        _consultaInventario.Entidad.FechaFin = _consultaMonitorInventario.FechaFin;
+
+        _consultaInventario.Entidad.ListaIdCatCliente = new List<int>();
+        _consultaInventario.Entidad.ListaIdCatCliente.Add(5);
+         _consultaInventario.Entidad.ListaIdCatCliente.Add(21);
+        _consultaInventario.NumeroDePagina = numeroDePagina;
+        _consultaInventario.RegistrosPorPagina = registrosPorPagina;
+
+        InvokeAsync(async () =>
+        {
+
+            var _result = await _inventarioAlmacenService.ObtenerListaPaginada(_consultaInventario);
+            
+            if (_result.Success) {
+
+                listaMonitorInventarioAlmacen = _result.Data;
+
+                totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+            }
+
+            isLoading = false;
+
+            selectedInventarioAlmacen = null;
+
+            DialogService.Close();
+
+            await InvokeAsync(StateHasChanged);
+
+            });
+
+        await BusyDialog("Cargando Información...");
+
+        
+
+    }
+
+    private void OnSelectionChanged(object value) {
+        _consultaMonitorInventario.ValorBusqueda = String.Empty;
+        StateHasChanged();
+    }
+
+    async void OnExportarReporteInventario() {
+
+        InvokeAsync(async () =>
+        {
+
+            ConsultaMonitorInventario _consultaInventario = new ConsultaMonitorInventario();
+
+            //TODO: Se asigna el identificador del Cliente que se encuentra en la sesión
+            //_consultaInventario.Entidad.IdCatCliente = 5;
+            _consultaInventario.TipoFecha = valTipoFecha;
+            _consultaInventario.BuscarPorConsultaInventario = (BuscarPorConsultaInventario)valBuscarPor;
+            _consultaInventario.ValorBusqueda = _consultaMonitorInventario.ValorBusqueda;
+            _consultaInventario.FechaInicio = _consultaMonitorInventario.FechaInicio;
+            _consultaInventario.FechaFin = _consultaMonitorInventario.FechaFin;
+
+            _consultaInventario.ListaIdCatCliente = new List<int>();
+            _consultaInventario.ListaIdCatCliente.Add(5);
+            _consultaInventario.ListaIdCatCliente.Add(21);
+            var _result = await _reporteInventarioService.ObtieneReporteDescargaInventario(_consultaInventario);
+
+            if (_result.Success) {
+
+                await JSRuntime.InvokeVoidAsync("AbrirArchivoArregloByte", _result.Data.Archivo,  _result.Data.ContentType, Convert.ToBase64String(_result.Data.Content));
+
+            }
+
+            BusyDialogService.Close();
+
+            await ObtenerDatos(_args);
+
+            await InvokeAsync(StateHasChanged);
+
+        });
+
+        await BusyDialog("Generando Reporte Inventario Terminal...");
+
+    }
+
+    async void DescargaExpedienteExcel()
+    {
+        //Console.WriteLine("-> DescargaExpedienteExcel");
+        string _pathOrdenServicio = String.Empty;
+
+        int _idOrdenServicio = 0;
+
+        try {
+
+            MultipleSeleccionArchivoBase multipleSeleccionArchivoBase = new MultipleSeleccionArchivoBase();
+            multipleSeleccionArchivoBase.ArchivoBase = new ArchivoBase();
+            multipleSeleccionArchivoBase.Ids = new List<int>();
+
+            foreach(var item in selectedInventarioAlmacen) {
+
+                if (item.IdOrdenServicio.Equals(_idOrdenServicio) || _idOrdenServicio.Equals(0)) {
+                    _idOrdenServicio = item.IdOrdenServicio;
+                    //break;
+                } else {
+
+                    throw new Exception("No se permite descargar Expediente de diferentes Servicios.");
+
+                }
+
+                multipleSeleccionArchivoBase.Ids.Add(item.IdInventario);
+
+            }
+
+            SolPathOrdenDTO solPathOrdenDTO = new SolPathOrdenDTO();
+
+            solPathOrdenDTO.IdOrden = _idOrdenServicio;
+            solPathOrdenDTO.IdLineaNegocio = 4;
+
+            //Console.WriteLine("-> SolPathOrdenDTO : " + JsonSerializer.Serialize(solPathOrdenDTO));
+
+            var _ordenServicio = await _ordenservice.ObtenerPath(solPathOrdenDTO);
+
+            if (_ordenServicio.IsSuccess) {
+
+                _pathOrdenServicio = _ordenServicio.strMensaje;
+
+                if (!_pathOrdenServicio.EndsWith("/")) {
+                    _pathOrdenServicio += "/";
+                }
+
+                DirectoryInfo directoryInfo = new DirectoryInfo(_pathOrdenServicio);
+                _pathOrdenServicio = directoryInfo.FullName;
+
+                ////Console.WriteLine($"-> DescargaExpedienteExcel, _pathOrdenServicio: {_pathOrdenServicio}");
+                multipleSeleccionArchivoBase.ArchivoBase.RutaBase = _pathOrdenServicio;
+
+            }
+
+            var _resultBase = await _servicioFotograficoService.ObtenerZipArchivos(multipleSeleccionArchivoBase);
+
+            if (_resultBase.Success) {
+
+
+                
+
+                await JSRuntime.InvokeVoidAsync("AbrirArchivoArregloByte", _resultBase.Data.Archivo,  _resultBase.Data.ContentType, _resultBase.Data.ContenidoBase64);
+
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Tarja", Detail = _resultBase.MensajeRespuesta, Duration = 4000 });
+            
+
+            }      
+
+        } catch (Exception ex) {
+
+        }
+
+    }
+
+    void RowRenderInventarioAlmacen(RowRenderEventArgs<MonitorInventarioAlmacen> args)
+    {
+        if (args.Data != null)
+            args.Expandable = args.Data.FechaIngreso != DateTime.MinValue;
+    }
+
+    async void RowExpandInventarioAlmacen(MonitorInventarioAlmacen monitorInventarioAlmacen)
+    {
+
+        isLoadingFotosRecepcion = true;
+
+        var IdMonitorInventarioSelected = monitorInventarioAlmacen.IdInventario;
+
+        ConsultaCatalogoBase<ConsultaServicioFotografico> _consulta = new ConsultaCatalogoBase<ConsultaServicioFotografico>();
+        _consulta.Entidad = new ConsultaServicioFotografico();
+
+        numeroDePagina = 1;
+        _consulta.Entidad.IdInventario = IdMonitorInventarioSelected;
+        _consulta.Entidad.TipoFoto = TipoFoto.Recepcion;
+        _consulta.NumeroDePagina = numeroDePaginaFotoRecepcion;
+        _consulta.RegistrosPorPagina = registrosPorPaginaFotoRecepcion;
+
+
+        var _resultRecepcion = await _servicioFotograficoService.ObtenerListaPaginada(_consulta);
+
+        if (_resultRecepcion.Success) 
+        {
+
+            listadoServicioFotografico = _resultRecepcion.Data;
+
+            //////Console.WriteLine("-> monitorServicioFotografico : " + System.Text.Json.JsonSerializer.Serialize(monitorServicioFotografico));
+            totalRegistrosFotoRecepcion = (int)_resultRecepcion.Paginado.TotalRegistros;
+            
+
+        }
+
+        isLoadingFotosRecepcion = false;
+
+        @* -------------------------------------------------------------------------------------------------------------------------------- *@
+
+        isLoadingFotosEvidenciaDannios = true;
+
+
+        _consulta = new ConsultaCatalogoBase<ConsultaServicioFotografico>();
+        _consulta.Entidad = new ConsultaServicioFotografico();
+
+        numeroDePagina = 1;
+        _consulta.Entidad.IdInventario = monitorInventarioAlmacen.IdInventario;
+        _consulta.Entidad.TipoFoto = TipoFoto.ReporteDannios;
+        _consulta.NumeroDePagina = numeroDePaginaFotoEvidenciaDannios;
+        _consulta.RegistrosPorPagina = registrosPorPaginaFotoEvidenciaDannios;
+
+
+        var _resultEvidenciaDannios = await _servicioFotograficoService.ObtenerListaPaginada(_consulta);
+
+        if (_resultEvidenciaDannios.Success) 
+        {
+
+            listadoServicioFotograficoEvidenciaDannios = _resultEvidenciaDannios.Data;
+
+            
+            totalRegistrosFotoEvidenciaDannios = (int)_resultEvidenciaDannios.Paginado.TotalRegistros;
+            
+
+        }
+
+        isLoadingFotosEvidenciaDannios = false;
+
+        @* -------------------------------------------------------------------------------------------------------------------------------- *@
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Button Clicked", Detail = text });
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    
+    void ChangeFiltros(string text)
+    {
+        //////Console.WriteLine.Log($"{text}");
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await DialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

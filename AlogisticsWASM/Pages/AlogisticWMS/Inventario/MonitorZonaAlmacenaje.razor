@@ -1,0 +1,597 @@
+﻿@page "/monitorZonaAlmacenaje"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogServiceConfirm
+@inject DialogService dialogService
+@inject NavigationManager navigationManager
+@inject NotificationService NotificationService
+
+@attribute [Authorize]
+
+<RadzenStack>
+    <RadzenRow class="rz-mt-0">
+        <RadzenColumn class="rz-mt-0">
+            <div class="storage-control">
+                @* <h3>Zona de Almacén</h3>
+                 *@
+                @* <div class="location-controls">
+                    <div class="form-group">
+                        <RadzenLabel Text="Fila" />
+                        <RadzenNumeric TValue="int" @bind-Value="@SelectedFilas" Min="1" Max="@MaxFilas" 
+                                    Style="width: 100px" Change="@OnLocationChanged" />
+                    </div>
+                    
+                    <div class="form-group">
+                        <RadzenLabel Text="Columna" />
+                        <RadzenNumeric TValue="int" @bind-Value="@SelectedColumna" Min="1" Max="@MaxColumnas" 
+                                    Style="width: 100px" Change="@OnLocationChanged" />
+                    </div>
+                    
+                    <div class="location-display">
+                        <RadzenLabel Text="Ubicación seleccionada:" />
+                        <RadzenTextBox Value="@($"Fila {SelectedFilas}, Cajón {SelectedColumna}")"
+                                    Disabled="true" Style="width: 200px" />
+                    </div>
+
+                    <RadzenButton Text="Redimensionar" ButtonStyle="ButtonStyle.Info" 
+                                Click="@ResizeStorage" class="resize-button" />
+
+                </div> *@
+
+                <RadzenRow AlignItems="AlignItems.Center" class="rz-pb-2">
+                    <RadzenColumn Size="1" class="text-center align-content-center">
+                        <RadzenIcon Icon="warehouse" style="font-size: 56px;" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="5">
+                        <RadzenLabel Text="Zona Almacenaje" Component="UBICACION_TIPO_ZONA_ALMACENAJE" />
+                            <RadzenDropDown @bind-Value=@valZonaAlmacenaje ValueProperty="@nameof(MonitorZonaAlmacen.IdZonaAlmacenaje)" 
+                                                        Style="width: 100%;"
+                                                        Change="@(args => UpdateZonaAlmacenaje())"
+                                                        TextProperty="Descripcion" Data=@listTipoZonaAlmacenaje
+                                                        Name="UBICACION_TIPO_ZONA_ALMACENAJE" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="1" class="text-center align-content-center">
+                        <RadzenIcon Icon="my_location" style="font-size: 56px;" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="5">
+                        <RadzenLabel Text="Ubicación seleccionada:" Component="UBICACION_ALMACENAJE" />
+                        <RadzenTextBox Value="@($"Fila {SelectedFilas}, Cajón {SelectedColumna}")"
+                                    
+                                    Disabled="true" Style="width: 100%" Name="UBICACION_ALMACENAJE" />
+                    </RadzenColumn>
+                </RadzenRow>
+                <div class="storage-grid">
+                    @for (int row = 1; row <= MaxFilas; row++)
+                    {
+                        <div class="storage-row">
+                            @for (int col = 1; col <= MaxColumnas; col++)
+                            {
+                                var currentFilas = row; // Captura local para el cierre
+                                var currentCol = col; // Captura local para el cierre
+                                
+                                <div class="storage-cell @ObtenerCeldaClass(currentFilas, currentCol)" 
+                                    @onclick="() => SelectCelda(currentFilas, currentCol)">
+                                    <div class="cell-coords">@(ClaveZona)F@(currentFilas)C@(currentCol)</div>
+                                    @if (IsCeldaOcupada(currentFilas, currentCol))
+                                    {
+                                        <div class="item-info">
+                                            <span class="item-badge">
+                                                <RadzenIcon Icon="directions_car" style="font-size: 24px;" />
+                                            </span>
+                                            <div class="item-details">
+                                                @StorageMap[(currentFilas, currentCol)]
+                                            </div>
+                                        </div>
+                                    }
+                                    @if (currentFilas == SelectedFilas && currentCol == SelectedColumna)
+                                    {
+                                        <span class="selection-marker">★</span>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                
+                @* <div class="current-item">
+                    <RadzenLabel Text="Id Mercancía en Ubicación:" />
+                    @if (IsCeldaOcupada(SelectedFilas, SelectedColumna))
+                    {
+                        <div class="item-card">
+                            <RadzenTextBox @bind-Value="@CurrentItem" Style="width: 100%" 
+                                        Disabled="@(!IsEdicion)" />
+                            <div class="item-actions">
+                                @if (!IsEdicion)
+                                {
+                                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Secondary" 
+                                                Click="@(() => IniciarEdicion())" />
+                                    <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" 
+                                                Click="@ReleaseLocation" />
+                                }
+                                else
+                                {
+                                    <RadzenButton Text="Guardar" ButtonStyle="ButtonStyle.Success" 
+                                                Click="@GuardarItem" />
+                                    <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" 
+                                                Click="@CancelEdicion" />
+                                }
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="item-card">
+                            <RadzenTextBox @bind-Value="@NuevoItem" Placeholder="Ingrese el nombre del Id Mercancía" 
+                                        Style="width: 100%" Disabled="@(!IsAgregar)" />
+                            <div class="item-actions">
+                                @if (!IsAgregar)
+                                {
+                                    <RadzenButton Text="Agregar Item" ButtonStyle="ButtonStyle.Primary" 
+                                                Click="@IniciarAgregarItem" />
+                                }
+
+                                        <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Light" 
+                                                Click="@CancelAgregar" />
+                                }
+                            </div>
+                        </div>
+                    }
+                </div> *@
+            </div>
+        </RadzenColumn>
+        <RadzenColumn >
+            <RadzenStack class="rz-mt-0">
+                
+                        <RadzenCard Variant="@variant" class="rz-background-color-info-lighter rz-shadow-0 rz-border-radius-2 rz-p-4">
+                            <RadzenStack JustifyContent="JustifyContent.SpaceBetween" Gap="1rem">
+                                <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.SpaceBetween">
+                                    <RadzenText TextStyle="TextStyle.H6">Ocupación</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.H2" class="rz-m-0">@($"{Math.Round(_zonaAlmacenProgress)}%")</RadzenText>
+                                </RadzenStack>
+                                <RadzenProgressBar @bind-Value=@_zonaAlmacenProgress ShowValue="false" Style="--rz-progressbar-height: 1rem;"/>
+                            </RadzenStack>
+                        </RadzenCard>
+                        <RadzenCard Variant="@variant" class="rz-mx-auto rz-border-radius-2" Style="width: 100%">
+                            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" Gap="1rem">
+                                <RadzenStack Gap="0">
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-2 rz-my-0">Capacidad Total del Almacén</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1"><b>@(LabelCapacidadTotal)</b></RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-4 rz-mb-0">Ocupación Actual</RadzenText>
+                                    <RadzenText TextStyle="TextStyle.Body1"><b>@(LabelOcupacionActual)</b></RadzenText>
+                                </RadzenStack>
+                            </RadzenStack>
+                        </RadzenCard>
+
+                </RadzenStack>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+    int MaxFilas = 30;
+
+    int MaxColumnas = 10; 
+
+    int TempFilas = 30;
+
+    int TempColumnas = 10;
+
+    string ClaveZona = String.Empty;
+
+    string LabelCapacidadTotal = String.Empty;
+
+    string LabelOcupacionActual = String.Empty;
+
+    int SelectedFilas = 1;
+
+    int SelectedColumna = 1;
+
+    string CurrentItem;
+
+    bool IsEdicion = false;
+
+    string OriginalItemValue;
+
+    bool IsAgregar = false;
+
+    string NuevoItem  = string.Empty;
+
+    @* -------------------------------------------------------- *@
+
+    bool responsive = true;
+
+    Variant variant = Variant.Filled;
+
+    double _zonaAlmacenProgress = 0;
+
+    int valZonaAlmacenaje = 1;
+
+    List<MonitorZonaAlmacen> listTipoZonaAlmacenaje;
+
+    List<MonitorUbicacionAlmacen> listaMonitorUbicacionAlmacen;
+
+    @* -------------------------------------------------------- *@
+
+    [Inject] private IInventarioAlmacenService? _inventarioAlmacenService {get; set; }
+    
+    [Inject] private IPartidaService? _partidaService { get; set; }
+
+    [Inject] private IZonaAlmacenService? _zonaAlmacenService { get; set; }
+
+    [Inject] private IUbicacionAlmacenService? _ubicacionAlmacenService { get; set; }
+    
+    private Dictionary<(int row, int col), string> StorageMap = new() { };
+    
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        await ObtenerDatosZonaAlmacen();
+
+        
+    }
+
+    @* ----------------------------------------------------------------------------------------------------- *@
+
+    async Task UpdateZonaAlmacenaje()
+    {
+        //Console.WriteLine("valZonaAlmacenaje: " + valZonaAlmacenaje.ToString());
+
+        await ObtenerDatosZonaAlmacen();
+    }
+    
+    private async Task ObtenerDatosZonaAlmacen() 
+    {
+
+        listTipoZonaAlmacenaje = new List<MonitorZonaAlmacen>();
+
+        _zonaAlmacenProgress = 0;
+
+        LabelOcupacionActual = "0 Unidades";
+
+        var _resultBase = await _zonaAlmacenService!.ObtenerLista();
+
+        //Console.WriteLine("--> PoC ");
+
+        StorageMap = new()
+        { };
+
+        if (_resultBase.Success) {
+
+            listTipoZonaAlmacenaje = _resultBase.Data;
+
+            var _dimensionAlmanceTotal = (from x in listTipoZonaAlmacenaje where x.IdZonaAlmacenaje.Equals(valZonaAlmacenaje)
+            select new { 
+                    IdZonaAlmacenaje = x.IdZonaAlmacenaje,
+                    TotalFilas = x.TotalFilas, 
+                    TotalColumnas = x.TotalColumnas,
+                    ClaveZona = x.Clave }).SingleOrDefault();
+
+            MaxFilas = _dimensionAlmanceTotal.TotalFilas;
+            MaxColumnas = _dimensionAlmanceTotal.TotalColumnas;  
+
+            LabelCapacidadTotal = (MaxFilas * MaxColumnas).ToString() + " Unidades";
+
+            ClaveZona = _dimensionAlmanceTotal.ClaveZona;
+
+            TempFilas = MaxFilas;
+            TempColumnas = MaxColumnas;
+
+            //Obtener el inventario asociado a la Zona Almacen Seleccioada
+
+            var _resultUbicaciones = await _ubicacionAlmacenService.ObtenerListaUbicacionPorIdAlmacenaje(_dimensionAlmanceTotal.IdZonaAlmacenaje);
+
+            if (_resultUbicaciones.Success) {
+
+                if (!_resultUbicaciones.Data.Count.Equals(0)) {
+
+                    ActualizarItemDisplay();
+
+                    _zonaAlmacenProgress = (_resultUbicaciones.Data.Count*100)/(MaxFilas * MaxColumnas);             
+
+                    LabelOcupacionActual = _resultUbicaciones.Data.Count.ToString() + " Unidades";
+
+                    //Console.WriteLine("-> _resultUbicaciones : " + JsonSerializer.Serialize(_resultUbicaciones.Data));
+
+                    foreach(var item in _resultUbicaciones.Data) {
+
+                        //var _listClaveUbicacion = item.Descripcion.Split('|').ToList();
+                        string[] _listClaveUbicacion = item.Descripcion.Split('|');
+
+                        SelectedFilas = Convert.ToInt32(_listClaveUbicacion[2]);
+
+                        SelectedColumna = Convert.ToInt32(_listClaveUbicacion[4]);
+
+                        CurrentItem = item.Numeros;
+
+                        StorageMap[(SelectedFilas, SelectedColumna)] = CurrentItem;
+
+                    }
+
+                    SelectCelda(1, 1);
+                }
+
+            }
+            
+            SelectCelda(1, 1);
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    @* ----------------------------------------------------------------------------------------------------- *@
+
+    private string ObtenerCeldaClass(int row, int col)
+    {
+        var classes = new List<string>();
+        
+        if (row == SelectedFilas && col == SelectedColumna)
+            classes.Add("selected");
+        
+        if (IsCeldaOcupada(row, col))
+            classes.Add("occupied");
+        
+        return string.Join(" ", classes);
+    }
+    
+    private bool IsCeldaOcupada(int row, int col)
+    {
+        return StorageMap.ContainsKey((row, col));
+    }
+    
+    private void SelectCelda(int row, int col)
+    {
+        // Aseguramos que los valores estén dentro de los límites
+        SelectedFilas = Math.Clamp(row, 1, MaxFilas);
+        SelectedColumna = Math.Clamp(col, 1, MaxColumnas);
+        ActualizarItemDisplay();
+        IsEdicion = false;
+        StateHasChanged(); // Forzar actualización de la UI
+    }
+    
+    private void OnLocationChanged()
+    {
+        ActualizarItemDisplay();
+        IsEdicion = false;
+    }
+    
+    private void ActualizarItemDisplay()
+    {
+        if (IsCeldaOcupada(SelectedFilas, SelectedColumna))
+        {
+            CurrentItem = StorageMap[(SelectedFilas, SelectedColumna)];
+        }
+        else
+        {
+            NuevoItem = string.Empty;
+            CurrentItem = string.Empty;
+        }
+    }
+    
+    private void IniciarAgregarItem()
+    {
+        NuevoItem = string.Empty;
+        IsAgregar = true;
+    }
+
+    private void ConfirmarAddItem()
+    {
+        if (!string.IsNullOrWhiteSpace(NuevoItem))
+        {
+            StorageMap[(SelectedFilas, SelectedColumna)] = NuevoItem;
+            CurrentItem = NuevoItem;
+            IsAgregar = false;
+            StateHasChanged();
+        }
+        else
+        {
+            // Mostrar mensaje de error
+        }
+    }
+    
+    private void IniciarEdicion()
+    {
+        OriginalItemValue = CurrentItem;
+        IsEdicion = true;
+    }
+    
+    private void GuardarItem()
+    {
+        if (!string.IsNullOrWhiteSpace(CurrentItem))
+        {
+            StorageMap[(SelectedFilas, SelectedColumna)] = CurrentItem;
+        }
+        IsEdicion = false;
+    }
+
+    private void CancelAgregar()
+    {
+        NuevoItem = string.Empty;
+        IsAgregar = false;
+    }
+    
+    private void CancelEdicion()
+    {
+        CurrentItem = OriginalItemValue;
+        IsEdicion = false;
+    }
+    
+    private void ReleaseLocation()
+    {
+        if (IsCeldaOcupada(SelectedFilas, SelectedColumna))
+        {
+            StorageMap.Remove((SelectedFilas, SelectedColumna));
+            CurrentItem = string.Empty;
+            IsEdicion = false;
+        }
+    }
+
+     private void ResizeStorage()
+    {
+        // Crear nuevo diccionario para los items que caben en la nueva dimensión
+        var newStorage = new Dictionary<(int, int), string>();
+        
+        foreach (var item in StorageMap)
+        {
+            if (item.Key.Item1 <= TempFilas && item.Key.Item2 <= TempColumnas)
+            {
+                newStorage.Add(item.Key, item.Value);
+            }
+        }
+        
+        // Actualizar dimensiones y almacenamiento
+        MaxFilas = TempFilas;
+        MaxColumnas = TempColumnas;
+        StorageMap = newStorage;
+        
+        // Ajustar selección si está fuera de los nuevos límites
+        SelectedFilas = Math.Min(SelectedFilas, MaxFilas);
+        SelectedColumna = Math.Min(SelectedColumna, MaxColumnas);
+        
+        StateHasChanged();
+    }
+
+}
+
+<style>
+    .storage-control {
+        max-width: 910px;
+        margin: 0px auto;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+    }
+    
+    .location-controls {
+        display: flex;
+        gap: 20px;
+        align-items: flex-end;
+        margin-bottom: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 0;
+    }
+    
+    .storage-grid {
+        margin: 5px 0;
+        border: 1px solid #ccc;
+        background-color: white;
+        overflow: auto;
+        max-height: 500px;
+    }
+    
+    .storage-row {
+        display: flex;
+    }
+    
+    .storage-cell {
+        width: 100px;
+        height: 90px;
+        border: 1px solid #eee;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        position: relative;
+        padding: 5px;
+    }
+    
+    .storage-cell:hover {
+        background-color: #f0f0f0;
+    }
+    
+    .storage-cell.selected {
+        background-color: #d4edff;
+        border: 2px solid #007bff;
+    }
+    
+    .storage-cell.occupied {
+        background-color: #ffeeba;
+    }
+    
+    .cell-coords {
+        font-size: 10px;
+        color: #666;
+        align-self: flex-start;
+    }
+    
+    .item-info {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+    
+    .item-badge {
+        color: #1976d2; /* Color azul para el ícono del auto */
+        font-size: 24px;
+    }
+    
+    .item-details {
+        font-size: 10px;
+        text-align: center;
+        word-break: break-word;
+        width: 100%;
+    }
+    
+    .selection-marker {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        color: #007bff;
+        font-size: 12px;
+    }
+    
+    .current-item {
+        margin: 20px 0;
+    }
+    
+    .item-card {
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: white;
+        margin-top: 10px;
+    }
+    
+    .item-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        justify-content: flex-end;
+    }
+    
+    .ml-2 {
+        margin-left: 10px;
+    }
+
+    .item-card {
+        border: 1px solid #ddd;
+        padding: 15px;
+        border-radius: 5px;
+        background-color: white;
+        margin-top: 10px;
+    }
+    
+    .item-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+        justify-content: flex-end;
+    }
+
+</style>
+
+

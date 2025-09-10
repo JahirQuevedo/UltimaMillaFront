@@ -1,0 +1,131 @@
+﻿@using ALOG.Modelos.Modelos.Vacios
+
+<script>
+    function downloadFile(fileName, fileUrl) {
+        var link = document.createElement('a');
+        link.href = fileUrl;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+
+<RadzenCard class="rz-my-4 rz-shadow-2" Style="border-radius: 10px;">
+    <RadzenRow>
+        <RadzenColumn Size="3">
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Contenedor<br />
+                    <strong>@Contenedor.Contenedor</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+        <RadzenColumn Size="2">
+            @* class="rz-p-12" *@
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Aduana<br />
+                    <strong>@Contenedor.Aduana</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+        <RadzenColumn Size="3">
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Ref cliente<br />
+                    <strong>@Contenedor.RefenciaCliente</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+        <RadzenColumn Size="4
+">
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Cliente<br />
+                    <strong>@Contenedor.Cliente_RazonSocial</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenCard>
+
+<RadzenDataGrid @ref="_gridServicios"
+                TItem="PeticionesServicios"
+                Data="@_servicios"
+                ExpandMode="DataGridExpandMode.Single"
+                AllowPaging="false"
+                AllowFiltering="false"
+                AllowSorting="false"
+                ShowPagingSummary="false"
+                ShowPagination="false"
+                RowRender="@OnRowRender">
+
+    <Columns>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Servicio">
+            <Template Context="servicio">@servicio?.DescServicio</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Fecha solicitud">
+            <Template Context="servicio">@servicio?.FechaRegistro.ToString("d/M/yyyy")</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Estado servicio">
+            <Template Context="servicio">
+                <RadzenBadge BadgeStyle="@(_utileriasPage.GetBadgeStyle2(servicio.IdEstadoServicio.ToString()))"
+                            Shade="Shade.Darker"
+                            IsPill="true"
+                             Text="@_utileriasPage.GetEstado(servicio.IdEstadoServicio)"
+                            class="rz-ms-2" />
+                </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Acciones">
+            <Template Context="servicio">
+                <RadzenButton Click="@(args => CancelarServicioAsync(servicio))"
+                              ButtonStyle="ButtonStyle.Danger"
+                              @onclick:stopPropagation="true"
+                              Size="ButtonSize.Medium"
+                              class="rz-my-1 rz-ms-1"
+                              Variant="Variant.Flat"
+                              Shade="Shade.Lighter"
+                              Icon="cancel"/>
+            </Template>
+        </RadzenDataGridColumn>
+        
+    </Columns>
+
+    <Template Context="servicio">
+        <RadzenDataGrid TItem="PeticionesDocumentos"
+                        Data="@servicio.Documentos"
+                        AllowPaging="false"
+                        AllowFiltering="false"
+                        AllowSorting="false"
+                        ShowPagingSummary="false"
+                        ShowPagination="false">
+            <Columns>
+
+                <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Nombre del documento">
+                    <Template Context="doc">@doc?.NombreDocumento</Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Tipo documento">
+                    <Template Context="doc">@doc?.TipoDocumentoNombre</Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Fecha registro">
+                    <Template Context="doc">@doc?.FechaRegistro.ToString("d/M/yyyy")</Template>
+                </RadzenDataGridColumn>
+
+                <RadzenDataGridColumn TItem="PeticionesDocumentos" Title="Acciones">
+                    <Template Context="doc">
+                        <RadzenButton Icon="picture_as_pdf" Text="Ver" Click="@(args => AbrirDocumento(doc))" Style="margin-right: 10px;" />
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </Template>
+</RadzenDataGrid>
+

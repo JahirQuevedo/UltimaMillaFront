@@ -1,0 +1,372 @@
+﻿@page "/ordenes-crear"
+@using ALOGModelos.Modelos.Catalogos
+
+<div class="content mt-10">
+   
+    <div class="rz-m-2">
+        <RadzenBreadCrumb>
+            <RadzenBreadCrumbItem Path="/" Text="Home" />
+            <RadzenBreadCrumbItem Path="/UltimaMillaRZ" Text="Ultima Milla" />
+            @* <RadzenBreadCrumbItem Path="/ordenes-crear" Text="Solicitar Ultima Milla" /> *@
+            <RadzenBreadCrumbItem Icon="add" Text="Solicitar Ultima Milla" />
+        </RadzenBreadCrumb>
+    </div>
+    <div class="mb-9">
+        <h4 class="fs-5 mb-4 mb-xl-5">Crear Servicio Ultima Milla</h4>
+        <div class="theme-wizard" data-theme-wizard="data-theme-wizard" data-wizard-modal-disabled="data-wizard-modal-disabled">
+        <div class="row gx-0 gx-xl-5">
+            <div class="col-xl-4 order-xl-1">
+                <div class="scrollbar mb-4">
+                    <ul class="nav justify-content-between flex-nowrap nav-wizard nav-wizard-vertical-xl" data-tab-map-container="data-tab-map-container">
+                        <li class="nav-item">
+                            <a class="nav-link @(pasoActual == 1 ? "active" : "") py-0 py-xl-3" href="#add-property-wizard-tab1" @onclick="@(() => SetPasoActual(1))" data-bs-toggle="tab" data-wizard-step="1">
+                                <div class="text-center d-inline-block d-xl-flex align-items-center gap-3">
+                                    <span class="nav-item-circle-parent">
+                                        <span class="nav-item-circle">
+                                            <span class="fa-solid fa-file nav-item-icon"></span>
+                                            <span class="fa-solid fa-check check-icon"></span>
+                                        </span>
+                                    </span>
+                                    <span class="nav-item-title fs-9 fs-xl-8">Datos generales</span>
+                                </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                                        <a class="nav-link @(pasoActual == 2 ? "active" : "") py-0 py-xl-3" href="#add-property-wizard-tab2" @onclick="@(() => SetPasoActual(2))" data-bs-toggle="tab" data-wizard-step="2">
+                            <div class="text-center d-inline-block d-xl-flex align-items-center gap-3">
+                                <span class="nav-item-circle-parent">
+                                    <span class="nav-item-circle">
+                                        <span class="fa-solid fa-file nav-item-icon"></span>
+                                        <span class="fa-solid fa-check check-icon"></span>
+                                    </span>
+                                </span>
+                                <span class="nav-item-title fs-9 fs-xl-8">Detalles de la orden</span>
+                            </div>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                                        <a class="nav-link @(pasoActual == 3 ? "active" : "") py-0 py-xl-3" href="#add-property-wizard-tab7" @onclick="@(() => SetPasoActual(3))" data-bs-toggle="tab" data-wizard-step="7">
+                            <div class="text-center d-inline-block d-xl-flex align-items-center gap-3">
+                                <span class="nav-item-circle-parent">
+                                    <span class="nav-item-circle">
+                                        <span class="fas fa-check"></span>
+                                    </span>
+                                </span>
+                                <span class="nav-item-title fs-9 fs-xl-8">Confirmación</span>
+                            </div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-xl-8 flex-1">
+                <div class="row">
+                    <div class="col-xxl-8">
+                        <div class="tab-content">
+                            <div class="tab-pane  @(pasoActual == 1 ? "active" : "")" role="tabpanel" aria-labelledby="add-property-wizard-tab1" id="add-property-wizard-tab1">
+                                <EditForm EditContext="_editContextEncabezado" OnValidSubmit="@( () => DatosValidoEncabezado())">
+                                    <DataAnnotationsValidator></DataAnnotationsValidator>
+                                    <ValidationSummary></ValidationSummary>
+                                    <form id="addPropertyWizardForm5" novalidate="novalidate" data-wizard-form="5">
+                                        <!--<h3 class="mb-6">Última milla Encabezado</h3>-->
+                                        <h4 class="mb-4">Datos generales</h4>
+                                        <div class="row g-3">
+                                            <div class="col-md-4 form-floating">
+                                                <InputNumber class="form-control" name="add-property-wizard-currency" id="add-property-wizardwizard-currency" placeholder="payment currency" @bind-Value="Encabezado.Viaje" />
+                                                <label for="add-property-wizardwizard-currency">Viaje</label>
+                                            </div>
+                                            <div class="col-md-4 form-floating">
+                                                <InputDate class="form-control" name="add-property-wizard-percentage" id="add-property-wizardwizard-percentage" placeholder="Commission Percentage" disabled="disabled" @bind-Value="Encabezado.FechaSolicitud" />
+                                                <label for="add-property-wizardwizard-percentage">Fecha de solicitud</label>
+                                            </div>
+                                            <div class="col-md-4 col-4 form-floating mt-3">
+                                                <InputDate class="form-control" name="add-property-wizard-card-holder" id="add-property-wizardwizard-card-holder" placeholder="Fecha de salida" @bind-Value="Encabezado.FechaSalida" />
+                                                <label for="add-property-wizardwizard-card-holder">Fecha de salida</label>
+                                            </div>
+                                            <div class="col-md-12 col-12 form-floating mt-3">
+                                                <ListadoGenerico Listado="_clientes"
+                                                                    TItem="CatClientes"
+                                                                    IdSelector="c => c.IdCatCliente"
+                                                                    DisplaySelector="c => c.RazonSocial"
+                                                                    SelectedId="Encabezado.IdCliente"
+                                                                    OnSelected="ObtenerClienteSeleccionado"
+                                                                    Etiqueta="Clientes" />
+                                            </div>
+                                            <div class="col-md-6 col-6 form-floating mt-3">
+                                                <InputText class="form-control" name="add-property-wizard-invoice-email" id="add-property-wizardwizard-invoice-email" placeholder="Factura"
+                                                                       @bind-Value="Encabezado.FacturaCliente" @oninput="@(e => Encabezado.FacturaCliente = e.Value.ToString().ToUpper())" />
+                                                <label for="add-property-wizardwizard-invoice-email">Factura</label>
+                                            </div>
+                                            <div class="col-md-6 col-6 form-floating mt-3">
+                                                <InputText class="form-control" name="add-property-wizard-card-holder" id="add-property-wizardwizard-card-holder" placeholder="Bodega"
+                                                                       @bind-Value="Encabezado.Bodega" @oninput="@(e => Encabezado.Bodega = e.Value.ToString().ToUpper())" />
+                                                <label for="add-property-wizardwizard-card-holder">Bodega</label>
+                                            </div>
+
+                                            <div class="col-md-12 col-12 form-floating mt-3">
+                                                <ListadoGenerico Listado="_servicios"
+                                                                    TItem="CatServicios"
+                                                                    IdSelector="s => s.IdCatServicio"
+                                                                    DisplaySelector="s => s.Descripcion"
+                                                                             SelectedId="Encabezado.IdServicio"
+                                                                    OnSelected="ObtenerServicioSeleccionado"
+                                                                    Etiqueta="Servicios" />
+                                            </div>
+                                        </div>
+                                    </form>
+                                </EditForm>
+                        
+                            </div>
+                            <div class="tab-pane @(pasoActual == 2 ? "active" : "")" role="tabpanel" aria-labelledby="add-property-wizard-tab2" id="add-property-wizard-tab2">
+                            <EditForm EditContext="_editContextDetalle" OnValidSubmit="@( () => DatosValidoEncabezado())">
+                                <DataAnnotationsValidator></DataAnnotationsValidator>
+                                <ValidationSummary></ValidationSummary>
+                                <form id="addPropertyWizardForm3" novalidate="novalidate" data-wizard-form="3">
+                                    <div>
+                                        <h3 class="mb-6">Creando detalle de la orden</h3>
+                                        <div class="row g-3">
+                                            <div class="col-sm-auto">
+                                                <a class="btn btn-phoenix-primary w-100 h-100 fs-8" @onclick="@(() => AgregarDetalle(Detalle))"><span class="fa-solid fa-plus me-2"></span>Agregar detalle</a>
+                                            </div>
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-4">
+                                                <div class="form-floating mt-3">
+                                                    <InputText class="form-control" name="add-property-wizard-invoice-email" id="add-property-wizardwizard-invoice-email" placeholder="Número de parte"
+                                                               @bind-Value="Detalle.NumeroParte" @oninput="@(e => Detalle.NumeroParte = e.Value.ToString().ToUpper())" />
+                                                    <label for="add-property-wizardwizard-invoice-email">Número de parte</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="form-floating mt-3">
+                                                    <InputNumber class="form-control" name="add-property-wizard-card-holder" id="add-property-wizardwizard-card-holder" placeholder="Número de piezas"
+                                                                 @bind-Value="@Detalle.Piezas" />
+                                                    <label for="add-property-wizardwizard-card-holder">Número de piezas</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-4">
+                                                <div class="form-floating mt-3">
+                                                    <InputNumber class="form-control" name="add-property-wizard-card-holder" id="add-property-wizardwizard-card-holder" placeholder="Número de pallet" 
+                                                                 @bind-Value="@Detalle.Pallet" />
+                                                    <label for="add-property-wizardwizard-card-holder">Número de pallet</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </EditForm>
+                    
+                            <div class="mb-8 mt-10">
+                                <div class="border-top border-bottom border-translucent" id="leadDetailsTable" data-list='{"valueNames":["dealName","amount","stage","probability","date","type"],"page":5,"pagination":true}'>
+                                    <div class="table-responsive scrollbar mx-n1 px-1">
+                                        <table class="table fs-9 mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th class="white-space-nowrap fs-9 align-middle ps-0" style="width:26px;">
+                                                        <div class="form-check mb-0 fs-8">
+                                                            <input class="form-check-input" type="checkbox" data-bulk-select='{"body":"lead-details-table-body"}' />
+                                                        </div>
+                                                    </th>
+                                                    <th class="sort white-space-nowrap align-middle pe-3 ps-0 text-uppercase" scope="col" data-sort="dealName" style="width:15%; min-width:200px">Número de parte</th>
+                                                    <th class="sort align-middle pe-6 text-uppercase text-end" scope="col" data-sort="amount" style="width:15%; min-width:100px">Número de piezas</th>
+                                                    <th class="sort align-middle text-start text-uppercase" scope="col" data-sort="stage" style="width:20%; min-width:200px">Número de pallets</th>
+                                                    <th class="align-middle pe-0 text-end" scope="col" style="width:15%;"> </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="list" id="lead-details-table-body">
+                                                @foreach (var detalle in _detalles) {                                                            
+                                                    <tr class="hover-actions-trigger btn-reveal-trigger position-static">
+                                                        <td class="fs-9 align-middle px-0 py-3">
+                                                            <div class="form-check mb-0 fs-8">
+                                                                <input class="form-check-input" type="checkbox" data-bulk-select-row='{"dealName":"leon","active":true,"amount":"$66,000","stage_status":{"label":"IN PROGRESS","type":"badge-phoenix-info"},"progress":{"min":"88","max":"145","color":"bg-success"},"date":"Aug 19, 2024","type_status":{"label":"cold","type":"badge-phoenix-warning"}}' />
+                                                            </div>
+                                                        </td>
+                                                        <td class="dealName align-middle white-space-nowrap py-2 ps-0">@detalle.NumeroParte</td>
+                                                        <td class="dealName align-middle white-space-nowrap py-2 ps-0">@detalle.Piezas</td>
+                                                        <td class="dealName align-middle white-space-nowrap py-2 ps-0">@detalle.Pallet</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="row align-items-center justify-content-between py-2 pe-0 fs-9">
+                                        <div class="col-auto d-flex">
+                                            <p class="mb-0 d-none d-sm-block me-3 fw-semibold text-body" data-list-info="data-list-info"></p><a class="fw-semibold" href="#!" data-list-view="*">View all<span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span></a><a class="fw-semibold d-none" href="#!" data-list-view="less">View Less<span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span></a>
+                                        </div>
+                                        <div class="col-auto d-flex">
+                                            <button class="page-link" data-list-pagination="prev"><span class="fas fa-chevron-left"></span></button>
+                                            <ul class="mb-0 pagination"></ul>
+                                            <button class="page-link pe-0" data-list-pagination="next"><span class="fas fa-chevron-right"></span></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="tab-pane @(pasoActual == 3 ? "active" : "")" role="tabpanel" aria-labelledby="add-property-wizard-tab7" id="add-property-wizard-tab7">
+                                <h3 class="mb-2">Estás a punto de terminar de crear tu orden</h3>
+                                <p class="mb-5 text-body-tertiary">Por favor, asegúrate de que los datos que se muestran a continuación son los correctos.</p>
+                                <div class="accordion-button-arrow-icon accordion mt-2" id="previewAccordion">
+                                    <div class="accordion-item border rounded-3 bg-body-emphasis p-3 p-sm-4 mb-5">
+                                    <h5 class="accordion-header">
+                                        <button class="accordion-button py-0 text-body-highlight" type="button" data-bs-toggle="collapse" data-bs-target="#basicInfo" aria-expanded="true" aria-controls="basicInfo"><img class="me-2 d-dark-none" src="../../../../assets/img/icons/info.svg" alt="" /><img class="me-2 d-light-none" src="../../../../assets/img/icons/info_dark.svg" alt="" /><span class="fs-sm-7">Resumen de la orden</span></button>
+                                    </h5>
+                                    <div class="accordion-collapse collapse show" id="basicInfo" data-bs-parent="#previewAccordion">
+                                        <div class="mt-4 scrollbar"><a class="fs-9 fw-semibold mb-2 d-inline-block">Fecha de la solicitud</a>
+                                        <table class="w-100">
+                                            <tr>
+                                            <th style="width: 176px"></th>
+                                            <th style="width: 32px"></th>
+                                            <th style="min-width: 300px"></th>
+                                            </tr>
+                                            <tr>
+                                            <td class="border-top pt-3 text-nowrap  pb-3">
+                                                <h5 class="fw-semibold text-body-highlight mb-0">Cliente</h5>
+                                            </td>
+                                            <td class="border-top px-3 pt-3 w-max-content  pb-3">
+                                                <p class="mb-0 w-max-content">:</p>
+                                            </td>
+                                            <td class="border-top pt-3  pb-3 text-nowrap">
+                                                                            <p class="mb-0 text-body-secondary">@Encabezado.NombreCliente</p>
+                                            </td>
+                                            </tr>
+                                            <tr>
+                                            <td class="border-top pt-3 text-nowrap  pb-3">
+                                                <h5 class="fw-semibold text-body-highlight mb-0">Factura</h5>
+                                            </td>
+                                            <td class="border-top px-3 pt-3 w-max-content  pb-3">
+                                                <p class="mb-0 w-max-content">:</p>
+                                            </td>
+                                            <td class="border-top pt-3  pb-3 ">
+                                                                            <p class="mb-0 text-body-secondary">@Encabezado.FacturaCliente</p>
+                                            </td>
+                                            </tr>
+                                            <tr>
+                                            <td class="border-top pt-3 text-nowrap  pb-3">
+                                                <h5 class="fw-semibold text-body-highlight mb-0">Bodega</h5>
+                                            </td>
+                                            <td class="border-top px-3 pt-3 w-max-content  pb-3">
+                                                <p class="mb-0 w-max-content">:</p>
+                                            </td>
+                                            <td class="border-top pt-3  pb-3 text-nowrap">
+                                                                            <p class="mb-0 text-body-secondary">@Encabezado.Bodega</p>
+                                            </td>
+                                            </tr>
+                                            <tr>
+                                            <td class="border-top pt-3 text-nowrap  pb-3">
+                                                <h5 class="fw-semibold text-body-highlight mb-0">Viaje</h5>
+                                            </td>
+                                            <td class="border-top px-3 pt-3 w-max-content  pb-3">
+                                                <p class="mb-0 w-max-content">:</p>
+                                            </td>
+                                            <td class="border-top pt-3  pb-3 text-nowrap">
+                                                                            <p class="mb-0 text-body-secondary">@Encabezado.Viaje</p>
+                                            </td>
+                                            </tr>
+                                            <tr>
+                                            <td class="border-top pt-3 text-nowrap  pb-3">
+                                                <h5 class="fw-semibold text-body-highlight mb-0">Servicio</h5>
+                                            </td>
+                                            <td class="border-top px-3 pt-3 w-max-content  pb-3">
+                                                <p class="mb-0 w-max-content">:</p>
+                                            </td>
+                                            <td class="border-top pt-3  pb-3 text-nowrap">
+                                                                            <p class="mb-0 text-body-secondary">@Encabezado.catServicios.Descripcion</p>
+                                            </td>
+                                            </tr>
+                                
+                                        </table>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    <div class="accordion-item border rounded-3 bg-body-emphasis p-3 p-sm-4 mb-5">
+                                    <h5 class="accordion-header">
+                                        <button class="accordion-button py-0 text-body-highlight collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#location" aria-expanded="true" aria-controls="basicInfo"><img class="me-2 d-dark-none" src="../../../../assets/img/icons/info_dark.svg" alt="" /><img class="me-2 d-light-none" src="../../../../assets/img/icons/info_dark.svg" alt="" /><span class="fs-sm-7">Detalles de la orden</span></button>
+                                    </h5>
+                                    <div class="accordion-collapse collapse show" id="location" data-bs-parent="#previewAccordion">
+                                        <div class="accordion-collapse collapse show" id="orderTable" data-list='{"valueNames":["order","total","customer","payment_status","fulfilment_status","delivery_type","date"],"page":10,"pagination":true}'>
+                                            @* <div class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-body-emphasis border-top border-bottom border-translucent position-relative top-1"> *@
+                                            <div>
+                                                <div class="mt-5 table-responsive scrollbar mx-n1 px-1">
+                                                    <table class="w-100 table table-sm fs-9 mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th class="white-space-nowrap fs-9 align-middle ps-0" style="width:26px;">
+                                                                    <div class="form-check mb-0 fs-8">
+                                                                        <input class="form-check-input" id="checkbox-bulk-order-select" type="checkbox" data-bulk-select='{"body":"order-table-body"}' />
+                                                                    </div>
+                                                                </th>
+                                                                <th class="sort white-space-nowrap align-middle pe-3" scope="col" data-sort="order" style="width:5%;">Número de parte</th>
+                                                                <th class="sort align-middle text-end" scope="col" data-sort="total" style="width:6%;">Número de piezas</th>
+                                                                <th class="sort align-middle text-start ps-8" scope="col" data-sort="customer" style="width:28%;">Número de pallets</th>
+                                                                <th class="sort text-body-tertiary text-end align-middle pe-0 ps-4" style="width:5%" scope="col"></th>
+                                                            </tr>
+                                                        </thead>
+                                                        @foreach (var detalle in _detalles) {
+                                                            <tbody class="list" id="order-table-body">
+                                                                <tr class="hover-actions-trigger btn-reveal-trigger position-static">
+                                                                    <td class="fs-9 align-middle px-0 py-3">
+                                                                        <div class="form-check mb-0 fs-8">
+                                                                            <input class="form-check-input" type="checkbox" data-bulk-select-row='{"order":2453,"total":87,"customer":{"avatar":"/team/32.webp","name":"Carry Anna"},"payment_status":{"label":"Complete","type":"badge-phoenix-success","icon":"check"},"fulfilment_status":{"label":"Cancelled","type":"badge-phoenix-secondary","icon":"x"},"delivery_type":"Cash on delivery","date":"Dec 12, 12:56 PM"}' />
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="order align-middle white-space-nowrap py-0">@detalle.NumeroParte</td>
+                                                                    <td class="total align-middle text-end fw-semibold text-body-highlight">@detalle.Piezas</td>
+                                                                    <td class="customer align-middle white-space-nowrap ps-8">@detalle.Pallet</td>
+                                                                    <td class="align-middle text-end white-space-nowrap pe-0 action">
+                                                                        <div class="btn-reveal-trigger position-static">
+                                                                            <button class="btn btn-sm dropdown-toggle dropdown-caret-none transition-none btn-reveal fs-10" type="button" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                                                                                <span class="fas fa-ellipsis-h fs-10"></span>
+                                                                            </button>
+                                                                            <div class="dropdown-menu dropdown-menu-end py-2">
+                                                                                <a class="dropdown-item" style="cursor: pointer">Ver detalles</a>
+                                                                                <a class="dropdown-item" style="cursor: pointer" data-bs-toggle="modal" data-bs-target="#modalCreacionEdicion">Editar</a>
+                                                                                <div class="dropdown-divider"></div><a class="dropdown-item text-danger" style="cursor: pointer">Eliminar</a>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            </tbody>
+                                                        }                                                        
+                                                    </table>
+                                                </div>
+                                                <div class="row align-items-center justify-content-between py-2 pe-0 fs-9">
+                                                    <div class="col-auto d-flex invisible">
+                                                        <p class="mb-0 d-none d-sm-block me-3 fw-semibold text-body" data-list-info="data-list-info"></p>
+                                                        <a class="fw-semibold" href="#!" data-list-view="*">
+                                                            Ver todos
+                                                            <span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span>
+                                                        </a>
+                                                        <a class="fw-semibold d-none" href="#!" data-list-view="less">
+                                                            Ver menos
+                                                            <span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span>
+                                                        </a>
+                                                    </div>
+                                                    <div class="col-auto d-flex">
+                                                        <button class="page-link" data-list-pagination="prev" @* @onclick="PrevPage" disabled="@(!CanGoPrev)" *@><span class="fas fa-chevron-left"></span></button>
+                                                        <ul class="mb-0 pagination"></ul>
+                                                        <button class="page-link pe-0" data-list-pagination="next" @* @onclick="NextPage" disabled="@(!CanGoNext)" *@><span class="fas fa-chevron-right"></span></button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    </div>
+                                </div>
+                            
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            @if (pasoActual < 3) {
+                                <button class="btn btn-primary px-6 px-sm-11" type="submit" @onclick="SiguientePaso">Siguiente</button>
+                            } else {
+                                <button class="btn btn-primary px-6 px-sm-11" type="submit" @onclick="@(() => CrearOrden())">Crear orden</button>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+</div>
+<ModalErrores Errores="@_errores"/>

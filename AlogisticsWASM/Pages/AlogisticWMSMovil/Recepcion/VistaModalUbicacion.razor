@@ -1,0 +1,287 @@
+﻿@page "/vistaModalUbicacion"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+
+@inject DialogService DialogServiceConfirm
+
+@inject DialogService dialogService
+@inject NavigationManager navigationManager
+@inject NotificationService NotificationService
+@attribute [Authorize]
+
+<RadzenTemplateForm Data=@monitorPartidaSelected Submit="@((MonitorPartida args) => { OnSubmit(args); })"> 
+    <RadzenStack AlignItems="AlignItems.Center" class="rz-p-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+        JustifyContent="JustifyContent.Normal" Style="width:100%;">
+        <RadzenRow AlignItems="AlignItems.Center">
+            <RadzenColumn Size="12" class="text-center align-content-start">
+                ID Mercancía
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow AlignItems="AlignItems.Center">
+            <RadzenColumn Size="12" class="text-center">
+                <RadzenText TextStyle="TextStyle.H6">@monitorPartidaSelected.Numeros</RadzenText>
+            </RadzenColumn>
+        </RadzenRow>
+        @* <RadzenRow AlignItems="AlignItems.Center">
+            <RadzenColumn Size="12" class="text-center align-content-start">
+                ID Mercancía
+            </RadzenColumn>
+        </RadzenRow> *@
+        @if  (!monitorRecepcionMercancia.IdUbicacionAlmacen.Equals(0)) {
+        <RadzenRow AlignItems="AlignItems.Center">
+            <RadzenColumn Size="2" class="text-center align-content-start rz-pr-5">
+                <RadzenIcon Icon="warehouse" style="font-size: 32px;" />
+            </RadzenColumn>
+            <RadzenColumn Size="5" class="text-center align-content-start">
+                <b>Zona</b><br/>@(monitorRecepcionMercancia.ClaveZonaAlmacenaje)
+            </RadzenColumn>
+            <RadzenColumn Size="5" class="text-center align-content-start">
+                <b>Ubicación</b><br/>@(monitorRecepcionMercancia.ClaveUbicacion)
+            </RadzenColumn>
+        </RadzenRow>
+        }
+    </RadzenStack>
+    <RadzenStack class="rz-pt-5" AlignItems="AlignItems.Center" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+        JustifyContent="JustifyContent.Normal" Style="width:100%;">
+        <RadzenStack AlignItems="AlignItems.Center">
+            <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+                <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="rz-mb-5">
+                    <RadzenLabel Text="Zona Almacenaje" Component="UBICACION_TIPO_ZONA_ALMACENAJE" />
+                        <RadzenDropDown @bind-Value=@valZonaAlmacenaje ValueProperty="@nameof(MonitorZonaAlmacen.IdZonaAlmacenaje)" 
+                                                    Style="width: 100%;"
+                                                    Change="@(args => UpdateZonaAlmacenaje())"
+                                                    TextProperty="Descripcion" Data=@listTipoZonaAlmacenaje
+                                                    Name="UBICACION_TIPO_ZONA_ALMACENAJE" />
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+                <RadzenColumn Size="10" SizeMD="10" SizeLG="10" class="rz-mb-5">
+                    <RadzenLabel Text="@labelUbicacion" Component="UBICACION_CLAVE_ZONA_ALMACENAJE" />
+                    <RadzenAutoComplete @bind-Value=@monitorUbicacionAlmacen.Clave Data=@listaMonitorUbicacionAlmacen 
+                        Name="UBICACION_CLAVE_ZONA_ALMACENAJE" Change=@OnChangeUbicacionAlmacen class="rz-text-uppercase"
+                        ValueProperty="@nameof(MonitorUbicacionAlmacen.IdUbicacionAlmacen)"
+                        TextProperty="@nameof(MonitorUbicacionAlmacen.Clave)" LoadData=@OnLoadDataUbicacion Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Zona Almacenaje" }})" />
+                </RadzenColumn>
+                <RadzenColumn Size="2" SizeMD="2" SizeLG="2" class="rz-pb-2 text-center">
+                    <RadzenButton Icon="qr_code_scanner" ButtonStyle="ButtonStyle.Primary" />
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenStack>
+    </RadzenStack>
+
+    <RadzenRow>
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenButton ButtonType="ButtonType.Submit" Text="Confirmar" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenTemplateForm>
+
+@code {
+    [Parameter] public int IdInventario { get; set; }
+
+    [Parameter] public MonitorRecepcionMercancia monitorRecepcionMercancia { get; set; }
+
+    [Parameter] public int nTipoUbicacion { get; set; } = 1;
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    MonitorPartida monitorPartidaSelected;
+
+    MonitorZonaAlmacen monitorZonaAlmacen;
+
+    MonitorUbicacionAlmacen monitorUbicacionAlmacen;
+
+    string labelUbicacion = "Ubicación";
+
+    int valZonaAlmacenaje = 1;
+
+    List<MonitorZonaAlmacen> listTipoZonaAlmacenaje;
+
+    List<MonitorUbicacionAlmacen> listaMonitorUbicacionAlmacen;
+
+    string claveUbicacionSelected = String.Empty;
+
+    int _totalColumnas = 15;
+
+    int _totalFilas = 10;
+
+    [Inject] private IPartidaService? _partidaService { get; set; }
+
+    [Inject] private IZonaAlmacenService? _zonaAlmacenService { get; set; }
+
+    [Inject] private IUbicacionAlmacenService? _ubicacionAlmacenService { get; set; }
+
+    protected override async void OnInitialized()
+    {
+        
+        monitorZonaAlmacen = new MonitorZonaAlmacen();
+        monitorUbicacionAlmacen = new MonitorUbicacionAlmacen();
+        await ObtenerDatosZonaAlmacen();
+        
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        monitorPartidaSelected = new MonitorPartida();
+        monitorPartidaSelected.IdInventario = IdInventario;
+        monitorPartidaSelected.Numeros = monitorRecepcionMercancia.IdMercancia;
+
+        valZonaAlmacenaje = monitorRecepcionMercancia.IdZonaAlmacenaje.Equals(0) ? 1 : monitorRecepcionMercancia.IdZonaAlmacenaje;
+        monitorUbicacionAlmacen.IdUbicacionAlmacen = monitorRecepcionMercancia.IdUbicacionAlmacen;
+        monitorUbicacionAlmacen.Clave = monitorRecepcionMercancia.ClaveUbicacion;
+
+        if (!monitorUbicacionAlmacen.IdUbicacionAlmacen.Equals(0)) {
+            labelUbicacion = "Ubicación Actual";
+            //ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Ubicación en Almacén", Detail = "La unidad ya cuenta con ubicación", Duration = 4000 });
+        }
+
+        await base.OnParametersSetAsync(); 
+
+    }
+
+    async Task UpdateZonaAlmacenaje()
+    {
+       //Console.WriteLine("valZonaAlmacenaje: " + valZonaAlmacenaje.ToString());
+        labelUbicacion = "Ubicación";
+        monitorUbicacionAlmacen.Clave = String.Empty;
+    }
+
+    async void OnSubmit(MonitorPartida monitorPartida)
+    {
+        string _mensaje = String.Empty;
+        bool _validaDatos = true;
+        bool _confirmar = true;
+
+        monitorPartida.CRUDAction = ECRUDAction.Update;
+        monitorPartida.IdUbicacion = monitorUbicacionAlmacen.IdUbicacionAlmacen;
+
+        var _zonaAlmacenaje = listTipoZonaAlmacenaje.ElementAt(valZonaAlmacenaje-1);
+
+        monitorPartida.ClaveZonaAlmacenaje = _zonaAlmacenaje.Descripcion;
+        monitorPartida.ClaveUbicacion = monitorUbicacionAlmacen.Clave;
+        monitorPartida.IdEmpresaLogin = 1;
+
+        if (nTipoUbicacion.Equals(2)) {
+
+            if (_confirmar) {
+
+                var result = await DialogServiceConfirm.Confirm("Desea Guardar la Ubicación?", "Ubicación Almacén", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                _validaDatos = result.HasValue ? (bool)result : false;
+            }
+
+            if (_validaDatos) {
+
+                var resultBase = await _partidaService.Guardar(monitorPartida);
+
+                if (resultBase.Success) {
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, 
+                        Summary = "Ubicación en Almacén se realizó correctamente", 
+                        Detail = resultBase.MensajeRespuesta, Duration = 4000 });
+                } else {
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+                        Summary = "Registro de Ubicación en Almacén", 
+                        Detail = resultBase.MensajeRespuesta, Duration = 4000 });
+                }
+
+            }
+
+    
+        } else {
+
+            if (!String.IsNullOrEmpty(monitorPartida.ClaveUbicacion)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, 
+                        Summary = "Ubicación en Almacén registrada.", 
+                        Detail = "OK", Duration = 4000 });
+            }
+
+        }
+
+        dialogService.Close(monitorPartida);
+    }
+
+    void OnChangeUbicacionAlmacen(object value)
+    {
+        monitorUbicacionAlmacen.IdUbicacionAlmacen = 0;
+        monitorUbicacionAlmacen.Clave = null;
+
+        if (listaMonitorUbicacionAlmacen != null) {
+            if (!listaMonitorUbicacionAlmacen.Count().Equals(0)) {
+
+                var selecteUbicacionAlmacen = listaMonitorUbicacionAlmacen
+                .FirstOrDefault(c => c.Clave == value?.ToString());
+
+                if (selecteUbicacionAlmacen != null)
+                {
+                    var selectedId = selecteUbicacionAlmacen.IdUbicacionAlmacen;
+                    monitorUbicacionAlmacen.IdUbicacionAlmacen = selecteUbicacionAlmacen.IdUbicacionAlmacen;
+                    monitorUbicacionAlmacen.Clave = selecteUbicacionAlmacen.Clave;
+
+                    //Console.WriteLine("OnChangeUbicacionAlmacen IdUbicacionAlmacen:" + monitorUbicacionAlmacen.IdUbicacionAlmacen);
+                }
+
+            }
+        }
+
+    }
+
+    private async Task ObtenerDatosZonaAlmacen() 
+    {
+
+        listTipoZonaAlmacenaje = new List<MonitorZonaAlmacen>();
+
+        var _resultBase = await _zonaAlmacenService!.ObtenerLista();
+
+        //Console.WriteLine("--> PoC ");
+
+        if (_resultBase.Success) {
+
+            listTipoZonaAlmacenaje = _resultBase.Data;
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    async Task OnLoadDataUbicacion(LoadDataArgs args)
+    {
+        listaMonitorUbicacionAlmacen = new List<MonitorUbicacionAlmacen>();
+        var resultBase = await _ubicacionAlmacenService.ObtenerPorClaveContiene(valZonaAlmacenaje, args.Filter);
+        if (resultBase.Success) {
+
+            listaMonitorUbicacionAlmacen = resultBase.Data;
+
+            if (listaMonitorUbicacionAlmacen.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Ubicación en Almacén", Detail = "No se encontró la ubicación solicitada.", Duration = 4000 });
+            }
+
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Ubicación en Almacén", Detail = "No se encontró la ubicación solicitado", Duration = 4000 });
+        }
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+}

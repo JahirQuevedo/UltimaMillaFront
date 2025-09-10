@@ -1,0 +1,437 @@
+﻿@using ALOG.Modelos.Modelos.Orden
+@using ALOG.Modelos.Modelos.Logisticos
+@using AlogisticsWASM.Layout.Utilerias
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+
+@inject IJSRuntime js
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+
+<style>
+    .tabla-scroll-wrapper {
+    max-height: 500px;
+    overflow-x: auto;
+    overflow-y: auto;
+    border: 1px solid #dcdcdc;
+    }
+
+    /* Aplica ancho automático a la tabla */
+    .tabla-scroll-wrapper .rz-datatable-table {
+    width: auto !important;
+    min-width: 100% !important;
+    table-layout: auto !important;
+    }
+
+    /* Evita truncamiento de texto */
+    .tabla-scroll-wrapper .rz-datatable-data td {
+    white-space: nowrap !important;
+    }
+
+    .tabla-scroll-wrapper .rz-header-cell {
+    white-space: nowrap !important;
+    }
+</style>
+
+<style>
+    .centrar {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    user-select: none;
+    white-space: nowrap;
+    }
+
+    #ddUpload {
+    left: 0;
+    --rz-upload-button-bar-background-color: transparent;
+    --rz-upload-button-bar-padding: 0;
+    }
+
+    #ddUpload .rz-fileupload-buttonbar .rz-fileupload-choose {
+    width: 100%;
+    text-align: center;
+    font-size: 16px;
+    padding: 100px 0;
+    }
+</style>
+
+<BarraInformacion Datos="@DiccionarioInfoReferencias"/>
+
+<label for="inputExcel" class="rz-button rz-button-md rz-button-secondary" style="margin-top: 10px; background-color: midnightblue">
+    <i class="rz-button-icon-left pi pi-upload"></i> Cargar Plantilla
+</label>
+<InputFile id="inputExcel" OnChange="SubirYProcesarArchivo" style="display: none;"/>
+
+<RadzenButton Icon="add_circle" Text="Agregar Servicio" Click="@AgregarNuevoRegistro" Style="margin-top: 10px;"
+              ButtonStyle="ButtonStyle.Secondary" /> @* Style="margin-bottom:2px; width: 30%;" *@
+<RadzenButton Icon="fact_check" Text="Enviar a Facturar"
+              ButtonStyle="ButtonStyle.Light"
+              Click="@AbrirModalFacturacion"
+              Disabled="@(!serviciosSeleccionados?.Any() ?? true)" />
+
+
+@if (_isLoading)
+{
+    <div class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12 centrar" style="max-width: 600px;">
+        <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" ProgressBarStyle="ProgressBarStyle.Primary">
+            <Template>Cargando</Template>
+        </RadzenProgressBarCircular>
+    </div>
+}
+@if (mostrarServiciosLigados)
+{
+    @if (serviciosLigados?.Any() == true)
+    {
+        @* <div class="tabla-scroll-wrapper">            
+            <RadzenDataGrid Data="@serviciosPlano"
+                            TItem="SLOPeticionesServicios"
+                            PageSize="6"
+                            AllowPaging="true"
+                            AllowSorting="true"
+                            AllowFiltering="true"
+                            @ref="grid"
+                            SelectionMode="DataGridSelectionMode.Multiple"
+                            @bind-SelectedItems="@serviciosSeleccionados"
+                            EditMode="DataGridEditMode.Single"
+                            RowEdit="@((serv) => servicioEnEdicion = serv)"
+                            RowUpdate="@GuardarEdicion"
+                            RowCancel="@CancelarEdicionServicios"
+                            ShowPagingSummary="true">
+
+                <Columns>
+                    <!-- Checkbox para seleccionar todos -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Width="40px">
+                        <HeaderTemplate>
+                            <RadzenCheckBox TriState="false"
+                                            TValue="bool"
+                                            Value="@seleccionarTodos"
+                                            Change="@((bool value) => ToggleSeleccionarTodos(value))" />
+                        </HeaderTemplate>
+                        <Template Context="serv">
+                            <RadzenCheckBox TriState="false"
+                                            TValue="bool"
+                                            Disabled="@idsServiciosFacturados.Contains(serv.IdServicio)"
+                                            Value="@serviciosSeleccionados.Contains(serv)"
+                                            Change="@((bool value) => ToggleSeleccionIndividual(serv, value))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <!-- Campos de contenedor -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Moneda">
+                        <Template Context="serv">@serv.Moneda</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Contenedor">
+                        <Template Context="serv">@serv.SLOpeticionesContenedores?.Contenedor</Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="BL">
+                        <Template Context="serv">@serv.SLOpeticionesContenedores?.BL</Template>
+                    </RadzenDataGridColumn>
+
+                    <!-- Servicio -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Servicio">
+                        <Template Context="serv">@serv.catServicios?.Nombre</Template>
+                    </RadzenDataGridColumn>
+
+                    <!-- Editable -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Property="Cantidad" Title="Cantidad">
+                        <EditTemplate Context="serv">
+                            <RadzenNumeric TValue="double?" @bind-Value="serv.Cantidad" Style="width:100%" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Property="Monto" Title="Subtotal">
+                        <EditTemplate Context="serv">
+                            <RadzenNumeric TValue="double?" @bind-Value="serv.Monto" Style="width:100%" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Property="ReferenciaClienteFactura" Title="Referencia Cliente">
+                        <EditTemplate Context="serv">
+                            <RadzenTextBox @bind-Value="serv.ReferenciaClienteFactura" Style="width:100%" />
+                        </EditTemplate> 
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Cliente a Facturar">
+                        <Template Context="serv">
+                            @serv.catClientesFacturarA?.RazonSocial
+                        </Template>
+                        <EditTemplate Context="serv">
+                            <RadzenAutoComplete TValue="SLOPeticionesServicios"
+                                                @bind-Value="_respListarCoincidenciasDTOSeleccionada.RazonSocial"
+                                                Data="@respListarCoincidencias"
+                                                TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                                ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                                Placeholder="Escribe para buscar cliente"
+                                                Name="ClienteaFacturar"
+                                                Style="width:100%;"
+                                                Change="@(args => OnClienteSeleccionado(args, serv))"
+                                                LoadData="AutoCompleteOnLoadCliente" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+
+                    <!-- Acciones -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Opciones">
+                        <Template Context="serv">
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Disabled="@idsServiciosFacturados.Contains(serv.IdServicio)" Click="@(() => grid?.EditRow(serv))" Style="margin-right: 5px" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Disabled="@idsServiciosFacturados.Contains(serv.IdServicio)" Size="ButtonSize.Small" Click="@(() => EliminarServicio(serv))" />
+                        </Template>
+                        <EditTemplate Context="serv">
+                            <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Click="@(() => grid?.UpdateRow(serv))" Style="margin-right: 5px" />
+                            <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => grid?.CancelEditRow(serv))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+
+        </div> *@
+
+        <div class="tabla-scroll-wrapper">
+            <RadzenDataGrid Data="@serviciosPlano"
+                            TItem="SLOPeticionesServicios"
+                            PageSize="6"
+                            AllowPaging="true"
+                            AllowSorting="true"
+                            AllowFiltering="true"
+                            @ref="grid"
+                            SelectionMode="DataGridSelectionMode.Multiple"
+                            @bind-SelectedItems="@serviciosSeleccionados"
+                            EditMode="DataGridEditMode.Single"
+                            RowEdit="@((serv) => {
+                                servicioEnEdicion = serv;
+                                servicioBackup = new SLOPeticionesServicios
+                                {
+                                    IdServicio = serv.IdServicio,
+                                    Cantidad = serv.Cantidad,
+                                    Monto = serv.Monto,
+                                    ReferenciaClienteFactura = serv.ReferenciaClienteFactura,
+                                    IdClienteFacturarA = serv.IdClienteFacturarA
+                                    // Agrega los campos que sean editables aquí
+                                };
+                            })"
+                            RowUpdate="@GuardarEdicion"
+                            RowCancel="@CancelarEdicionServicios"
+                            ShowPagingSummary="true"
+                            >
+                <!-- Forzar scroll horizontal -->
+                <Columns>
+                    <!-- Checkbox con Frozen -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Width="50px" Frozen="true">
+                        <HeaderTemplate>
+                            <RadzenCheckBox TriState="false"
+                                            TValue="bool"
+                                            Value="@seleccionarTodos"
+                                            Change="@((bool value) => ToggleSeleccionarTodos(value))" />
+                        </HeaderTemplate>
+                        <Template Context="serv">
+                            <RadzenCheckBox TriState="false"
+                                            TValue="bool"
+                                            Disabled="@idsServiciosFacturados.Contains(serv.IdServicio)"
+                                            Value="@serviciosSeleccionados.Contains(serv)"
+                                            Change="@((bool value) => ToggleSeleccionIndividual(serv, value))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Moneda" Width="100">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">@serv.Moneda</div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Contenedor" Width="250px">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">@serv.SLOpeticionesContenedores?.Contenedor</div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="BL" Width="250px">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">@serv.SLOpeticionesContenedores?.BL</div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Servicio" Width="350px">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">@serv.catServicios?.Nombre</div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Property="Cantidad" Title="Cantidad" MinWidth="150px">
+                        <EditTemplate Context="serv">
+                            <RadzenNumeric TValue="double?" @bind-Value="serv.Cantidad" Style="width:100%" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Property="Monto" Title="Subtotal" MinWidth="150px">
+                        <EditTemplate Context="serv">
+                            <RadzenNumeric TValue="double?" @bind-Value="serv.Monto" Style="width:100%" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Property="ReferenciaClienteFactura" Title="Referencia Cliente" MinWidth="150px">
+                        <EditTemplate Context="serv">
+                            <RadzenTextBox @bind-Value="serv.ReferenciaClienteFactura" Style="width:100%" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Cliente a Facturar" Width="200px">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">@serv.catClientesFacturarA?.RazonSocial</div>
+                        </Template>
+                        <EditTemplate Context="serv">
+                            <RadzenAutoComplete TValue="SLOPeticionesServicios"
+                                                @bind-Value="_respListarCoincidenciasDTOSeleccionada.RazonSocial"
+                                                Data="@respListarCoincidencias"
+                                                TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)"
+                                                ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                                Placeholder="Escribe para buscar cliente"
+                                                Name="ClienteaFacturar"
+                                                Style="width:100%;"
+                                                Change="@(args => OnClienteSeleccionado(args, serv))"
+                                                LoadData="AutoCompleteOnLoadCliente" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+
+                    <!-- Seccion de Facturación -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Comentario Encabezado" Width="250px">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">
+                                @serv.SLOintegraFacturaDet?.FirstOrDefault().SLOintegracionFacturaEnc?.Comentario
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Comentario Partida" Width="250px">
+                        <Template Context="serv">
+                            <div style="white-space: nowrap;">
+                                @serv.SLOintegraFacturaDet?.FirstOrDefault().Comentario
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Enviado" Width="100px">
+                        <Template Context="serv">
+                            @{
+                                var enviado = serv.SLOintegraFacturaDet ?.FirstOrDefault().SLOintegracionFacturaEnc?.Enviado;
+                                string color = enviado == true ? "background-color: #28a745; color: white;" :
+                                enviado == false ? "background-color: #ffc107; color: black;" :
+                                "";
+                            }
+                            <div style="text-align:center; border-radius: 6px; padding: 5px; @color">
+                                @(enviado == true ? "Sí" : enviado == false ? "No" : "")
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+
+                    <!-- Opciones con Frozen -->
+                    <RadzenDataGridColumn TItem="SLOPeticionesServicios" Title="Opciones" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                        <Template Context="serv">
+                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Disabled="@idsServiciosFacturados.Contains(serv.IdServicio)" Click="@(() => grid?.EditRow(serv))" Style="margin-right: 5px" />
+                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Disabled="@idsServiciosFacturados.Contains(serv.IdServicio)" Size="ButtonSize.Small" Click="@(() => EliminarServicio(serv))" />
+                        </Template>
+                        <EditTemplate Context="serv">
+                            <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" Click="@(() => grid?.UpdateRow(serv))" Style="margin-right: 5px" />
+                            <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" Click="@(() => CancelarEdicionServicios(serv))" />
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </div>
+
+    }
+    else
+    {
+        <p><i>No hay servicios ligados a esta referencia.</i></p>
+    }
+}
+else @if (_datosExcel?.Any() == true)
+{            
+    <div class="tabla-scroll-wrapper">
+        <RadzenDataGrid @ref="gridDatos" Data="_datosExcel" TItem="Dictionary<string, string>"
+        AllowMultiColumnSorting="true" PageSize="6"
+        ShowMultiColumnSortingIndex="true" AllowPaging="true" 
+        AllowSorting="true" ColumnWidth="300px"
+        Editable="true" EditMode="DataGridEditMode.Single"
+        RowUpdate="@GuardarRegistroNuevo" RowCancel="@CancelarEdicion"
+        ShowPagingSummary="true" class="rz-datatable-table">
+            <Columns>
+                @foreach (var columna in _columnas.Where(c => c != "Referencia alo" && c != "Clave" && c != "Comentario encabezado" && c != "Comentario partida"))
+                {
+                    <RadzenDataGridColumn TItem="Dictionary<string, string>" Property="@columna" Title="@columna">
+                        <Template Context="dato">
+                            <div style=" white-space: nowrap;">
+                                @(dato.TryGetValue(columna, out var valor) && !string.IsNullOrWhiteSpace(valor) && valor != "N/A" ? valor : string.Empty)
+                            </div>
+                        </Template>
+                        <EditTemplate Context="dato">
+                            @* <RadzenTextBox Value="@dato[columna]"
+                            ValueChanged="@(v => dato[columna] = v)"
+                            Style="width: 100%;" /> *@
+                            @if (columna == "Cantidad" || columna == "Subtotal")
+                            {
+                                <RadzenNumeric TValue="decimal"
+                                               Value="@(decimal.TryParse(dato[columna], out var val) ? val : 0)"
+                                               ValueChanged="@(v => dato[columna] = v.ToString())"
+                                               Style="width: 100%;" />
+                            }
+                            else if (columna == "Cliente factura")
+                            {
+                                <RadzenAutoComplete TValue="RespListarCoincidenciasDTO"                                                    
+                                                    Data="@respListarCoincidencias"
+                                                    TextProperty="RazonSocial"
+                                                    ValueProperty="RazonSocial"
+                                                    Placeholder="Buscar cliente"
+                                                    Style="width:100%"
+                                                    Change="@(args => OnClientefactSeleccionado(args, dato))"
+                                                    LoadData="AutoCompleteOnLoadCliente" />
+                            }
+                            else if (columna == "Servicio")
+                            {
+                                <RadzenAutoComplete TValue="CatServicios"
+                                                    Data="@serviciosDisponibles"
+                                                    TextProperty="Nombre"
+                                                    ValueProperty="Nombre"
+                                                    Placeholder="Buscar servicio"
+                                                    Style="width:100%"
+                                                    Change="@(args => OnServicioSeleccionado(args, dato))"
+                                                    LoadData="AutoCompleteOnLoadServicio" />
+                            }
+                            else
+                            {
+                                <RadzenTextBox Value="@dato[columna]"
+                                               ValueChanged="@(v => dato[columna] = v)"
+                                               Style="width: 100%;" />
+                            }
+                        </EditTemplate>
+                    </RadzenDataGridColumn>
+                }
+
+                <RadzenDataGridColumn TItem="Dictionary<string, string>" Title="" Width="150px" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template Context="dato">
+                        <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Size="ButtonSize.Small" title="Editar"
+                                      Click="@(args => EditarRegistro(dato))" />
+                        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Size="ButtonSize.Small" title="Eliminar"
+                        Click="() => EliminarRegistro(dato)" />
+                    </Template>
+                    <EditTemplate Context="dato">
+                        <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Size="ButtonSize.Small" title="Aceptar"
+                        Click="@(args => gridDatos.UpdateRow(dato))" />
+                        <RadzenButton Icon="cancel" ButtonStyle="ButtonStyle.Secondary" Size="ButtonSize.Small" title="Cancelar"
+                                      Click="@(args => CancelarEdicion(dato))" />
+                    </EditTemplate>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </div>
+    <RadzenButton Text="Guardar" Icon="save" Click="GuardarRegistrosAsync" Style="margin-top: 4px; margin-right: 3px;" ButtonStyle="ButtonStyle.Primary" Disabled="@(!_datosExcel?.Any() ?? true)" /> @* Click="GuardarRegistrosAsync" *@
+    @if (!mostrarServiciosLigados && (_datosExcel?.Any() ?? false))
+    {
+        <RadzenButton Icon="arrow_back" Text="Cancelar" ButtonStyle="ButtonStyle.Secondary"
+                      Click="@(() => CancelarCarga())" />
+    }
+}
+else
+{
+    <p><i>No hay datos cargados.</i></p>
+}
+
+

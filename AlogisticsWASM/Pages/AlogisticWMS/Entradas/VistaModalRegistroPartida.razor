@@ -1,0 +1,117 @@
+﻿@page "/vistaModalRegistroPartida/{IdPartida}"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+
+@inject DialogService dialogService
+@attribute [Authorize]
+<RadzenTemplateForm Data="@monitorPartidaSelected" Submit="@((MonitorPartida args) => { Submit(args); })">
+    <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" 
+        JustifyContent="JustifyContent.SpaceBetween" Style="width:100%; height: 100%;">
+        <RadzenStack>
+            <div class="row">
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Marcas" Component="PARTIDA_MARCAS" />
+                    <RadzenTextBox Name="PARTIDA_MARCAS" 
+                    Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                    @bind-Value="monitorPartidaSelected.Marcas" />
+                </div>
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Números" Component="PARTIDA_NUMEROS" />
+                    <RadzenTextBox Name="PARTIDA_NUMEROS" 
+                    Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                    @bind-Value="monitorPartidaSelected.Numeros" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Modelo" Component="PARTIDA_MODELO" />
+                    <RadzenTextBox Name="PARTIDA_MODELO" 
+                    Style="width: 100%; max-width: 400px; background-color: antiquewhite;"
+                    @bind-Value="monitorPartidaSelected.Modelo" />
+                </div>
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Mercancía" Component="PARTIDA_MERCANCIA" />
+                    <RadzenTextBox Name="PARTIDA_MERCANCIA" 
+                    Style="width: 100%; background-color: antiquewhite;"
+                    @bind-Value="monitorPartidaSelected.Mercancia" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Cantidad" Component="PARTIDA_CANTIDAD" />
+                    <RadzenNumeric Name="REF_BULTO_INICIAL" TValue="int" Style="width: 100%; background-color: antiquewhite;" ShowUpDown="false" @bind-Value="monitorPartidaSelected.BultosInicial" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "enter value" }})" />
+                </div>
+                <div class="col-sm-6">
+                    <RadzenLabel Text="Peso" Component="PARTIDA_PESO" />
+                    <RadzenNumeric TValue="decimal" Format="#.000" Style="width: 100%;" ShowUpDown="false" Name="PARTIDA_PESO" @bind-Value="monitorPartidaSelected.PesoInicial" />
+                </div>  
+            </div>
+        </RadzenStack>
+        <RadzenStack Visible="@ShowClose" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+            <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="Guardar" />
+            <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="Cerrar" Click="@Cancel" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+
+    [Parameter] public int IdPartida { get; set; }
+
+    [Parameter] public MonitorPartida monitorPartidaSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    [Inject] private IPartidaService? _partidaService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync(); 
+
+    }
+
+    void Cancel()
+    {
+        dialogService.Close(true);
+    }
+
+    async void Submit(MonitorPartida monitorPartida)
+    {
+       string _mensaje = String.Empty;
+        ////Console.WriteLine("-> Guardar Datos Partida args : " + JsonSerializer.Serialize(monitorPartida));
+
+        
+        monitorPartida.IdEmpresaLogin = 1;
+
+        if (monitorPartida.IdPartida.Equals(0)) {
+            monitorPartida.CRUDAction = ECRUDAction.Create;
+        } else {
+            monitorPartida.CRUDAction = ECRUDAction.Update;
+        }
+
+        var _resultBase = await _partidaService!.Guardar(monitorPartida);
+
+        ////Console.WriteLine("-> Viaje : " + JsonSerializer.Serialize(_resultBase));
+        if (_resultBase.Success) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Registro de Partida", Detail = "Se Guardo la Partida de forma correcta", Duration = 4000 });
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Partida", Detail = _resultBase.MensajeRespuesta, Duration = 4000 });
+        }
+
+        dialogService.Close(true);
+    
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+}

@@ -1,0 +1,41 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.Peticiones
+@using Radzen
+
+<RadzenTemplateForm Data="@objPeticionesContenedoresCron" Submit="@((PeticionesContenedoresCron formData) => { Actualizar(formData); })">
+    <div class="row">
+        <div class="col-md-6">
+            <RadzenLabel Text="Incidencia" />
+            <RadzenDropDown Data="@listaTiposIncidencia"
+                            TextProperty="Nombre"
+                            ValueProperty="IdCatTipoIncidenciaCron"
+                            @bind-Value="idTipoIncidencia"
+                            Change="OnTipoIncidenciaChange"
+                            Style="width: 100%" />
+        </div>
+
+        <div class="col-md-6">
+            <RadzenLabel Text="Evento" />
+            <RadzenDropDown Data="@listaTiposEvento"
+                            TextProperty="Nombre"
+                            ValueProperty="IdCatTipoEventoCron"
+                            @bind-Value="idTipoEvento"
+                            Style="width: 100%" />
+        </div>
+
+        <div class="col-md-6">
+            <RadzenLabel Text="Fecha del evento" />
+            <RadzenDatePicker @bind-Value="objPeticionesContenedoresCron.FechaEvento" ShowTime="true" HourFormat="12" DateFormat="dd/MM/yyyy h:mm tt" Style="width: 100%" />
+        </div>
+
+        <div class="col-md-12">
+            <RadzenLabel Text="Comentario" />
+            <RadzenTextArea @bind-Value="objPeticionesContenedoresCron.Comentarios" MaxLength="150" Style="width: 100%" />
+        </div>
+
+        <div class="col-md-12 mt-3">
+            <RadzenButton Text="Actualizar" ButtonType="ButtonType.Submit" Icon="save" Style="margin-right: 1rem" />
+            <RadzenButton Text="Cancelar" ButtonStyle="ButtonStyle.Secondary" Icon="close" Click="@(args => dialogService.Close(false))" />
+        </div>
+    </div>
+</RadzenTemplateForm>

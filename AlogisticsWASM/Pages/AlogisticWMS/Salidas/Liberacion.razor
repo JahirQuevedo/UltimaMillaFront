@@ -1,0 +1,732 @@
+﻿@page "/liberaciones"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOG.Modelos.ModelosWMS.Reportes.Salidas
+@using ALOGRepositorios.Services.Catalogos.ICatalogos
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using AlogisticsWASM.Pages.AlogisticWMS.Traslados
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@attribute [Authorize]
+@inject IJSRuntime JSRuntime;
+
+@inject DialogService BusyDialogService
+@inject DialogService DialogServiceLiberacion
+@inject DialogService DialogRegistroViaje
+
+@inject DialogService DialogServiceConfirm
+@inject NotificationService NotificationService
+@inject DialogService BusyDialogService
+
+<script src="resources/js/general.js"></script>
+
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Normal" Style="height: 100%;">
+
+    @* ------------------------------------------------------------------------------------- *@
+    <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+                Expand=@(() => ChangeFiltros("Panel expanded")) Collapse=@(() => ChangeFiltros("Panel collapsed"))>
+        <HeaderTemplate>
+            <RadzenText TextStyle="TextStyle.Subtitle1" class="rz-display-flex rz-align-items-center rz-m-0">
+                <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Filtros de Consulta</b>
+            </RadzenText>
+        </HeaderTemplate>
+        <ChildContent>
+            <RadzenCard Variant="Variant.Outlined">
+                <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                            <RadzenLabel Text="Fecha Inicio" Component="LIBERACION_FECHA_INICIO" />
+                            <RadzenDatePicker @bind-Value="@_consultaLiberacionInventario.FechaInicio" DateFormat="dd/MM/yyyy" Name="LIBERACION_FECHA_INICIO" />
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                            <RadzenLabel Text="Fecha Fin" Component="LIBERACION_FECHA_FIN" />
+                            <RadzenDatePicker @bind-Value="@_consultaLiberacionInventario.FechaFin" DateFormat="dd/MM/yyyy" Name="LIBERACION_FECHA_FIN" />
+                        </RadzenStack>
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                            <RadzenLabel Text="Estado" Component="LIBERACION_ESTATUS" />
+                            <RadzenDropDown @bind-Value="valEstadoLiberacion" ValueProperty="Key" 
+                                TextProperty="Value" Data=@_listEstadoLiberacion
+                                Style="width: 100%;"
+                                Name="LIBERACION_ESTATUS" />
+                        </RadzenStack>
+
+                        @* <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                            <RadzenLabel Text="Estatus:" Component="DropDownEstatus" />
+                            <RadzenDropDown @bind-Value=@valEstadoTurno Data=@_listEstadoTurno Change=@DropDownOnEstatusChange 
+                            
+                            Style="width: 100%; max-width: 200px;" Name="DropDownEstatus" />
+                            
+                        </RadzenStack> *@
+                        <RadzenButton Text="Buscar" Icon="search" Click="@(args => BurcarLiberacionInventario())" />
+                    </RadzenStack>
+                </RadzenRow>
+                <RadzenRow>
+                    <RadzenColumn Size="3">
+                        <RadzenLabel Text="Cliente" Component="LIB_MERCANCIA_RAZONSOCIAL_CLIENTE"/>
+                        <RadzenAutoComplete @bind-Value=@_consultaLiberacionInventario.Cliente Data=@listaCliente
+                            Name="LIB_MERCANCIA_RAZONSOCIAL_CLIENTE" Change=@OnChangeCliente class="rz-text-uppercase"
+                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataCliente Style="width: 100%; text-transform: capitalize;" 
+                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Cliente" }})" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="3">
+                        <RadzenLabel Text="Numeros/VIN" Component="LIB_MERCANCIA_NUMEROS"/>
+                        <RadzenTextBox Style="width: 100%;" @bind-Value="@_consultaLiberacionInventario.IdMercancia"
+                            Name="LIB_MERCANCIA_NUMEROS" />
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenCard>
+        </ChildContent>
+    </RadzenPanel>
+    <RadzenStack class="rz-mt-0">
+        <RadzenRow>
+            <RadzenColumn Size="6" SizeMD="6">
+                <RadzenButton Click=@(args => OpenAsignarMercancia(null)) Text="Mercancía" Icon="add_circle"  />
+                @* <RadzenButton Click=@(args => OnClick("Crear Viaje button")) Text="Crear Viaje" Icon="add_circle" /> *@
+                @* <RadzenButton Text="Asignar Servicio a Referencia" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />    *@
+                <RadzenSplitButton Click=@(args => OnClickSplitButton(args, "SplitButton with text and icon")) Text="Acciones Liberación" 
+                        ButtonStyle="ButtonStyle.Primary"
+                        Icon="lists">
+                    <ChildContent>
+                        @* <RadzenSplitButtonItem Text="Autorizar Liberación" Value="1" Icon="account_box" /> *@
+                        <RadzenSplitButtonItem Text="Salida Almacén" Value="1" Icon="account_balance_wallet" />
+                    </ChildContent>
+                </RadzenSplitButton>
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenStack>
+    @* ------------------------------------------------------------------------------------- *@
+    <RadzenStack class="rz-mt-2" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+        @* <RadzenRow>
+            <RadzenColumn Size="12" SizeMD="12">
+                <RadzenButton Text="Asignar Servicio a Referencia" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />   
+            </RadzenColumn>
+        </RadzenRow> *@
+        <RadzenDataGrid class="rz-p-0"
+                    Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                    @ref="gridLiberaciones"
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    AllowColumnResize="true"
+                    SelectionMode="DataGridSelectionMode.Multiple"
+                    @bind-Value=@selectedMonitorLiberacionInventario
+                    style="border-radius:7px;"
+                    TItem="MonitorLiberacionInventario"
+                    AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    Data="@(listaMonitorLiberacionInventario)" LoadData="@ObtenerDatos"  IsLoading=@isLoading ColumnWidth="200px" 
+                    RowExpand="RowExpandLiberacionInventario"
+                    RowRender="@RowRenderLiberacionInventario"
+                    ExpandMode="DataGridExpandMode.Single"
+                    Density="Density.Compact" AllowAlternatingRows="false">
+            @* Listado de Inventar Asignados a la Liberacion*@
+            @* --------------------------------------------------------------------------------------------------------------------------- *@
+            <Template Context="monitorLiberacionInventario">
+                <RadzenDataGrid AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                    style="border-radius:7px; width: 100%;"
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    AllowColumnResize="false"
+                    ColumnWidth="200px"
+                    Count="@totalRegistrosInventarioSalida" 
+                    PageSize="@registrosPorPaginaInventarioSalida" ShowPagingSummary="true" 
+                    @bind-Value=@selectedInventarioSalida
+                    Data="@listaMonitorInventarioSalida">
+                    <Columns>
+                        <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Numeros)" Title="Numeros/VIN" Width="180px" Frozen="true"  />
+                        <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Modelo)" Title="Modelo" Frozen="true"  />
+                        <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Marcas)" Title="Marcas" Frozen="true"  />
+                        <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Cantidad)"  Title="Cantidad" />
+                        <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Peso)" Title="Peso" />
+                        <RadzenDataGridColumn Title="Fecha Ingreso" Filterable="false">
+                            <Template Context="monitorInventarioAlmacen">
+                                @(monitorInventarioAlmacen.FechaIngreso == DateTime.MinValue ? "" : monitorInventarioAlmacen.FechaIngreso.ToString())
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Fecha Salida" Filterable="false">
+                            <Template Context="monitorInventarioAlmacen">
+                                @(monitorInventarioAlmacen.FechaSalida == DateTime.MinValue ? "" : monitorInventarioAlmacen.FechaSalida.ToString())
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="@nameof(MonitorInventarioAlmacen.Estadias)"Title="Estadias" />
+                        <RadzenDataGridColumn Title="Fecha Embarque" Filterable="false">
+                            <Template Context="monitorInventarioAlmacen">
+                                @(monitorInventarioAlmacen.FechaEmbarque == DateTime.MinValue ? "" : monitorInventarioAlmacen.FechaEmbarque.ToString())
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Frozen="false" 
+                            FrozenPosition="FrozenColumnPosition.Right" Width="80px">
+                        <Template Context="data">
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter"
+                            Disabled=!data.FechaSalida.Equals(DateTime.MinValue)
+                            Click=@(args => EliminarMercanciaLiberacion(data))
+                             Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                        </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </Template>
+            @* --------------------------------------------------------------------------------------------------------------------------- *@
+            <Columns>
+                <RadzenDataGridColumn Width="35px" Sortable="false" Filterable="false"  Frozen="true">
+                    <HeaderTemplate>
+                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                            Value="@(selectedMonitorLiberacionInventario == null || selectedMonitorLiberacionInventario?.Any() != true ? false : !listaMonitorLiberacionInventario.All(i => selectedMonitorLiberacionInventario.Contains(i)) ? null : listaMonitorLiberacionInventario.Any(i => selectedMonitorLiberacionInventario.Contains(i)))"
+                            Change="@(args => selectedMonitorLiberacionInventario = args == true ? listaMonitorLiberacionInventario.ToList() : null)" />
+                    </HeaderTemplate>
+                    <Template Context="data">
+                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedMonitorLiberacionInventario != null && selectedMonitorLiberacionInventario.Contains(data))" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                            TValue="bool" Change=@(args => { if(!allowRowSelectOnRowClick) { gridLiberaciones.SelectRow(data); }}) />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(MonitorLiberacionInventario.FolioLiberacion)" Title="Folio Liberacion" Width="100px" Frozen="true" />
+                <RadzenDataGridColumn Property="@nameof(MonitorLiberacionInventario.ClaveViaje)" Title="Folio Viaje" Frozen="true" />
+                <RadzenDataGridColumn Property="@nameof(MonitorLiberacionInventario.ClaveReferenciaTarja)" Title="Tarja Salida" Width="100px" Frozen="true" />
+                <RadzenDataGridColumn Title="Estado" Width="100px" Frozen="true" >
+                    <Template Context="monitorLiberacionInventario">
+                        <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleEstadoLiberacion(monitorLiberacionInventario.EstadoLiberacion)" Text="@(monitorLiberacionInventario.EstadoLiberacion.ToString())" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(MonitorLiberacionInventario.Cliente)" Title="Cliente" />
+                <RadzenDataGridColumn Property="@nameof(MonitorLiberacionInventario.Cantidad)" Title="Cantidad" />
+                <RadzenDataGridColumn Title="Fecha Captura" Filterable="false">
+                    <Template Context="monitorLiberacionInventario">
+                        @(monitorLiberacionInventario.FechaAlta == DateTime.MinValue ? "" : monitorLiberacionInventario.FechaAlta.ToString())
+                    </Template>
+                </RadzenDataGridColumn>
+                 <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" 
+                    FrozenPosition="FrozenColumnPosition.Right">
+                        <Template Context="data">
+                            @* <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Primary" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                @onclick:stopPropagation="true">
+                            </RadzenButton> *@
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="note_stack_add" Variant="Variant.Flat" 
+                            Click=@(args => OpenAsignarMercancia(data)) Disabled=@DisabledByEstadoLiberacion(data)
+                            title="Agregar Mercancía"
+                            Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="local_shipping" Variant="Variant.Flat" 
+                            Click=@(args => OpenAsignarViaje(data)) Disabled=@DisabledByEstadoLiberacion(data)
+                            title="Asignar Viaje de Salida"
+                            Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Primary" Icon="print" Variant="Variant.Flat" Size="ButtonSize.Medium" 
+                            Click=@(args => OnImprimirTarjaLiberacion(data)) Disabled=data.EstadoLiberacion.Equals(EstadoLiberacion.Cancelada)
+                            title="Imprimir Boleta de Liberación"
+                            class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter"
+                            Click=@(args => EliminarLiberacion(data)) Disabled=@DisabledByEstadoLiberacion(data)
+                            title="Cancelar Liberación"
+                            Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                        </Template>
+                    </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+    @* <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Click=@(() => ObtenerReferenciaSelected()) Variant="Variant.Flat" Text="Seleccionar" Style="width: 120px" />
+    </RadzenStack> *@
+</RadzenStack>
+
+
+@code {
+
+    MonitorLiberacionInventario MonitorLiberacionInvenrtarioSelected;
+
+    List<MonitorLiberacionInventario> listaMonitorLiberacionInventario;
+
+    IList<MonitorLiberacionInventario> selectedMonitorLiberacionInventario;
+
+    List<MonitorInventarioAlmacen> listaMonitorInventarioSalida;
+
+    IList<MonitorInventarioAlmacen> selectedInventarioSalida;
+
+    ConsultaLiberacionInventario _consultaLiberacionInventario;
+
+    RadzenDataGrid<MonitorLiberacionInventario> gridLiberaciones;
+
+    ICollection<RespListarCoincidenciasDTO> listaCliente;
+
+    bool allowRowSelectOnRowClick = true;
+
+    int valEstadoLiberacion = 0;
+
+    SortedList<int, string> _listEstadoLiberacion = new SortedList<int, string>
+        {
+            { 0, "Ninguno" },
+            { 1, "Pendiente" },
+            { 2, "Autorizada" }, 
+            { 3, "En Proceso de Salida" },
+            { 4, "Cerrada" },
+            { 5, "Cancelada" }
+        };
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    int totalRegistrosInventarioSalida;
+
+    int registrosPorPaginaInventarioSalida = 10;
+    
+    int numeroDePaginaInventarioSalida = 1;
+
+    private LoadDataArgs _args;
+
+    [Inject] private IReferenciaWMSService? _referenciaService { get; set; }
+
+    [Inject] private ILiberacionService? _liberacionService {get; set; }
+
+    [Inject] private IReporteLiberacionService? _reporteLiberacionServicie { get; set; }
+
+    [Inject] private ICatClientesService? _clienteService { get; set; }
+    
+    protected override async Task OnInitializedAsync() 
+    {
+        await base.OnInitializedAsync();
+
+        MonitorLiberacionInvenrtarioSelected = new MonitorLiberacionInventario();
+
+        _consultaLiberacionInventario = new ConsultaLiberacionInventario();
+
+        listaMonitorLiberacionInventario = new List<MonitorLiberacionInventario>();
+
+        await ObtenerDatos(_args);
+
+        //Console.WriteLine("-> OnInitializedAsync ");
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync(); 
+
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //Console.WriteLine("-> Obtener Datos args : " + System.Text.Json.JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaLiberacionInventario> _consulta = new ConsultaCatalogoBase<ConsultaLiberacionInventario>();
+        _consulta.Entidad = new ConsultaLiberacionInventario();
+        
+        _consulta.Entidad.FechaInicio = _consultaLiberacionInventario.FechaInicio;
+        _consulta.Entidad.FechaFin = _consultaLiberacionInventario.FechaFin;
+        _consulta.Entidad.IdMercancia = String.IsNullOrEmpty(_consultaLiberacionInventario.IdMercancia) ? _consulta.Entidad.IdMercancia : _consultaLiberacionInventario.IdMercancia;
+        _consulta.Entidad.EstadoLiberacion = (EstadoLiberacion)valEstadoLiberacion;
+        _consulta.Entidad.IdCliente = _consultaLiberacionInventario.IdCliente.Equals(0) ? 0 : _consultaLiberacionInventario.IdCliente;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+    
+        _consulta.NumeroDePagina = numeroDePagina;
+        _consulta.RegistrosPorPagina = registrosPorPagina;
+
+        var _listLiberacionInvnetario = await _liberacionService!.ObtenerListaPaginada(_consulta);
+
+        //Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listLiberacionInvnetario.Paginado.TotalRegistros;
+
+        //Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listaMonitorLiberacionInventario = _listLiberacionInvnetario.Data;
+
+        selectedMonitorLiberacionInventario = null;
+
+        isLoading = false;
+    }
+
+    async Task OnLoadDataCliente(LoadDataArgs args) {
+
+        listaCliente = await _clienteService.GetClientesConincidencia(args.Filter);
+        if (listaCliente.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cliente", Detail = "No se encontró el Cliente solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeCliente(object value) {
+        _consultaLiberacionInventario.IdCliente = 0;
+        _consultaLiberacionInventario.Cliente = null;
+
+        if (listaCliente != null) {
+            if (!listaCliente.Count().Equals(0)) {
+
+                var selectedCliente = listaCliente
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedCliente != null)
+                {
+                    var selectedId = selectedCliente.Id;
+                    _consultaLiberacionInventario.IdCliente = selectedCliente.Id;
+                    _consultaLiberacionInventario.Cliente = selectedCliente.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    private async Task BurcarLiberacionInventario()
+    {
+
+        await ObtenerDatos(_args);
+
+    }
+
+    public async Task OpenAsignarMercancia(MonitorLiberacionInventario monitorLiberacionInventario)
+    {
+
+        await DialogServiceLiberacion.OpenAsync<VistaModalAgregarMercancia>($"Mercancia",
+               new Dictionary<string, object>() { { "monitorLiberacionInventarioSelected", monitorLiberacionInventario } },
+               new DialogOptions() 
+               {
+                   Resizable = true, 
+                   Draggable = true,
+                   Width = "970px", 
+                   Height = "630px"
+                });
+
+        await ObtenerDatos(_args);
+    }
+
+    async void SalidaAlmacen() {
+
+        string _mensaje = String.Empty;
+
+        bool _dataSelected = false;
+
+        if (selectedMonitorLiberacionInventario != null) {
+
+            if (!selectedMonitorLiberacionInventario.Count().Equals(0)) {
+
+                _dataSelected = selectedMonitorLiberacionInventario.Where(x => x.EstadoLiberacion.Equals(EstadoLiberacion.Pendiente)).Any();
+
+            } 
+
+        }
+
+
+        if (!_dataSelected) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Salida Almacén", Detail = "Favor de selccionar al menos una liberación con estatus pendiente, para realizar la operación de Salida de Almacén.", Duration = 4000 });
+            return;
+
+        }
+
+        var result = await DialogServiceConfirm.Confirm("Se va dar salida a la Liberación seleccionada?", "Liberación", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+        bool _confirmar = result.HasValue ? (bool)result : false;
+
+        if (_confirmar) {
+
+            InvokeAsync(async () =>
+            {
+
+                foreach(var monitorLiberacionInventario in selectedMonitorLiberacionInventario) {
+
+                    ConsultaLiberacionInventario consultaLiberacionInventario = new ConsultaLiberacionInventario();
+                    consultaLiberacionInventario.IdOrdenSalida = monitorLiberacionInventario.IdLiberacion;
+
+                    var _result = await _liberacionService.SalidaAlmacen(consultaLiberacionInventario);
+
+                    if (_result.Success) {
+
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Salida de Almacén se completó correctamente", Detail = _mensaje, Duration = 4000 });
+
+                    } else {
+
+                        _mensaje = "Error en Liberación:" + monitorLiberacionInventario.FolioLiberacion.ToString() + ", " + _result.MensajeRespuesta;
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Salida Almacén", Detail = _mensaje, Duration = 4000 });
+
+                    }
+
+                }
+
+                BusyDialogService.Close();
+
+                await ObtenerDatos(_args);
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Cargando Información...");
+
+        }
+
+    }
+
+    public async Task EliminarMercanciaLiberacion(MonitorInventarioAlmacen monitorInventarioAlmacen) 
+    { 
+
+        string _mensaje = String.Empty;
+
+        var result = await DialogServiceConfirm.Confirm("Desea Eliminar el registro: " + monitorInventarioAlmacen.Numeros + " ?", "Mercancía", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+        bool _confirmar = result.HasValue ? (bool)result : false;
+
+        if (_confirmar) {
+
+            InvokeAsync(async () =>
+            {
+
+                ConsultaLiberacionInventario consultaLiberacionInventario = new ConsultaLiberacionInventario();
+                consultaLiberacionInventario.IdOrdenSalida = monitorInventarioAlmacen.IdOrdenSalida;
+                consultaLiberacionInventario.IdInventario = monitorInventarioAlmacen.IdInventario;
+
+                var _result = await _liberacionService.EliminarMercanciaLiberacion(consultaLiberacionInventario);
+
+                if (_result.Success) {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Mercancía, se eliminó correctamente", Detail = _mensaje, Duration = 4000 });
+
+                } else {
+
+                    _mensaje = _result.MensajeRespuesta;
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Eliminar Mercancía", Detail = _mensaje, Duration = 4000 });
+
+                }
+
+                BusyDialogService.Close();
+
+                await ObtenerDatos(_args);
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Procesando Información...");
+
+        }
+
+    }
+
+    async void EliminarLiberacion(MonitorLiberacionInventario monitorLiberacionInventario) {
+
+         ConsultaLiberacionReporteador _consultaReporte = new ConsultaLiberacionReporteador();
+        _consultaReporte.IdOrdenSalida = monitorLiberacionInventario.IdLiberacion;
+
+        string _mensaje = String.Empty;
+
+
+        var result = await DialogServiceConfirm.Confirm("Desea Eliminar la Liberación: " + monitorLiberacionInventario.FolioLiberacion + " ?", "Liberación", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+        bool _confirmar = result.HasValue ? (bool)result : false;
+
+        if (_confirmar) {
+
+            InvokeAsync(async () =>
+            {
+
+                ConsultaLiberacionInventario consultaLiberacionInventario = new ConsultaLiberacionInventario();
+                consultaLiberacionInventario.IdOrdenSalida = monitorLiberacionInventario.IdLiberacion;
+
+                var _result = await _liberacionService.EliminarLiberacion(consultaLiberacionInventario);
+
+                if (_result.Success) {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Liberación, se eliminó correctamente", Detail = _mensaje, Duration = 4000 });
+
+                } else {
+
+                    _mensaje = _result.MensajeRespuesta;
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Eliminar Liberación", Detail = _mensaje, Duration = 4000 });
+
+                }
+
+                BusyDialogService.Close();
+
+                await ObtenerDatos(_args);
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Procesando Información...");
+
+        }
+
+    }
+
+    async void OnImprimirTarjaLiberacion(MonitorLiberacionInventario monitorLiberacionInventario) {
+
+        InvokeAsync(async () =>
+        {
+
+            ConsultaLiberacionReporteador _consultaReporte = new ConsultaLiberacionReporteador();
+            _consultaReporte.IdOrdenSalida = monitorLiberacionInventario.IdLiberacion;
+            
+            var _result = await _reporteLiberacionServicie.ObtieneReporteTarjaSalidaLiberacion(_consultaReporte);
+
+            if (_result.Success) {
+
+                await JSRuntime.InvokeVoidAsync("AbrirArchivoArregloByte", _result.Data.Archivo,  _result.Data.ContentType, Convert.ToBase64String(_result.Data.Content));
+
+            }
+
+            BusyDialogService.Close();
+
+            await ObtenerDatos(_args);
+
+            await InvokeAsync(StateHasChanged);
+
+        });
+
+        await BusyDialog("Generando Boleta de Liberación...");
+
+    }
+
+
+    public async Task OpenAsignarViaje(MonitorLiberacionInventario monitorLiberacionInventario)
+    {
+        MonitorCtrlTransporte monitorCtrlTransporte = new MonitorCtrlTransporte();
+        monitorCtrlTransporte.TipoViaje = TipoViaje.Salida;
+        monitorCtrlTransporte.IdOrdenSalida = monitorLiberacionInventario.IdLiberacion;
+        monitorCtrlTransporte.IdControlTransporte = monitorLiberacionInventario.IdControlTransporte;
+
+        await DialogRegistroViaje.OpenAsync<VistaModalRegistroViajeTurno>($"Viaje",
+               new Dictionary<string, object>() { { "IdControlTransporte", monitorCtrlTransporte.IdControlTransporte }, { "monitorCtrlTransporte", monitorCtrlTransporte} },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Width = "860px", 
+                   Height = "550px"
+                });
+
+        await ObtenerDatos(_args);
+
+    }
+
+    void ChangeFiltros(string text)
+    {
+        ////Console.WriteLine.Log($"{text}");
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Button Clicked", Detail = text });
+    }
+
+    async void RowExpandLiberacionInventario(MonitorLiberacionInventario monitorLiberacionInventario)
+    {
+
+        ConsultaCatalogoBase<ConsultaLiberacionInventario> _consulta = new ConsultaCatalogoBase<ConsultaLiberacionInventario>();
+        _consulta.Entidad = new ConsultaLiberacionInventario();
+        _consulta.Entidad.IdOrdenSalida = monitorLiberacionInventario.IdLiberacion;
+        _consulta.NumeroDePagina = numeroDePaginaInventarioSalida;
+        _consulta.RegistrosPorPagina = registrosPorPaginaInventarioSalida;
+
+        InvokeAsync(async () =>
+            {
+
+                var result = await _liberacionService!.ObtenerDetalleInventarioListaPaginada(_consulta);
+
+                if (result.Success) {
+
+                    listaMonitorInventarioSalida = result.Data;
+
+                    totalRegistrosInventarioSalida = (int)result.Paginado.TotalRegistros;
+
+                    selectedInventarioSalida = listaMonitorInventarioSalida.Take(1).ToList();
+                }
+
+                BusyDialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+        });
+
+        await BusyDialog("Cargando Información...");
+    }
+
+    void RowRenderLiberacionInventario(RowRenderEventArgs<MonitorLiberacionInventario> args)
+    {
+        if (args.Data != null)
+            args.Expandable = !args.Data.Cantidad.Equals(0);
+    }
+
+    async void OnClickSplitButton(RadzenSplitButtonItem item, string buttonName)
+    {
+        if (item != null)
+        {
+            switch(item.Value) {
+                case "1" :  SalidaAlmacen(); 
+                            await InvokeAsync(StateHasChanged);
+                        break;
+                default:
+                break;
+
+            }
+
+        }
+        @* 
+        if (item != null)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "SplitButton Item Clicked", Detail = $"{buttonName}, item with value {item.Value} clicked" });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "SplitButton Clicked", Detail = $"{buttonName} clicked" });
+        } 
+        *@
+    }
+
+    private BadgeStyle BadgeStyleEstadoLiberacion(EstadoLiberacion estadoLiberacion) {
+
+        switch(estadoLiberacion) {
+
+            case EstadoLiberacion.Cerrada : return BadgeStyle.Success;
+            case EstadoLiberacion.Pendiente : return BadgeStyle.Base;
+            case EstadoLiberacion.Cancelada : return BadgeStyle.Danger;
+            case EstadoLiberacion.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+    private bool DisabledByEstadoLiberacion(MonitorLiberacionInventario data) {
+
+        return data.EstadoLiberacion.Equals(EstadoLiberacion.Cancelada) || data.EstadoLiberacion.Equals(EstadoLiberacion.Cerrada);
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}

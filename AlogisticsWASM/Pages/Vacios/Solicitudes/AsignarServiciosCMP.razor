@@ -1,0 +1,30 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="10px" Style="margin-bottom: 10px">
+    <RadzenAutoComplete FilterOperator="StringFilterOperator.StartsWith"
+                        FilterDelay="100"
+                        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        @bind-Value=@_servicioNombre
+                        Data=@_serviciosFiltrados
+                        TextProperty="@nameof(CatServicios.Nombre)"
+                        Style="width: 100%"
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                        Change="@(args => FiltrarServiciosAsync(args.ToString()))" />
+</RadzenStack>
+
+
+<RadzenDataGrid Data="@_serviciosFiltrados" @ref=_grid TItem="CatServicios" AllowPaging="true" AllowSorting="true">
+    <Columns>
+        <RadzenDataGridColumn TItem="CatServicios" Width="50px">
+            <Template Context="data">
+                <RadzenCheckBox TValue="bool" Value="_selectedServicios.Contains(data)" Change="@(args => OnCheckBoxChange(args, data))" />
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn TItem="CatServicios" Property="Nombre" Title="Nombre" />
+    </Columns>
+</RadzenDataGrid>
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Start" Wrap="FlexWrap.Wrap" Gap="10px">
+    <RadzenButton Text="Aplicar servicios" ButtonStyle="ButtonStyle.Secondary" Click="AplicarServicios" Style="margin-right: 10px; margin-top: 10px;" />
+    <RadzenButton Variant="Variant.Outlined" ButtonStyle="ButtonStyle.Primary" Text="Cancelar" Click="Cancelar" Style="margin-right: 10px; margin-top: 10px;" />
+</RadzenStack>

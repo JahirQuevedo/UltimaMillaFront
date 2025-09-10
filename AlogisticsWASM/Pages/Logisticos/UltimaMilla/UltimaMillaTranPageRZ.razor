@@ -1,0 +1,431 @@
+﻿@page "/ultima-milla-tran"
+@inject Radzen.DialogService DialogService
+@using ALOG.Modelos.Modelos.Logisticos;
+@using ALOGRepositorios.Services.Logisticos
+@using Radzen;
+<style>
+    :root {
+    --rz-grid-header-color: white;
+    --rz-grid-header-background-color: darkred;
+    }
+
+    .rz-datepicker-custom .rz-inputtext,
+    .rz-datepicker-custom .rz-datepicker {
+    border-radius: 8px !important;
+    }
+
+    .rz-tabview-nav li a {
+    color: black !important;
+    border-radius: 8px;
+    padding: 8px 16px;
+    }
+
+    .rz-tabview-nav li.rz-state-active a {
+    background-color: rgba(255, 204, 0, 0.3);
+    color: black !important;
+    }
+
+    .rz-tabview-nav {
+    border-bottom: none;
+    }
+    /* Oculta solo la lista de archivos seleccionados */
+    .hide-upload-list .rz-upload-file-list {
+        display: none !important; /* !important evita que la librería lo sobreescriba */
+    }
+
+</style>
+
+
+<div class="modal-wrapper" style="position: relative; padding: 1rem;">
+
+    <!-- Header -->
+     @* <div class="modal-header" style="background-color: darkred; padding: 1rem;">
+         <h2 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: white;">
+            SOLICITUD DE SERVICIOS A TRANSPORTISTA
+        </h2> 
+        <div style="color: white;">
+            @(objSolicitudes?.Orden?.ReferenciaALO != null 
+                                ? objSolicitudes.Orden.ReferenciaALO.ToString() 
+                                : "")
+        </div>
+
+    </div>  *@
+    
+    <RadzenFieldset Text="Información de solicitud" Style="margin-top: -1rem; margin-bottom: 1rem; padding: -1rem;">
+    <!-- Cuerpo -->
+    <div class="mt-4" style="margin-left: 1rem;">
+        
+        @* <RadzenLabel Style="display:flex;margin:0.5rem">Transportista Asignada</RadzenLabel> *@       
+        @* <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTransportista"
+        Placeholder="Asignar Transportista"
+        Data="@lstCatTransportistas"
+        TextProperty="RazonSocial"
+        ValueProperty="IdCatTransportista"
+        Style="width: 100%; border-radius: 8px; margin-bottom: 10px; margin-top: -1rem;"
+        AllowFiltering="true"
+        FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+        FilterOperator="StringFilterOperator.Contains"
+        FilterAutoCompleteType="AutoCompleteType.On" 
+        Disabled="@(Modo == "R")"
+        /> *@
+        <RadzenRow Gutter="16">
+            <!-- Columna izquierda -->
+            <RadzenColumn Size="6">
+               @*  <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoTransporte"
+                Data="@lstCatTipoTransporte"
+                TextProperty="Nombre"
+                ValueProperty="IdCatTipoTransporte"
+                Placeholder="Tipo de transporte"
+                Style="width: 100%; border-radius: 8px;"
+                                Disabled="@(Modo == "R")" /> *@
+                    @* <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoEstados"
+                                    Data="@lstCatTipoEstados"
+                                    TextProperty="Nombre"
+                                    ValueProperty="IdCatTipoEstados"
+                                    Placeholder="Tipo Estado"
+                                    Style="width: 100%; border-radius: 8px;"
+                                    Disabled="true" /> *@
+                    <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTransportista"
+                                    Placeholder="Asignar Transportista"
+                                    Data="@lstCatTransportistas"
+                                    TextProperty="RazonSocial"
+                                    ValueProperty="IdCatTransportista"
+                                    Style="width: 100%; border-radius: 8px; margin-bottom: 10px;"
+                                    AllowFiltering="true"
+                                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                    FilterOperator="StringFilterOperator.Contains"
+                                    FilterAutoCompleteType="AutoCompleteType.On"
+                                    Disabled="@(Modo == "R")" />
+
+                <RadzenFieldset Text="Lugar de posicionamiento (Origen)">
+                    <RadzenRow>
+                        <!-- Columna 1: Fecha -->
+                        <RadzenColumn Size="3">
+                            <RadzenFieldset Text="Posicionamiento">
+                                <div style="margin: 0.5rem; text-align: center;">
+                                    <h7><strong>@objSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy")</strong></h7>
+                                        <h7><strong>@objSolicitudes.FechaPosicionamiento?.ToString("HH:mm") </strong> hrs.</h7>
+                                </div>
+                            </RadzenFieldset>
+                        </RadzenColumn>
+
+                        <!-- Columna 2 -->
+                        <RadzenColumn Size="3">
+                            <div><strong>País:</strong> @objSolicitudes.catClienteUbicacionOrigen?.catPaises?.Nombre</div>
+                            <div><strong>Colonia:</strong> @objSolicitudes.catClienteUbicacionOrigen?.Colonia</div>
+                            <div><strong>No. Interior:</strong> @objSolicitudes.catClienteUbicacionOrigen?.NoInterior</div>
+                            <div><strong>Nombre Lugar:</strong> @objSolicitudes.catClienteUbicacionOrigen?.NombreLugar</div>
+                        </RadzenColumn>
+
+                        <!-- Columna 3 -->
+                        <RadzenColumn Size="3">
+                            <div><strong>Estado:</strong> @objSolicitudes.catClienteUbicacionOrigen?.catPaisEstados?.Nombre</div>
+                            <div><strong>Calle:</strong> @objSolicitudes.catClienteUbicacionOrigen?.Calle</div>
+                            <div><strong>CP:</strong> @objSolicitudes.catClienteUbicacionOrigen?.CP</div>
+                            <div><strong>Contacto:</strong> @objSolicitudes.catClienteUbicacionOrigen?.Contacto</div>
+                        </RadzenColumn>
+
+                        <!-- Columna 4 -->
+                        <RadzenColumn Size="3">
+                            <div><strong>Municipio:</strong> @objSolicitudes.catClienteUbicacionOrigen?.catPaisMunicipios?.Nombre</div>
+                            <div><strong>No. Exterior:</strong> @objSolicitudes.catClienteUbicacionOrigen?.NoExterior</div>
+                            <div><strong>Referencia:</strong> @objSolicitudes.catClienteUbicacionOrigen?.Referencia</div>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenFieldset>
+            </RadzenColumn>
+
+            <!-- Columna derecha -->
+            <RadzenColumn Size="6">
+                @* <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoEstados"
+                Data="@lstCatTipoEstados"
+                TextProperty="Nombre"
+                ValueProperty="IdCatTipoEstados"
+                Placeholder="Tipo Estado"
+                Style="width: 100%; border-radius: 8px;" 
+                Disabled="true"/> *@
+
+                    @* <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoTransporte"
+                                    Data="@lstCatTipoTransporte"
+                                    TextProperty="Nombre"
+                                    ValueProperty="IdCatTipoTransporte"
+                                    Placeholder="Tipo de transporte"
+                                    Style="width: 100%; border-radius: 8px;"
+                                    Disabled="@(Modo == "R")" /> *@
+
+                   <h5 style="margin-top: 0.9rem; margin-left: 3.0rem;">Transporte Terrestre</h5>
+                <RadzenFieldset Text="Lugar de entrega (Destino)">
+                    <RadzenRow>
+                        <!-- Columna 1: Fecha -->
+                        <RadzenColumn Size="3">
+                            <RadzenFieldset Text="Entrega">
+                                <div style="margin: 0.5rem; text-align: center;">
+                                    <h7><strong>@Solicitud.FechaFin?.ToString("dd/MM/yyyy")</strong></h7>
+                                        <h7><strong>@objSolicitudes.FechaFin?.ToString("HH:mm") </strong> hrs.</h7>
+                                </div>
+                            </RadzenFieldset>
+                        </RadzenColumn>
+
+                        <!-- Columna 2 -->
+                        <RadzenColumn Size="3">
+                            <div><strong>País:</strong> @objSolicitudes.catClienteUbicacionDestino?.catPaises?.Nombre</div>
+                            <div><strong>Colonia:</strong> @objSolicitudes.catClienteUbicacionDestino?.Colonia</div>
+                            <div><strong>No. Interior:</strong> @objSolicitudes.catClienteUbicacionDestino?.NoInterior</div>
+                            <div><strong>Nombre Lugar:</strong> @objSolicitudes.catClienteUbicacionDestino?.NombreLugar</div>
+                        </RadzenColumn>
+
+                        <!-- Columna 3 -->
+                        <RadzenColumn Size="3">
+                            <div><strong>Estado:</strong> @objSolicitudes.catClienteUbicacionDestino?.catPaisEstados?.Nombre</div>
+                            <div><strong>Calle:</strong> @objSolicitudes.catClienteUbicacionDestino?.Calle</div>
+                            <div><strong>CP:</strong> @objSolicitudes.catClienteUbicacionDestino?.CP</div>
+                            <div><strong>Contacto:</strong> @objSolicitudes.catClienteUbicacionDestino?.Contacto</div>
+                        </RadzenColumn>
+
+                        <!-- Columna 4 -->
+                        <RadzenColumn Size="3">
+                            <div><strong>Municipio:</strong> @objSolicitudes.catClienteUbicacionDestino?.catPaisMunicipios?.Nombre</div>
+                            <div><strong>No. Exterior:</strong> @objSolicitudes.catClienteUbicacionDestino?.NoExterior</div>
+                            <div><strong>Referencia:</strong> @objSolicitudes.catClienteUbicacionDestino?.Referencia</div>
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenFieldset>
+            </RadzenColumn>
+        </RadzenRow>
+        </div>
+        
+    @if (Modo == "C")
+    {
+        <RadzenText Text="Contenido a cargar" 
+                    Style="display:block; font-size:1.3rem; font-weight:600; 
+                       color:#b22222; margin: 1rem 0; border-bottom:2px solid #ccc; padding-bottom:4px;" />
+    }
+    else if (Modo == "R")
+    {
+        <RadzenText Text="Contenido de la carga" 
+                    Style="display:block; font-size:1.3rem; font-weight:600; 
+                       color:#2f4f4f; margin: 1rem 0; border-bottom:2px solid #ccc; padding-bottom:4px;" />
+    }
+
+
+        <RadzenDataGrid Data="@lstCargamentoDto" TItem="CargamentoDTO" @ref="gridDetalles" Style="border-radius: 12px;">
+            <Columns>
+                @if (Modo == "C")
+                {
+                    <RadzenDataGridColumn TItem="CargamentoDTO" Title="Seleccionar">
+                        <Template Context="item">
+                            <RadzenCheckBox TValue="bool"
+                                            Value="@IsSelected(item.SolicitudesDet)"
+                                            Change="@(args => OnSelectChanged(item.SolicitudesDet, args))"/>
+                        </Template>
+                    </RadzenDataGridColumn>
+                }
+                
+                <RadzenDataGridColumn TItem="CargamentoDTO" Title="Tipo de Mercancía">
+                    <Template Context="item">
+                        @item.SolicitudesDet.catTipoMercancia?.Nombre
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn TItem="CargamentoDTO" Property="SolicitudesDet.NoParte" Title="Número de Parte"/>
+                <RadzenDataGridColumn TItem="CargamentoDTO" Property="SolicitudesDet.Cantidad" Title="Cantidad"/>
+                <RadzenDataGridColumn TItem="CargamentoDTO" Property="SolicitudesDet.Peso" Title="Peso"/>
+                <RadzenDataGridColumn TItem="CargamentoDTO" Property="SolicitudesDet.Volumen" Title="Volumen" />
+            </Columns>
+        </RadzenDataGrid>
+        
+        </RadzenFieldset>
+
+    
+        <div style="position: relative; min-height: 100%; padding-bottom: 60px; margin-top:20px;">
+            <!-- Ajusta el padding según el tamaño de tus botones -->
+            @* <RadzenDataGrid Data="@servicios"
+                        Style="
+                                --rz-grid-cell-border: none;
+                                --rz-grid-bottom-cell-border: none;
+                                --rz-grid-right-cell-border: none;
+                                  "
+                        TItem="UltimaMillaPageRZ.Servicio"
+                        Class="rz-datagrid"
+                        ShowPagingSummary="false"
+                        ShowPagination="false">
+            <Columns>
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="Tipo" Title="TIPO" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="RefAlo" Title="Ref.Alo" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="RefCte" Title="Ref.Cte" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="Booking" Title="Booking" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="Cargamento" Title="Cargamento" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="De" Title="De" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="A" Title="A" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="Inicia" Title="Inicia" />
+                <RadzenDataGridColumn TItem="UltimaMillaPageRZ.Servicio" Property="Termina" Title="Termina" />
+
+            </Columns>
+        </RadzenDataGrid> *@
+
+
+            <RadzenFieldset Text="Transporte Asignado" Style="margin-top: 2rem;">
+                <RadzenRow Gutter="16">
+                    <!-- Placas -->
+                    <RadzenColumn Size="2">
+                        <RadzenLabel Text="Placas"/>
+                        <RadzenTextBox @bind-Value="objTransporteAsignado.Placas" Style="width: 100%;" Disabled="@(Modo == "R")"
+                        MaxLength="10"
+                        />
+                    </RadzenColumn>
+
+                    <!-- Económico -->
+                    <RadzenColumn Size="2">
+                        <RadzenLabel Text="Económico"/>
+                        <RadzenTextBox @bind-Value="objTransporteAsignado.Economico" Style="width: 100%;" Disabled="@(Modo == "R")"
+                        MaxLength="10"
+                        />
+                    </RadzenColumn>
+
+                    <!-- Color -->
+                    <RadzenColumn Size="2">
+                        <RadzenLabel Text="Color"/>
+                        <RadzenTextBox @bind-Value="objTransporteAsignado.Color" Style="width: 100%;" Disabled="@(Modo == "R")"
+                        MaxLength="20"
+                        />
+                    </RadzenColumn>
+
+                    <!-- Conductor -->
+                    <RadzenColumn Size="3">
+                        <RadzenLabel Text="Conductor"/>
+                        <RadzenTextBox @bind-Value="objTransporteAsignado.Operador" Style="width: 100%;" Disabled="@(Modo == "R")"
+                        MaxLength="150"/>
+                    </RadzenColumn>
+
+                 
+
+                    @*    <!-- Celular -->
+                    <RadzenColumn Size="3">
+                        <RadzenLabel Text="Celular" />
+                        <RadzenTextBox @bind-Value="objTransporteAsignado" Style="width: 100%;" />
+                    </RadzenColumn> *@
+                </RadzenRow>
+
+
+
+
+
+
+                <RadzenRow Gutter="16" Class="mt-3">
+                   @*  <RadzenColumn Size="3">
+                        <RadzenText Text="Marca"/>
+                    <RadzenTextBox @bind-Value="objTransporteAsignado.Marca" Style="margin-left: 0.5rem" Disabled="@(Modo == "R")" />
+                    </RadzenColumn> *@
+                   <!--Marca-->
+                       <RadzenColumn Size="3">
+                        <RadzenLabel Text="Marca" />
+                    <RadzenTextBox @bind-Value="objTransporteAsignado.Marca" Style="width: 100%;" Disabled="@(Modo == "R")" 
+                    MaxLength="50"
+                    />
+                    </RadzenColumn>
+
+                    <!-- CAAT -->
+                    <RadzenColumn Size="3">
+                        <RadzenLabel Text="CAAT"/>
+                        @* <RadzenTextBox @bind-Value="caat"  /> *@
+                        <RadzenTextBox @bind-Value="objSLOTransporteSolicitud.CAAT"
+                                       Name="CAAT"
+                                       Style="width: 100%; text-transform: uppercase;"
+                                       MaxLength="50" Disabled="@(Modo == "R")"/>
+
+                        <RadzenRequiredValidator Component="CAAT"
+                                                 Text="El CAAT es requerido"
+                                                 Style="margin-left: 0.5rem" Disabled="@(Modo == "R")"/>
+
+                        <RadzenRegexValidator Component="CAAT"
+                                              Pattern="^[A-Z0-9]{10}$"
+                                              Text="Debe contener exactamente 10 caracteres alfanuméricos en mayúsculas"
+                                              Style="margin-left: 0.5rem" Disabled="@(Modo == "R")"/>
+                    </RadzenColumn>
+
+                    <!-- FOLIO CCP -->
+                    <RadzenColumn Size="3"> <!-- aumenté el tamaño -->
+                        <RadzenLabel Text="FOLIO CCP"/>
+                        <RadzenTextBox @bind-Value="objSLOTransporteDetalle.FolioUUID"
+                                       MaxLength="50"
+                                       Style="width: 100%;"
+                                       Disabled="@(Modo == "R")"/>
+                    </RadzenColumn>
+
+                    <!--XCarga de documentos-->
+                   
+                </RadzenRow>
+                <RadzenRow Style="margin-top:1rem;">
+                    <RadzenColumn Size="6">
+                        @* <RadzenButton Icon="add" Text="Agregar documento" Click="@AgregarDocumento" Style="margin-bottom:1rem" /> *@
+                        @* <RadzenUpload ChooseText="Seleccionar documentos"
+                                      Multiple="true"
+                                      Accept="application/pdf"
+                                      Auto="false"
+                                      Change="@OnUploadChange"
+                                      Style="width:100%;" />   *@
+
+                        <RadzenUpload @ref="uploadFiles"
+                            ChooseText="Agregar documentos"
+                                      Multiple="true"
+                                      Accept="application/pdf"
+                                      Auto="true"
+                                      Change="@OnUploadChange"
+                                      Style="width:40%;"
+                                      InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
+                                      Visible="@(Modo == "C")"/>   <!-- <‑‑ aquí -->
+
+
+                        @if (lstCargarArchivos != null && lstCargarArchivos.Any())
+                        {
+                                    <RadzenDataGrid @ref="documentosGrid" TItem="SLOCargarArchivo" Data="@lstCargarArchivos"
+                                                    ShowPagingSummary="false" AllowSorting="false" AllowFiltering="false" Responsive="true"
+                                                    AllowPaging="false" Style="max-height:200px; overflow-y:auto; font-size:0.85rem;">
+                                        <Columns>
+                                            <RadzenDataGridColumn TItem="SLOCargarArchivo" Property="TipoDocumento" Title="Tipo" Resizable="true"/>
+                                            <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Archivo" Resizable="true">
+                                                <Template Context="doc">
+                                                    @doc.NombreArchivo (@(doc.SizeFile / 1024) KB)
+                                                </Template>
+                                            </RadzenDataGridColumn>
+                                            <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Acciones" Width="80px">
+                                                <Template Context="doc">
+                                                    <RadzenButton Icon="close"
+                                                                  ButtonStyle="ButtonStyle.Danger"
+                                                                  Size="ButtonSize.Small"
+                                                                  Click="@(() => EliminarDocumento(doc))"/>
+                                                </Template>
+                                            </RadzenDataGridColumn>
+                                        </Columns>
+                                    </RadzenDataGrid>
+                                
+                        }
+                        else
+                        {
+                            @* <span style="color:gray; font-size:0.85rem;margin-top:10px;">No hay documentos cargados</span> *@
+                        }
+
+
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenFieldset>
+
+            <!-- Botones flotantes -->
+            <RadzenButton Icon="add_circle" Text="Crear"
+                          ButtonStyle="ButtonStyle.Secondary"
+                          Click="@(() => CrearSolicitudTransporte())"
+                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "C")"/>
+
+            <RadzenButton Icon="cancel" Text="Cancelar"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@(() => DialogService.Close(null))"
+                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "C")"/>
+            <RadzenButton Icon="cancel" Text="Cerrar"
+                          ButtonStyle="ButtonStyle.Primary"
+                          Click="@(() => DialogService.Close(null))"
+                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "R")"/>
+
+
+        </div>
+    </div>
+
+

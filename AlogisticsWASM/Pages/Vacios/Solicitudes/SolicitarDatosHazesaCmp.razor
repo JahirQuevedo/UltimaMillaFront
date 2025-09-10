@@ -1,0 +1,81 @@
+﻿@page "/hazesa"
+
+<div>
+    <RadzenRow Gap="2rem" JustifyContent="JustifyContent.Center">
+        <RadzenColumn Size="12" SizeMD="12">
+            
+            <RadzenRow Gap="2rem">
+                <RadzenColumn Size="12">
+                    <RadzenFieldset Text="Documentación">
+                        <RadzenStack Gap="1rem">
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenUpload @ref="_uploadBl"
+                                                  Change="@((args) => CargarDocumentoAsync(args))"
+                                                  ChooseText="Cargar documento EIR de lleno"
+                                                  Accept="application/pdf"
+                                                  Multiple="false"
+                                                  Auto="true" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                        </RadzenStack>
+                    </RadzenFieldset>
+                </RadzenColumn>
+            </RadzenRow>
+            
+            <RadzenRow Gap="2rem">
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Datos del chofer a ingresar">
+                    <RadzenStack Gap="1rem">
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenLabel Text="Nombre completo" Component="CardNr" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="8">
+                                <RadzenTextBox @bind-Value="_nombreChofer" Style="width: 100%;" Name="CardNr" />
+                            </RadzenColumn>
+                        </RadzenRow>
+
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenLabel Text="Número de licencia" Component="CardNr" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="8">
+                                <RadzenTextBox @bind-Value="_numeroLicenciaChofer" Style="width: 100%;" Name="CardNr" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenStack>
+                </RadzenFieldset>
+                </RadzenColumn>
+
+                <RadzenColumn Size="6">
+                    <RadzenFieldset Text="Datos de la unidad a ingresar">
+                    <RadzenStack Gap="1rem">
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenLabel Text="Número de la unidad" Component="Name" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="8">
+                                <RadzenTextBox @bind-Value="_numeroUnidad" Style="width: 100%;" Name="Name" />
+                            </RadzenColumn>
+                        </RadzenRow>
+
+                        <RadzenRow AlignItems="AlignItems.Center">
+                            <RadzenColumn Size="12" SizeMD="4">
+                                <RadzenLabel Text="número de placas" Component="Name" />
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="8">
+                                <RadzenTextBox @bind-Value="_numeroPlacas" Style="width: 100%;" Name="Name" />
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenStack>
+                </RadzenFieldset>
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" class="rz-mt-8 rz-mb-4">
+        <RadzenButton Click=@(args => Aceptar()) Text="Aceptar" ButtonStyle="ButtonStyle.Primary" />
+        <RadzenButton Click=@(args => Cancelar()) Text="Cancelar" ButtonStyle="ButtonStyle.Secondary" />
+    </RadzenStack>
+</div>

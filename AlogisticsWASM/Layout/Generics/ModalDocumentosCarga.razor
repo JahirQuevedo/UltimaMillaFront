@@ -1,0 +1,91 @@
+﻿@page "/modaldocumentoscarga"
+@inject Radzen.DialogService DialogService
+
+<style>
+    #ddUpload {
+        left: 0;
+        --rz-upload-button-bar-background-color: transparent;
+        --rz-upload-button-bar-padding: 0;
+    }
+
+        #ddUpload .rz-fileupload-buttonbar .rz-fileupload-choose {
+            width: 100%;
+            text-align: center;
+            font-size: 16px;
+            padding: 100px 0;
+        }
+</style>
+
+
+<RadzenRow Gap="2rem" RowGap="2rem" class="rz-m-0 rz-m-md-12">
+    <RadzenColumn Size="12">
+        <RadzenCard Variant="Variant.Outlined">
+            <RadzenText TextStyle="TextStyle.Subtitle2" TagName="TagName.H3">Drag and drop files to upload</RadzenText>
+            <RadzenUpload id="ddUpload" @ref="uploadDD" ChooseText="Drag and drop here or click to choose files" Auto="false" Multiple="true" Url="upload/multiple" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "select file" }})"
+                          Progress=@(args => OnProgress(args, "Drag and drop files to upload")) Style="width: 100%" />
+            <RadzenButton Text="Upload" Click=@(args => uploadDD.Upload()) class="rz-mt-4" />
+        </RadzenCard>
+    </RadzenColumn>
+</RadzenRow>
+
+@code {
+    [Parameter] public int pIdServicio { get; set; }
+    RadzenUpload upload;
+    RadzenUpload uploadDD;
+
+    int progress;
+    bool showProgress;
+    bool showComplete;
+    string completionMessage;
+    bool cancelUpload = false;
+
+    void CancelUpload()
+    {
+        cancelUpload = true;
+    }
+
+    int customParameter = 1;
+
+    void OnChange(UploadChangeEventArgs args, string name)
+    {
+        foreach (var file in args.Files)
+        {
+            ////Console.WriteLine($"File: {file.Name} / {file.Size} bytes");
+        }
+
+        ////Console.WriteLine($"{name} changed");
+    }
+
+    void OnProgress(UploadProgressArgs args, string name)
+    {
+        ////Console.WriteLine($"{args.Progress}% '{name}' / {args.Loaded} of {args.Total} bytes.");
+
+        if (args.Progress == 100)
+        {
+            foreach (var file in args.Files)
+            {
+                ////Console.WriteLine($"Uploaded: {file.Name} / {file.Size} bytes");
+            }
+        }
+    }
+
+    void OnComplete(UploadCompleteEventArgs args)
+    {
+        ////Console.WriteLine($"Server response: {args.RawResponse}");
+    }
+
+
+    async Task ShowCloseableFromOverlayDialog()
+    {
+        await DialogService.OpenAsync("Closeable from overlay Dialog", ds =>
+    @<div>
+        Click outside to close this Dialog
+    </div>, new DialogOptions() { CloseDialogOnOverlayClick = true });
+    }
+
+    void Close()
+    {
+        DialogService.Close();
+    }
+
+}

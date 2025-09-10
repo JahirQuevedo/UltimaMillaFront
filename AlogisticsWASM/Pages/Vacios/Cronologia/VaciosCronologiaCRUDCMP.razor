@@ -1,0 +1,203 @@
+﻿@using ALOG.Modelos.Modelos.Peticiones
+@using ALOGRepositorios.Services.Utilerias.IUtilerias
+@using Radzen
+@inject DialogService DialogService
+@inject HttpClient Http
+@inject IJSRuntime JsRuntime
+@inject NavigationManager NavigationManager
+@inject IExportarExcelService ExportarExcelService
+@using System.Net.Http.Json
+@using System.Net.Http
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOGRepositorios.Services.Peticiones.IPeticiones
+@using AlogisticsWASM.Layout.Utilerias
+
+@* <RadzenTemplateForm TItem="ActividadModel" Data="@tiposIncidencia" Submit="@RegistrarActividad"> *@
+@if (objPeticionesContenedoresCron!= null)
+{
+    <BarraInformacion Datos="@DiccionarioInfoContenedor"/>
+    <RadzenTemplateForm Data="@objPeticionesContenedoresCron" Submit="@((PeticionesContenedoresCron args) => { Submit(args); })">
+        <ChildContent>
+            @if (esInterno)
+            {
+                <div class="row">
+                    <div class="col-md-6">
+                        <RadzenLabel Text="Fecha Evento" Component="FechaEventoIn" />
+                        <RadzenDatePicker @bind-Value="@objPeticionesContenedoresCron.FechaEvento" ShowTime="true" HourFormat="12" DateFormat="dd/MM/yyyy h:mm tt" Max="@objPeticionesContenedoresCron.FechaRegistro" Style="width: 100%" Name="FechaEventoIn" />
+                    </div>
+                    <div class="col-md-6">
+                        <RadzenLabel Text="Fecha Registro" Component="FechaRegistroIn" />
+                        <RadzenDatePicker @bind-Value="@objPeticionesContenedoresCron.FechaRegistro" ShowTime="true" HourFormat="12" DateFormat="dd/MM/yyyy h:mm tt" Style="width: 100%" Name="FechaRegistroIn" ReadOnly="true" />
+                    </div>
+                    <div class="col-md-6">
+                        <RadzenLabel Text="Incidencia" Component="TipoIn" />
+                        <RadzenDropDown @bind-Value="idIncidenciaSeleccionada" Data="@listaTiposIncidencia" TextProperty="Nombre" ValueProperty="IdCatTipoIncidenciaCron" Change="@OnTipoIncidenciaChange" Style="width: 100%" Name="TipoIn" />
+                    </div>
+                    <div class="col-md-6">
+                        <RadzenLabel Text="Evento" Component="EstadoIn" />
+                        <RadzenDropDown @bind-Value="idEventoSeleccionado" Data="@listaEventosPorTipo" TextProperty="Nombre" ValueProperty="IdCatTipoEventoCron" Change="@OnTipoEventoChange" Style="width: 100%" Name="EstadoIn" />
+                    </div>
+                    <div class="col-md-12">
+                        <RadzenLabel Text="Comment" />
+                        <RadzenTextArea @bind-Value="@objPeticionesContenedoresCron.Comentarios" MaxLength="500" Style="width: 100%; max-height: 80px; min-height: 80px;" Rows="3" />
+                        <div class="text-end">
+                            <RadzenText Text="@($"{CaracteresRestantes} caracteres restantes")"
+                            Style="font-size: 0.8rem; color: gray;" />
+                        </div>
+
+                    </div>
+                </div>
+            }
+
+            @if (listaCronologia == null || !listaCronologia.Any())
+            {
+                <RadzenCard Style="padding: 1rem; text-align: center;">
+                    <RadzenText Text="No hay reportes registrados aún." TextStyle="TextStyle.H6" />
+                </RadzenCard>
+            }
+            else if (mostrarTabla)
+            {
+               @*  <RadzenDataGrid Data="@listaCronologia.OrderByDescending(l => l.FechaEvento)" TItem="PeticionesContenedoresCron" ShowPagingSummary="true" PageSize="10" AllowPaging="true" AllowSorting="true">
+                    <Columns>
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Property="FechaEvento" Title="Fecha de evento" FormatString="{0:dd/MM/yyyy h:mm tt}" />
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Property="FechaRegistro" Title="Fecha de registro" FormatString="{0:dd/MM/yyyy h:mm tt}" />
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Tipo Incidencia">
+                            <Template Context="data">
+                                @data.catTipoIncidenciaEvento?.catTipoIncidenciaCron?.Nombre
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Tipo Evento">
+                            <Template Context="data">
+                                @data.catTipoIncidenciaEvento?.catTipoEventosCron?.Nombre
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Usuario">
+                            <Template Context="data">
+                                @data.catUsuarios?.Nombre
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Property="Comentarios" Title="Comentarios" />
+                        @if (esInterno)
+                        {
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Acciones">
+                            <Template Context="item">
+                                <RadzenButton Icon="edit" Style="margin-right: 0.5rem; border-radius: 50%;" Click="@(args => EditarIncidencia(item))" />
+                                <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Style="border-radius: 50%;" Click="@(args => EliminarCronologia(item.IdContenedorCron))" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                        }
+                    </Columns>
+                </RadzenDataGrid> *@
+                <div style="max-width: 100%; overflow-x: auto;">
+                    <div style="max-height: 260px; overflow-y: auto; min-width: 700px;">
+                        <RadzenDataGrid Data="@listaCronologia"
+                                        TItem="PeticionesContenedoresCron"
+                                        ShowPagingSummary="true"
+                                        PageSize="10"
+                                        AllowPaging="false"
+                                        AllowSorting="true"
+                                        Style="min-width: 100%;">
+
+                            <Columns>
+                                <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Property="FechaEvento" Title="Fecha de evento" FormatString="{0:dd/MM/yyyy h:mm tt}" />
+                                <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Property="FechaRegistro" Title="Fecha de registro" FormatString="{0:dd/MM/yyyy h:mm tt}" />
+                                <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Tipo Incidencia">
+                                    <Template Context="data">
+                                        @data.catTipoIncidenciaEvento?.catTipoIncidenciaCron?.Nombre
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Tipo Evento">
+                                    <Template Context="data">
+                                        @data.catTipoIncidenciaEvento?.catTipoEventosCron?.Nombre
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Usuario">
+                                    <Template Context="data">
+                                        @data.catUsuarios?.Nombre
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Property="Comentarios" Title="Comentarios" />
+
+                                @if (esInterno)
+                                {
+                                    <RadzenDataGridColumn TItem="PeticionesContenedoresCron" Title="Acciones">
+                                        <Template Context="item">
+                                            <RadzenButton Icon="edit" Style="margin-right: 0.5rem; border-radius: 50%;" Click="@(args => EditarIncidencia(item))" />
+                                            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Style="border-radius: 50%;" Click="@(args => EliminarCronologia(item.IdContenedorCron))" />
+                                        </Template>
+                                    </RadzenDataGridColumn>
+                                }
+                            </Columns>
+                        </RadzenDataGrid>
+                    </div>
+                </div>
+
+            }
+            else
+            {
+                <RadzenCard Style="padding: 1rem;">
+                    <RadzenRow Style="align-items: center;">
+                        <RadzenColumn Size="1" class="d-flex justify-content-center">
+                            <RadzenButton Icon="chevron_left" Disabled="@((currentPage == 0))"
+                                          Click="@(args => currentPage--)" />
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="10">
+                            <RadzenRow>
+                                @foreach (var item in Paginas.ElementAtOrDefault(currentPage) ?? new())
+                                {
+                                    <RadzenColumn Size="3">
+                                        <RadzenCard class="rz-my-4 rz-mx-auto" Style="width: 100%; height: 210px;">
+                                            <RadzenStack Orientation="Orientation.Vertical" Gap="0.5rem" class="rz-p-2">
+                                                <RadzenBadge Text="@item.catTipoIncidenciaEvento?.catTipoIncidenciaCron?.Nombre" Style="@(item.catTipoIncidenciaEvento?.catTipoIncidenciaCron?.Nombre == "Operativo" ? "background-color: #007bff; color: white;" : "margin-bottom: 0.5rem;")" />
+                                                <RadzenText Text="@item.catTipoIncidenciaEvento?.catTipoEventosCron?.Nombre" TextStyle="TextStyle.Subtitle1" />
+                                                <RadzenText Text="@item.FechaEvento.ToString("dd/MM/yyyy hh:mm")" />
+                                                <RadzenText Text="@TruncarComentario(item.Comentarios)"
+                                                            Style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" />
+                                                <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="1">
+                                                    @if (esInterno)
+                                                    {
+                                                        <RadzenButton Icon="edit" Style="border-radius: 50%;" Click="@(args => EditarIncidencia(item))" />
+                                                        <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Danger" Style="border-radius: 50%;" Click="@(args => EliminarCronologia(item.IdContenedorCron))" />
+                                                    }
+                                                </RadzenStack>
+                                            </RadzenStack>
+                                        </RadzenCard>
+                                    </RadzenColumn>
+                                }
+                            </RadzenRow>
+                        </RadzenColumn>
+
+                        <RadzenColumn Size="1" class="d-flex justify-content-center">
+                            <RadzenButton Icon="chevron_right"
+                                          Disabled="@((currentPage >= Paginas.Count() - 1))"
+                                          Click="@(args => currentPage++)" />
+                        </RadzenColumn>
+                    </RadzenRow>
+                </RadzenCard>
+
+            }
+
+            <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="1rem" class="rz-p-4">
+                <RadzenButton Text="@(mostrarTabla ? "Cartas" : "Tabla")" Icon="cached" ButtonStyle="ButtonStyle.Light" Click="@CambiarVista" />
+                <RadzenButton Text="Exportar" Icon="file_save" ButtonStyle="ButtonStyle.Light" Style="background-color: #438d65; color:white;" Click="@Exportar" />
+                @if (esInterno)
+                {
+                    <RadzenButton Text="Register" Icon="check" ButtonStyle="ButtonStyle.Primary" Type="Submit" />
+                }
+                <RadzenButton Text="Close" Icon="close" ButtonStyle="ButtonStyle.Danger" Click="@(() => DialogService.Close(false))" />
+            </RadzenStack>
+        </ChildContent>
+    </RadzenTemplateForm>
+}
+else
+{
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Wrap="FlexWrap.Wrap" class="rz-m-12" Gap="2rem">
+        <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large">
+            <Template>Wait</Template>
+        </RadzenProgressBarCircular>
+    </RadzenStack>
+}

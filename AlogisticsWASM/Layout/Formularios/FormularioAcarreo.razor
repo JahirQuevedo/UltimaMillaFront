@@ -1,0 +1,38 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+@using AlogisticsWASM.Layout.Generics
+
+<EditForm EditContext="_editContext" OnValidSubmit="@( () => DatosValidos())">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ValidationSummary></ValidationSummary>
+    <div class="row">
+        <div class="col-xl-12">
+             <form class="row g-3 mb-6">
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputDate class="form-control" id="floatingInputGrid" placeholder="Número de contenedor" @bind-Value="@Acarreo!.Fecha" />
+                        <label for="floatingInputGrid">Fecha</label>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputText class="form-control" id="floatingNumeroContenedor" type="text" placeholder="Referencia del cliente" @bind-Value="@Acarreo.Contenedor" />
+                        <label for="floatingNumeroContenedor">Número de contenedor</label>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-12">
+                    <ListadoGenerico Etiqueta="Clientes"
+                                     TItem="CatClientes"
+                                     Listado="_clientes"
+                                     IdSelector="c => c.IdCatCliente"
+                                     DisplaySelector="c => c.RazonSocial"
+                                     SelectedId="Acarreo.IdCliente"
+                                     OnSelected="ObtenerClienteSeleccionado" />
+                </div>
+             </form>
+        </div>
+    </div>
+</EditForm>
+
+@code {
+
+}

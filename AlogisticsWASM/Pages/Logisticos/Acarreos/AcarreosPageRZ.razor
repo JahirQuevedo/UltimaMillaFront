@@ -1,0 +1,194 @@
+﻿@page "/Acarreos"
+
+
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using Microsoft.AspNetCore.Authorization
+@inject NotificationService NotificationService
+@inject UsuarioTokenDTO UsuarioTokenDTO
+@inject IConfiguration configuration
+@inject Radzen.DialogService DialogService
+
+
+@attribute [Authorize]
+
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+
+    .custom-header {
+        font-weight: bold;
+        /*background-color: #f0f0f0; /* Color gris claro */
+    }
+</style>
+@if (position == 0)
+{
+    <style>
+        .rz-panel-titlebar {
+            flex-direction: row-reverse;
+            justify-content: left;
+        }
+    </style>
+}
+
+<div class="content">
+    <div class="row g-3 mb-2">
+        <div class="col-auto">
+            <h4 class="mb-0">Servicios de Acarreo</h4>
+        </div>
+    </div>
+    @if(!isLoading){
+    <RadzenStack Gap="1rem">
+
+        <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+                     Expand=@(() => Change("Panel expanded")) Collapse=@(() => Change("Panel collapsed"))>
+            <HeaderTemplate>
+                <RadzenText TextStyle="TextStyle.H6" class="rz-display-flex rz-align-items-center rz-m-0">
+                    <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Filtros de Consulta</b>
+                </RadzenText>
+            </HeaderTemplate>
+            <ChildContent>
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Contenedor:" Component="contenedor" />
+                                <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="strPcontenedor" />
+                                @*  <RadzenDropDown @bind-Value="@logicalFilterOperator" TextProperty="Text" ValueProperty="Value" Name="operator" Change=@(args => grid.Reload())
+                                Data="@(Enum.GetValues(typeof(LogicalFilterOperator)).Cast<LogicalFilterOperator>().Select(t => new { Text = $"{t}", Value = t }))" /> *@
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Cliente:" Component="cliente" />
+                                <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="cliente" @bind-Value="strPcliente" />
+                            </RadzenStack>
+
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="F.Cierre" Component="FSolicitudIni" />
+                                <RadzenDatePicker @bind-Value="@dFSolicitudCierre" DateFormat="MM/dd/yyyy" Name="FSolicitudCierre" />
+                            </RadzenStack>
+                            
+                        </RadzenStack>
+                    </RadzenRow>
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-4">
+                        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1.5rem;" Wrap="FlexWrap.Wrap">
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="F.Solicitud Ini" Component="FSolicitudIni" />
+                                <RadzenDatePicker @bind-Value="@dFSolicitudIni" DateFormat="dd/MM/yyyy" Name="FSolicitudIni" />
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="F.Solicitud Fin" Component="FSolicitudFin" />
+                                <RadzenDatePicker @bind-Value="@dFSolicitudFin" DateFormat="dd/MM/yyyy" Name="FSolicitudFin" />
+                            </RadzenStack>
+                            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem;">
+                                <RadzenLabel Text="Proveedor:" Component="proveedor" />
+                                <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="proveedor" @bind-Value="strProveedor" />
+                            </RadzenStack>
+
+                            
+                            <RadzenButton Text="Enviar" Click="@(args => EnviarDatos())" />
+                        </RadzenStack>
+                    </RadzenRow>
+                </RadzenCard>
+            </ChildContent>
+        </RadzenPanel>
+            <RadzenButton Click=@(args => OpenModal(null,"A")) Text="Crear" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Style="width:200px;" />
+        <RadzenDataGrid  @ref=grid AllowFiltering="true" AllowColumnResize="true"
+                            FilterMode="FilterMode.Simple" PageSize="10" AllowPaging="true" AllowSorting="true" Data="@ODobjrespObtenerAcarreosDTO" ColumnWidth="300px"
+                        FilterCaseSensitivity="@filterCaseSensitivity" LogicalFilterOperator="@logicalFilterOperator" ShowPagingSummary="true"  >
+            <Columns>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.idDtAcarreos)" Filterable="false" Title="ID" Frozen="true" Width="80px" TextAlign="TextAlign.Center" >
+                    <HeaderTemplate>
+                        <span class="custom-header">ID</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                    @*  <RadzenDataGridColumn Title="Photo" Sortable="false" Filterable="false" Width="200px">
+                <Template Context="data">
+                <RadzenImage Path="@data.Photo" class="rz-gravatar" AlternateText="@(data.FirstName + " " + data.LastName)" />
+                </Template>
+                </RadzenDataGridColumn> *@
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.IdOrden)" Title="IdOrden" Frozen="true" Width="80px" >
+                    <HeaderTemplate>
+                        <span class="custom-header">Orden</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.FechaRegistro)" Title="F.Registro" Width="150px" FormatString="{0:d}" >
+                    <HeaderTemplate>
+                        <span class="custom-header">F.Registro</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.NumeroContenedor)" Title="Contenedor" Width="150px" >
+                    <HeaderTemplate>
+                        <span class="custom-header">Contenedor</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.NombreServicio)" Title="Servicio" Width="200px" >
+                    <HeaderTemplate>
+                        <span class="custom-header">Servicio</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.NombreCliente)" Title="Cliente" Width="200px" >
+                    <HeaderTemplate>
+                        <span class="custom-header">Cliente</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.Fecha)" Title="F.Entrega" Width="150px" FormatString="{0:d}" >
+                    <HeaderTemplate>
+                        <span class="custom-header">F.Entrega</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(RespObtenerAcarreosDTO.TipoEstado)" Filterable="false" Title="Estado" Width="150px" >
+                    <Template Context="data">
+                        <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle(data.TipoEstado))" Shade="Shade.Darker" IsPill="true" Text="@data.TipoEstado" class="rz-ms-2" />
+                    </Template>
+                    <HeaderTemplate>
+                        <span class="custom-header">Estado</span>
+                    </HeaderTemplate>
+                    </RadzenDataGridColumn>
+
+
+
+                <RadzenDataGridColumn Context="RespObtenerAcarreosDTO" Width="80px" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+                    <Template Context="RespObtenerAcarreosDTO">
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Dark" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@(args => OpenModal(RespObtenerAcarreosDTO,"M"))" @onclick:stopPropagation="true">
+                        </RadzenButton>
+                        @* <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(order))" @onclick:stopPropagation="true">
+                        </RadzenButton> *@
+                    </Template>
+                    @* <EditTemplate Context="order">
+                        <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(order))" aria-label="Save">
+                        </RadzenButton>
+                        <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@((args) => CancelEdit(order))" aria-label="Cancel">
+                        </RadzenButton>
+                        <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(order))" aria-label="Delete">
+                        </RadzenButton>
+                    </EditTemplate> *@
+                </RadzenDataGridColumn>
+                @*    <RadzenDataGridColumn Property="BirthDate" Title="Birth Date" FormatString="{0:d}" />
+                <RadzenDataGridColumn Property="@nameof(Employee.Country)" Title="Country" />
+                <RadzenDataGridColumn Property="Notes" Title="Notes" /> *@
+
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+    }else
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Wrap="FlexWrap.Wrap" class="rz-m-12" Gap="2rem">
+           
+            <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large">
+                <Template>Wait</Template>
+            </RadzenProgressBarCircular>
+        </RadzenStack>
+    }
+</div>
+@code {
+
+
+  
+   
+}

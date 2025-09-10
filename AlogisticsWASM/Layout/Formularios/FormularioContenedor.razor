@@ -1,0 +1,76 @@
+﻿
+@using ALOG.Modelos.Modelos.Catalogos
+@using AlogisticsWASM.Layout.Generics
+
+<EditForm EditContext="_editContext" OnValidSubmit="@( () => DatosValidos())">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ValidationSummary></ValidationSummary>
+    <div class="row">
+        <div class="col-xl-12">
+            <form class="row g-3 mb-6">
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputText class="form-control" id="floatingInputGrid" type="text" placeholder="Número de contenedor" @bind-Value="@Contenedor!.Contenedor" />
+                        <label for="floatingInputGrid">Número de contenedor</label>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputText class="form-control" id="floatingInputGrid" type="text" placeholder="Referencia del cliente" @bind-Value="@Contenedor.RefenciaCliente" />
+                        <label for="floatingInputGrid">Referencia del cliente</label>
+                        <label for="floatingSelectPrivacy">Referencia del cliente</label>
+                    </div>
+                </div>
+                <ListadoTiposContenedor OnTipoContenedorSeleccionado="ObtenerTipoContenedorSeleccionado"></ListadoTiposContenedor>
+                <div class="col-sm-12 col-md-12">
+                   @*  <ListadoGenerico Etiqueta="Clientes"
+                                     TItem="CatClientes"
+                                     Listado="_clientes"
+                                     IdSelector="c => c.IdCatCliente"
+                                     DisplaySelector="c => c.RazonSocial"
+                                     SelectedId="Contenedor.ClienteId"
+                                     OnSelected="ObtenerClienteSeleccionado" /> *@
+                </div>
+                <div class="col-sm-12 col-md-12">
+                   @*  <ListadoGenerico Etiqueta="Navieras"
+                                     TItem="CatNavieras"
+                                     Listado="_navieras"
+                                     IdSelector="n => n.IdCatNaviera"
+                                     DisplaySelector="n => n.RazonSocial"
+                                     SelectedId="Contenedor.Naviera_Id"
+                                     OnSelected="ObtenerNavieraSeleccionada" /> *@
+                </div>
+                <div class="col-sm-12 col-md-12">
+                   @*  <ListadoGenerico Etiqueta="Patios"
+                                     TItem="CatPatio"
+                                     Listado="_patios"
+                                     IdSelector="p => p.IdCatPatios"
+                                     DisplaySelector="p => p.RazonSocial"
+                                     SelectedId="Contenedor.PatioId"
+                                     OnSelected="ObtenerPatioSeleccionado" /> *@
+                </div>
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputText class="form-control" id="floatingInputGrid" type="text" placeholder="BL" @bind-Value="@Contenedor.BL" />
+                        <label for="floatingInputGrid">Bl</label>
+                        <label for="floatingSelectPrivacy">Bl</label>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputText class="form-control" id="floatingInputGrid" type="text" placeholder="Buque" @bind-Value="@Contenedor.Buque" />
+                        <label for="floatingInputGrid">Buque</label>
+                        <label for="floatingSelectPrivacy">Buque</label>
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-4">
+                    <div class="form-floating">
+                        <InputText class="form-control" id="floatingInputGrid" type="text" placeholder="Buque" @bind-Value="@Contenedor.Buque" />
+                        <label for="floatingInputGrid">Buque</label>
+                        <label for="floatingSelectPrivacy">Buque</label>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</EditForm>

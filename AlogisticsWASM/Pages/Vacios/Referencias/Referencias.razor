@@ -1,0 +1,150 @@
+﻿@page "/referencias"
+
+
+@using ALOGModelos.Modelos.Vacios.Peticiones
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<div class="mb-9">
+    <div id="projectSummary" data-list='{"valueNames":["referenciaAlo","referenciaCliente","fechaApertura","cliente","usuario","progreso","estatus","action"],"page":6,"pagination":true}'>
+        @* <div class="row mb-4 gx-6 gy-3 align-items-center mt-10">
+            <div class="col-12">
+                <h2 class="mb-0">Referencias</h2>
+            </div>
+            <div class="col-auto">
+                <a class="btn btn-primary px-5" data-bs-toggle="modal" data-bs-target="#staticBackdrop" @onclick="() => CrearReferencia()">
+                    <i class="fa-solid fa-plus me-2"></i>Crear Referencia
+                </a>
+            </div>
+            <button class="btn btn-primary px-5" data-bs-toggle="modal" data-bs-target="#modalFiltro">Filtrar Referencias</button>
+            <div class="col-12 col-sm-auto">
+                <div class="d-flex align-items-center">
+                    <div class="search-box me-3">
+                        <form class="position-relative">
+                            <input class="form-control search-input search" type="search" placeholder="Buscar referencia" aria-label="Search" />
+                            <span class="fas fa-search search-box-icon"></span>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div> *@
+
+        <div class="d-xl-flex justify-content-between mt-10">
+            <div class="mb-3">
+                <button class="btn btn-primary me-4" type="button" data-bs-toggle="modal" data-bs-target="#modalCreacionEdicion" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent" @onclick="() => CrearReferencia()">
+                    <span class="fas fa-plus me-2"></span>Crear Referencia
+                </button>
+                <button class="btn btn-link text-body px-0">
+                    <span class="fa-solid fa-file-export fs-9 me-2"></span>Exportar
+                </button>
+            </div>
+            <div class="d-flex mb-4">
+                <div class="search-box mx-2">
+                    <form class="position-relative">
+                        @* <input class="form-control search-input search" type="search" placeholder="Buscar por contenedor" aria-label="Search" @bind:get="NumeroContenedorFiltrar" @bind:set="BuscarPorNumeroContenedor" @bind:event="oninput" /> *@
+                        <input class="form-control search-input search" placeholder="Buscar por Ticket" aria-label="Search" @bind:get="TicketFiltrar" @bind:set="BuscarReferenciasPorTicket" @bind:event="oninput" />
+                        <span class="fas fa-search search-box-icon"></span>
+                    </form>
+                </div>
+                <button class="btn px-3 btn-phoenix-secondary" type="button" data-bs-toggle="modal" data-bs-target="#modalFiltro" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                    <span class="fa-solid fa-filter text-primary" data-fa-transform="down-3"></span>
+                </button>
+            </div>
+        </div>
+
+        @if (referencias is null)
+        {
+            <Loading></Loading>
+        }
+
+        else if (referencias.Count() == 0)
+        {
+            <p>No se encontraron datos</p>
+        }
+
+        else {
+            <div class="table-responsive scrollbar">
+                <table class="table fs-9 mb-0 border-top border-translucent">
+                    <thead>
+                        <tr>
+                            <th class="sort white-space-nowrap align-middle ps-0" scope="col" data-sort="projectName" style="width:5%;">TICKET</th>
+                            <th class="sort align-middle ps-3" scope="col" data-sort="projectName" style="width:10%;">RERERENCIA ALO</th>
+                            <th class="sort align-middle ps-3" scope="col" data-sort="assignees" style="width:10%;">TRANSPORTISTA</th>
+                            <th class="sort align-middle ps-3" scope="col" data-sort="start" style="width:10%;">USUARIO TRANSPORTISTA</th>
+                            <th class="sort align-middle ps-3" scope="col" data-sort="deadline" style="width:10%;">FECHA SOLICITUD</th>
+                            <th class="sort align-middle ps-3" scope="col" data-sort="task" style="width:5%;">ESTADO</th>
+                            <th class="sort align-middle text-end" scope="col" style="width:5%;"></th>
+                        </tr>
+                    </thead>
+                    <tbody class="list" id="project-list-table-body">
+                        @foreach (var referencia in ReferenciasFiltradas) {
+                            @if (referencia == null) {
+                                continue;
+                            }
+                            <tr class="position-static">
+                                <td class="align-middle time white-space-nowrap ps-0 projectName py-4">
+                                    <a class="fw-bold fs-8" @onclick="() => ObtenerReferenciaSeleccionada(referencia)">@referencia.Ticket</a>
+                                </td>
+                                <td class="align-middle white-space-nowrap assignees ps-3 py-4">
+                                    <p class="mb-0 fs-9 text-body">@referencia.ReferenciaALO</p>
+                                </td>
+                                <td class="align-middle white-space-nowrap assignees ps-3 py-4">
+                                    <p class="mb-0 fs-9 text-body">@referencia.Transporte_RazonSocial</p>
+                                </td>
+                                <td class="align-middle white-space-nowrap start ps-3 py-4">
+                                    <p class="mb-0 fs-9 text-body">@referencia.Transporte_Usuario</p>
+                                </td>
+                                <td class="align-middle white-space-nowrap deadline ps-3 py-4">
+                                    <p class="mb-0 fs-9 text-body">@referencia.FechaSolicitud</p>
+                                </td>
+                                <td class="align-middle white-space-nowrap task ps-3 py-4">
+                                    <p class="fw-bo text-body fs-9 mb-0">@referencia.EstadoReferencia</p>
+                                </td>
+                                <td class="align-middle text-end white-space-nowrap pe-0 action">
+                                    <div class="btn-reveal-trigger position-static">
+                                        <button class="btn btn-sm dropdown-toggle dropdown-caret-none transition-none btn-reveal fs-10" type="button" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                                            <span class="fas fa-ellipsis-h fs-10"></span>
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-end py-2">
+                                            <a class="dropdown-item" @onclick="() => VerDetalles(referencia)">Ver detalles</a>
+                                            <a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#modalCreacionEdicion" @onclick="() => EditarReferencia(referencia)">Editar</a>
+                                            <div class="dropdown-divider"></div><a class="dropdown-item text-danger" @onclick=@(() => BajaReferencia(referencia))>Eliminar</a>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+       
+        
+        <div class="d-flex flex-wrap align-items-center justify-content-between py-3 pe-0 fs-9 border-bottom border-translucent">
+            <div class="d-flex">
+                <p class="mb-0 d-none d-sm-block me-3 fw-semibold text-body" data-list-info="data-list-info"></p>
+                <a class="fw-semibold" href="#!" data-list-view="*">Ver todo<span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span>
+                </a>
+                <a class="fw-semibold d-none" href="#!" data-list-view="less">Ver menos
+                    <span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span>
+                </a>
+            </div>
+            <div class="d-flex">
+                <button class="page-link" data-list-pagination="prev"><span class="fas fa-chevron-left"></span></button>
+                <ul class="mb-0 pagination"></ul>
+                <button class="page-link pe-0" data-list-pagination="next"><span class="fas fa-chevron-right"></span></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<ModalCreacionEdicion TModel="Referencia"
+                      EstaEditando="@_estaEditando" />
+
+<FormularioReferencia Referencia="@ReferenciaSeleccionada" OnReferenciaCreada="ObtenerReferenciaCreada"/>
+<ModalFiltro 
+    TModel="Referencia"
+    OnFiltrosAplicados="FiltrosAplicados">
+</ModalFiltro>

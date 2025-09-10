@@ -1,0 +1,241 @@
+﻿@page "/recepcion-fotogaleria/{DataRecepcion}"
+@page "/recepcion-fotogaleria"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@using Microsoft.AspNetCore.Authorization
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.Drawing
+@using SixLabors.ImageSharp.Drawing.Processing
+@using SixLabors.ImageSharp.Processing;
+@using SixLabors.ImageSharp.Formats.Jpeg
+@using SixLabors.Fonts
+@using System.Net.Http
+@using System.IO
+@using System.Text.Json
+@using Newtonsoft.Json
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnBack())  />
+    </RadzenColumn>
+    @* <RadzenColumn Size="6" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("ubicacion"))  />
+    </RadzenColumn> *@
+</RadzenRow>
+
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">EVIDENCIA FOTOGRAFICA</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+
+<RadzenStack AlignItems="AlignItems.Center" class="rz-p-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2" 
+        Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">@(_recepcionMercanciaDTO.IdMercancia)</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center align-content-start">
+            ID Mercancía
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+<RadzenStack class="rz-mt-3 rz-p-0 rz-p-md-12">
+    <RadzenCarousel Auto="false" AllowPaging="true" 
+        @ref=carousel PagerOverlay="true"
+        PagerPosition=PagerPosition.Bottom
+        AllowNavigation="false">
+        <Items>
+            @if(monitorServicioFotografico != default(MonitorServicioFotografico))
+            {
+            <RadzenCarouselItem>
+                <RadzenCard class="rz-h-100">
+                    <RadzenImage Path="@monitorServicioFotografico.ArchivoBase?.ContenidoBase64" Style="width: 17rem;" AlternateText="url image" />
+                </RadzenCard>
+            </RadzenCarouselItem>
+            }
+        </Items>
+    </RadzenCarousel>
+    <RadzenCard class="rz-p-4" Variant="Variant.Outlined">
+        <RadzenPager Count="@totalRegistros" PageSize="1" PageChanged="@OnPageChanged" />
+    </RadzenCard>
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenButton Icon="delete" ButtonStyle="ButtonStyle.Primary" Text="Eliminar" Click=@(args => OnEliminarFoto())  />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+
+    [Parameter] public string DataRecepcion { get; set; }
+
+    RadzenCarousel carousel;
+
+    private string captionText = String.Empty;
+
+    private MonitorServicioFotografico monitorServicioFotografico = new MonitorServicioFotografico();
+
+    private string frameUri;
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+    int valTipoFoto = 1;
+
+    int selectedIndex;
+
+    int registrosPorPagina = 1;
+
+    int totalRegistros = 0;
+
+    int numeroDePagina = 1;
+
+    DialogSettings _settings;
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; }
+
+    [Inject] private IServicioFotograficoService? _servicioFotograficoService { get; set; }
+
+    public class DialogSettings
+    {
+        public string Left { get; set; }
+        public string Top { get; set; }
+        public string Width { get; set; }
+        public string Height { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+         if (DataRecepcion != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataRecepcion);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            
+
+            _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+            _recepcionMercanciaDTO =  new RecepcionMercanciaDTO();
+
+            _recepcionMercanciaDTO = JsonConvert.DeserializeObject<RecepcionMercanciaDTO>(decodedString);
+
+            ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+            _consultaRecepcion.Entidad = new ConsultaRecepcion();
+            _consultaRecepcion.Entidad.IdInventario = _recepcionMercanciaDTO.IdInventario;
+
+            
+
+            var _result = await _recepcionService?.ObtenerListaPaginada(_consultaRecepcion);
+
+            if (_result.Success) {
+
+                
+
+                _monitorRecepcionMercancia = _result.Data.Take(1).SingleOrDefault();
+
+                
+
+                await ObtenerDatos(selectedIndex);
+
+            }
+        }
+
+    }
+
+    async Task OnPageChanged(PagerEventArgs args)
+    {
+        selectedIndex = args.PageIndex;
+
+        ObtenerDatos(selectedIndex);
+    }
+
+    async Task ObtenerDatos(int selectedIndex) {
+
+        ConsultaCatalogoBase<ConsultaServicioFotografico> _consulta = new ConsultaCatalogoBase<ConsultaServicioFotografico>();
+        _consulta.Entidad = new ConsultaServicioFotografico();
+
+        numeroDePagina = selectedIndex + 1;
+        _consulta.Entidad.IdInventario = _monitorRecepcionMercancia.IdInventario;
+        //_consulta.Entidad.TipoFoto = TipoFoto.Recepcion;
+        _consulta.NumeroDePagina = numeroDePagina;
+        _consulta.RegistrosPorPagina = registrosPorPagina;
+
+        var _result = await _servicioFotograficoService.ObtenerListaPaginada(_consulta);
+
+        if (_result.Success) {
+
+            monitorServicioFotografico = _result.Data.Take(1).FirstOrDefault();
+
+            ////Console.WriteLine("-> monitorServicioFotografico : " + System.Text.Json.JsonSerializer.Serialize(monitorServicioFotografico));
+
+            totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+            //Console.WriteLine("-> totalRegistros : " + totalRegistros.ToString());
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    async Task OnEliminarFoto() {
+
+        
+
+    }
+
+    async void OnBack() {
+
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+        await SaveStateAsync();
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/recepcion-fotocamara/{base64EncodedData}");
+
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _monitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<MonitorRecepcionMercancia>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<MonitorRecepcionMercancia>(_monitorRecepcionMercancia));
+    }
+
+
+}

@@ -1,0 +1,251 @@
+﻿@page "/contenedor/nuevo"
+
+@using ALOG.Modelos.Modelos.Catalogos
+
+<style>
+    .style-modal-services {
+    min-height: 300px;
+    }
+</style>
+
+
+<RadzenCard class="rz-my-4 rz-shadow-0" Style="border-radius: 10px; width: 600px;">
+    <RadzenRow>
+        <RadzenColumn Size="6">
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Servicio<br />
+                    <strong>@Servicio.catLineaNegocioTarifa.catServicios.Nombre</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+        <RadzenColumn Size="3">
+            @* class="rz-p-12" *@
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Subtotal<br />
+                    <strong>@Servicio.Precio</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+        <RadzenColumn Size="3">
+            <RadzenStack Orientation="Orientation.Vertical">
+                <RadzenText TextStyle="TextStyle.Body1" TextAlign="TextAlign.Left">
+                    Aduana<br />
+                    <strong>@Orden.catAduana.Nombre</strong>
+                </RadzenText>
+            </RadzenStack>
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenCard>
+
+<RadzenCard class="rz-shadow-0">
+    <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Start" Gap="1rem">
+        <RadzenColumn Size="6" class="style-modal-services">
+            <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenColumn Size="6">
+                    <RadzenFormField Text="Contenedor" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox Disabled="@(Contenedor != null)" Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_contenedor.Contenedor" />
+                    </RadzenFormField>
+                </RadzenColumn>
+
+                <RadzenColumn Size="6">
+                    @if (Contenedor == null) {
+                        <RadzenFormField Text="Tipo contenedor" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenAutoComplete FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                            @bind-Value:int="_tipoContenedorSeleccionado.IdCatTipoContenedor"
+                            ValueProperty="@nameof(CatTipoContenedor.IdCatTipoContenedor)"
+                            TextProperty="@nameof(CatTipoContenedor.Nomenclatura)"
+                            Change="OnTipoContenedorSeleccionado"
+                            Data=@_tiposContenedor
+                            Style="width: 100%"/>
+                        </RadzenFormField>
+                    } else {
+                        <RadzenFormField Text="Tipo contenedor" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox @bind-Value="_tipoContenedorSeleccionado.Nomenclatura"
+                            Disabled="@(Contenedor != null)"
+                            aria-label="Default TextBox"
+                            Name="Tipo contenedor"
+                            Style="width: 100%"/>
+                        </RadzenFormField>
+                    }
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenColumn Size="12">
+                    <RadzenFormField Text="Cliente servicio" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenAutoComplete FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        @bind-Value:int="_clienteServicioSeleccionado.IdCatCliente"
+                        ValueProperty="@nameof(CatClientes.IdCatCliente)"
+                        TextProperty="@nameof(CatClientes.RazonSocial)"
+                        Change="@OnClienteServicioSeleccionado"
+                        Style="width: 100%"
+                        Data=@_clientes />
+                    </RadzenFormField>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenColumn Size="12">
+                    <RadzenFormField Text="Cliente facturar" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenAutoComplete FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                        @bind-Value:int=@_clienteFacturarSeleccionado.IdCatCliente
+                        ValueProperty="@nameof(CatClientes.IdCatCliente)"
+                        TextProperty="@nameof(CatClientes.RazonSocial)"
+                        Change="@OnClienteFacturarSeleccionado"
+                        Data=@_clientesFacturar
+                        Style="width: 100%" />
+                    </RadzenFormField>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenColumn Size="6">
+                    <RadzenFormField Text="Referencia cliente" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox Disabled="@(Contenedor != null)" Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_contenedor.ReferenciaCliente" />
+                    </RadzenFormField>
+                </RadzenColumn>
+                <RadzenColumn Size="6">
+                    <RadzenFormField Text="Referencia cliente" Variant="Variant.Outlined" Style="width: 100%;">
+                        <RadzenTextBox Disabled="@(Contenedor != null)" Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_servicio.ReferenciaClienteFacturar" />
+                    </RadzenFormField>
+                </RadzenColumn>
+            </RadzenRow>
+            <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenColumn Size="12">
+                    @if (Contenedor == null) {
+                        <RadzenFormField Text="Patio" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenAutoComplete FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                @bind-Value:int=@_patioSeleccionado.IdCatPatios
+                                                TextProperty="@nameof(CatPatios.RazonSocial)"
+                                                ValueProperty="@nameof(CatPatios.IdCatPatios)"
+                                                Change="@OnPatioSeleccionado"
+                                                Style="width: 100%"
+                                                Data=@_patios/>
+                        </RadzenFormField>
+                    }else {
+                        <RadzenFormField Text="Patio" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox @bind-Value="_patioSeleccionado.RazonSocial"
+                                           Disabled="@(Contenedor != null)"
+                                           aria-label="Default TextBox"
+                                           Style="width: 100%"
+                                           Name="contenedor"/>
+                        </RadzenFormField>
+                    }
+                </RadzenColumn>
+            </RadzenRow>
+        </RadzenColumn>
+        <RadzenColumn Size="6" class="style-modal-services">
+            @if (Servicio?.catLineaNegocioTarifa?.catServicios?.IdCatServicio == 1) {
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Número de BL" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_servicio.NumeroBL" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                    <RadzenColumn Size="6">
+                        <RadzenFormField Text="Número de viaje" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_servicio.NumeroViaje" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                </RadzenRow>
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="Nombre del buque" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_servicio.NombreBuque" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="Naviera" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenAutoComplete FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                @bind-Value:int=@_navieraSeleccionada.IdCatNaviera
+                                                ValueProperty="@nameof(CatNavieras.IdCatNaviera)"
+                                                TextProperty="@nameof(CatNavieras.RazonSocial)"
+                                                Change="@OnNavieraSeleccionada"
+                                                Data=@_navieras
+                                                Style="width: 100%" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="Transportista" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenAutoComplete FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                @bind-Value:int=@_transportistaSeleccionado.IdCatTransportista
+                                                ValueProperty="@nameof(CatTransportistas.IdCatTransportista)"
+                                                TextProperty="@nameof(CatTransportistas.RazonSocial)"
+                                                Change="@OnTransportistaSeleccionado"
+                                                Data=@_transportistas
+                                                Style="width: 100%" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                </RadzenRow>
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn Size="12">
+                        <RadzenFormField Text="Email transportista" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_servicio.TransporteEmailContacto" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                </RadzenRow>
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn Size="12" Style="margin-top: 0.7rem;">
+                        <RadzenUpload @ref="_uploadExpediente"
+                                      Change="@((args) => OnDocumentoCargado(args))"
+                                      ChooseText="Cargar documento BL"
+                                      Accept="application/pdf"
+                                      Multiple="false"
+                                      Auto="true"
+                                      Style="width: 100%;"/>
+                    </RadzenColumn>
+                </RadzenRow>
+            }
+
+            @if (Servicio?.catLineaNegocioTarifa?.catServicios?.IdCatServicio == 2) {
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn SizeMD="6" SizeLG="6">
+                        <RadzenFormField Text="Patio" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenAutoComplete InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Company Name" }})"
+                                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                                TextProperty="@nameof(CatPatios.RazonSocial)"
+                                                ValueProperty="@nameof(CatPatios.IdCatPatios)"
+                                                Data=@_patios
+                                                Change="@OnPatioSeleccionado"
+                                                @bind-Value:int=@_patioSeleccionado.IdCatPatios
+                                                Style="width: 100%"
+                                                Name="CatClienteId2" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                    <RadzenColumn SizeMD="6" SizeLG="6">
+                        <RadzenFormField Text="Folio de maniobra" Variant="Variant.Outlined" Style="width: 100%;">
+                            <RadzenTextBox Style="width: 100%" aria-label="Default TextBox" Name="contenedor" @bind-Value="_servicio.FolioManiobra" />
+                        </RadzenFormField>
+                    </RadzenColumn>
+
+                </RadzenRow>
+                <RadzenRow JustifyContent="JustifyContent.Left" AlignItems="AlignItems.Center" Gap="1rem">
+                    <RadzenColumn Size="12" Style="margin-top: 0.7rem;">
+                        <RadzenUpload @ref="_uploadExpediente"
+                                      Change="@((args) => OnDocumentoCargado(args))"
+                                      ChooseText="Cargar EIR de lleno"
+                                      Accept="application/pdf"
+                                      Multiple="false"
+                                      Auto="true"
+                                      Style="width: 100%;"/>
+                    </RadzenColumn>
+                </RadzenRow>
+            }
+        </RadzenColumn>
+    </RadzenRow>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="2rem" class="rz-p-4">
+        <RadzenButton Text="Guardar" IsBusy="_busy" Click="GuardarAsync" ButtonStyle="ButtonStyle.Primary" />
+        <RadzenButton Text="Cancelar" Click="Cancelar" ButtonStyle="ButtonStyle.Secondary" />
+    </RadzenStack>
+
+</RadzenCard>

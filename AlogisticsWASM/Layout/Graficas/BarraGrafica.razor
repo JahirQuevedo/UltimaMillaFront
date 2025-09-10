@@ -1,0 +1,82 @@
+﻿@using ALOG.Modelos.Modelos.Graficas
+@inject IJSRuntime JS
+
+<div id="barChart" style="width: 100%; height: 400px;"></div>
+
+@code {
+
+    private EChartOption chartOptions;
+    IJSObjectReference modulo;
+    [Parameter] public List<DataPoint> dataPoints { get; set; } = new List<DataPoint>();
+    private List<string> servicios = new List<string>();
+    private int[] serviciosSinFacturar = null;
+    private int[] serviciosFacturados = null;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        if (firstRender) {
+            // await ConstruirGrafica();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync() {
+        if (dataPoints.Count() > 0) {
+            serviciosSinFacturar = new int[dataPoints.Count()];
+            serviciosFacturados = new int[dataPoints.Count()];
+            int i = 0;
+            foreach (var data in dataPoints) {
+                servicios.Add(data.Name);
+                serviciosSinFacturar[i] = data.Value;
+                serviciosFacturados[i] = 0;
+                i++;
+            }
+            await ConstruirGrafica();
+        }
+    }
+
+    private async Task ConstruirGrafica() {
+
+        modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./assets/js/common.js");
+
+        var chartOptions = new {
+            title = new {
+                text = ""
+            },
+            tooltip = new {
+                trigger = "axis",
+                axisPointer = new {
+                    type = "shadow"
+                }
+            },
+            legend = new { },
+            grid = new {
+                left = "3%",
+                right = "4%",
+                bottom = "3%",
+                containLabel = true
+            },
+            xAxis = new {
+                type = "value",
+                boundaryGap = new[] { 0, 0.01 }
+            },
+            yAxis = new {
+                type = "category",
+                data = servicios
+            },
+            series = new[] {
+            new {
+                name = "Servicios sin facturar",
+                type = "bar",
+                data = serviciosSinFacturar
+            },
+            new {
+            name = "Servicios facturados",
+              type = "bar",
+              data = serviciosFacturados
+                }
+            }
+        };
+
+        await modulo.InvokeVoidAsync("initializeEChart", "barChart", chartOptions);
+    }
+
+}

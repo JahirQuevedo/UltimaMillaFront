@@ -1,0 +1,1876 @@
+﻿@page "/referencia-crear/{IdReferencia:int}"
+@page "/referencia-crear"
+
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using ALOGRepositorios.Services.Catalogos.ICatalogos
+@using AlogisticsWASM.Pages.AlogisticWMS.Programacion.Servicio
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime;
+
+@inject NavigationManager navigationManager
+@inject DialogService DialogService
+@inject DialogService DialogServiceConfirm
+@inject DialogService DialogServiceBuscarRerencia
+
+@inject NotificationService NotificationService
+@attribute [Authorize]
+
+<script src="resources/js/general.js"></script>
+
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+
+    .rz-button {
+        text-transform: none !important;
+    }
+
+    .editable-list-container {
+        padding: 20px;
+        border: 1px solid #eee;
+        border-radius: 4px;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .add-item-section {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .item-content {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+    }
+
+    .item-id {
+        font-size: 0.8rem;
+        color: #666;
+    }
+
+    .item-text {
+        margin-top: 0.2rem;
+    }
+
+    .item-actions {
+        display: flex;
+        margin-left: 1rem;
+    }
+
+    .edit-form {
+        display: flex;
+        align-items: center;
+        width: 100%;
+    }
+
+    .edit-actions {
+        display: flex;
+        margin-left: 1rem;
+    }
+
+    .empty-list-message {
+        display: flex;
+        align-items: center;
+        color: #666;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-radius: 4px;
+    }
+
+    .ml-1 {
+        margin-left: 0.25rem;
+    }
+
+    .ml-2 {
+        margin-left: 0.5rem;
+    }
+
+    .mt-3 {
+        margin-top: 1rem;
+    }
+
+    .mr-2 {
+        margin-right: 0.5rem;
+    }
+
+</style>
+
+<div class="content mt-10">
+    @* 
+    <h3>Referencia</h3>
+    <RadzenButton Click=@(args => OnClick("Primary button")) Text="Primary" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />
+     *@
+    @if (isLoading)
+    {
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.Center" Wrap="FlexWrap.Wrap" class="rz-m-12" Gap="2rem">           
+            <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large">
+                <Template>Guardando</Template>
+            </RadzenProgressBarCircular>
+        </RadzenStack>
+    }else{
+    <RadzenTemplateForm Data=@referenciaSelected Submit="@((MonitorReferencia args) => { OnSubmit(args); })">
+    <div class="row g-3 flex-between-end mb-3">
+        <div class="col-6">
+            <h2 class="mb-2">Referencia</h2>
+            @* <h5 class="text-700 fw-semi-bold">Orders placed across your store</h5> *@
+        </div>
+        <div class="col-6 text-end">
+            <RadzenButton Click=@(args => EliminarReferencia()) Text="Eliminar" Icon="delete" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+            <RadzenButton Click=@(() => CancelarRegistroReferencia()) Text="Cerrar" Icon="cancel" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+            <RadzenButton Click=@(() => OpenBuscarReferencia()) Text="Buscar Referencia..." Icon="search" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />
+            <RadzenButton Text="Guardar" Icon="save" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit" class="rz-background-color-danger" />
+        </div>
+        <div class="col-12">
+            @*  *@
+            <div class="row">
+                @*                 
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="T. Mercancía" Component="REF_TIPO_MERCANCIA" />
+                    <RadzenDropDown @bind-Value=@valTipoOperacion ValueProperty="Key" 
+                                                Placeholder="Seleccione Tipo de Mercancía"
+                                                TextProperty="Value" Data=@listTipoMercancia Style="width: 100%; max-width: 400px;" 
+                                                Name="REF_TIPO_MERCANCIA" />
+                </div> *@
+
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="T. Operación" Component="REF_TIPO_OPERACION" />
+                    <RadzenDropDown @bind-Value=@valTipoOperacion ValueProperty="Key" 
+                                                Placeholder="Seleccione la Operación"
+                                                Disabled=@disabledTipoOperacion
+                                                TextProperty="Value" Data=@listTipoOperacion 
+                                                Style="width: 100%;" 
+                                                Name="REF_TIPO_OPERACION" />
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Fecha Captura" Component="REF_FECHA_CAPTURA" />
+                    <RadzenDatePicker @bind-Value="referenciaSelected.FechaAlta" ParseInput="@ParseDate" Name="REF_FECHA_CAPTURA" 
+                    Style="width: 100%;" Disabled="@disabledFCapturaReferencia"/>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Aduana de Despacho" Component="REF_ADUANA_SECCION"/>
+                                        <RadzenAutoComplete @bind-Value=@referenciaSelected.AduanaSeccion Data=@listaAduanaSeccion
+                                            Name="REF_ADUANA_SECCION" Change=@OnChangeAduanaSeccion class="rz-text-uppercase"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" 
+                                            LoadData=@OnLoadDataAduanaSeccion Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Aduana Sección" }})">
+                                                <Template Context="respListarCoincidenciasDTO">
+                                                    <b>@respListarCoincidenciasDTO.Acronimo:</b> @respListarCoincidenciasDTO.RazonSocial
+                                                </Template>
+                                        </RadzenAutoComplete>
+                </div>
+            </div>
+            @*  *@
+        </div>
+    </div>
+    <div class="row g-3 flex-between-end mb-5">
+        <div class="col-12">
+             <div class="row">
+                <div class="col-sm-6 col-md-4">
+                   <RadzenLabel Text="Folio Referencia" Component="REF_FOLIO_REFERENCIA" />
+                   <RadzenTextBox Style="width: 100%;" Name="REF_FOLIO_REFERENCIA" 
+                    @bind-Value="FolioReferencia"
+                    Disabled="@disableFolioReferencia" />
+                </div>
+                
+                <div class="col-sm-6 col-md-4">
+                    <RadzenLabel Text="Estado" Component="REF_ESTADO_REFERENCIA" />
+                    <RadzenDropDown @bind-Value=@valEstadoReferencia ValueProperty="Key" 
+                                                Placeholder="Estado de la Referencia"
+                                                TextProperty="Value" Data=@listEstadoReferencia Style="width: 100%;" 
+                                                Name="REF_ESTADO_REFERENCIA"
+                                                Disabled="@disabledEdoReferencia" />
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    &nbsp;
+                </div>
+            </div>
+        </div>  
+    </div>
+    <div class="row g-3 flex-between-end mb-5">
+        <div class="col-12">
+            <RadzenTabs Change=@OnChangeTabReferencia SelectedIndex="0">
+                    <Tabs>
+                        <RadzenTabsItem Text="Detalle Referencia">
+                            <RadzenStack>
+                                <div class="row">
+                                     <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Referencia Buque" Component="REF_VIAJE_BUQUE"/>
+                                        <RadzenAutoComplete @bind-Value=@referenciaSelected.FolioViaje Data=@listaReferenciaBuque 
+                                            Name="REF_VIAJE_BUQUE" Change=@OnChangeReferenciaBuque class="rz-text-uppercase"
+                                            ValueProperty="@nameof(MonitorViaje.IdViaje)"
+                                            TextProperty="@nameof(MonitorViaje.FolioViaje)" LoadData=@OnLoadDataReferenciaBuque Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Referencia Buque" }})">
+                                                <Template Context="monitorViaje">
+                                                    <b>Referencia Buque:</b> @monitorViaje.ReferenciaBuque
+                                                    <br />
+                                                    <b>Folio Viaje:</b> @monitorViaje.FolioViaje
+                                                    <br />
+                                                    <b>Buque:</b> @monitorViaje.Barco.Nombre
+                                                </Template>
+                                        </RadzenAutoComplete>
+                                    </div>
+                                    <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Manifiesto Buque" Component="REF_MANIFIESTO_BUQUE"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_MANIFIESTO_BUQUE" />
+                                    </div>
+                                    <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Fecha Entrada" Component="REF_FECHA_ENTRADA" />
+                                        <RadzenDatePicker @bind-Value="referenciaSelected.FechaEntrada" Style="width: 100%;" ShowTime="true" ShowSeconds="true" HoursStep="1.5" MinutesStep="5" SecondsStep="10" DateFormat="dd/MM/yyyy HH:mm" Name="REF_FECHA_ENTRADA" />
+                                    </div>
+                                    
+                                </div>
+                                <div class="row">
+                                    @* <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Puerto Origen/Destino" Component="REF_PUERTO_ORIGENDESTINO"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_PUERTO_ORIGENDESTINO" />
+                                    </div> *@
+                                    <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Pais Origen/Destino" Component="REF_PAIS"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_PAIS" />
+                                    </div>
+                                    <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Terminal Origen" Component="REF_TERMINAL_ORIGEN"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_TERMINAL_ORIGEN" />
+                                    </div>                                    
+                                </div>
+                                @* <div class="row">
+                                    <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Booking BL" Component="REF_BOOKING_BL"/>
+                                        <RadzenTextBox Style="width: 100%" Name="REF_BOOKING_BL" />
+                                    </div>  
+                                    <div class="col-sm-2 col-md-2 align-content-end">
+                                        <RadzenButton Click=@(args => OnClick("Agregar button")) Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                                    </div>                           
+                                </div> *@
+                                <div class="row">
+                                    <div class="col-sm-6 col-md-4">
+                                        <RadzenLabel Text="Booking BL" Component="REF_BOOKING_BL"/>
+                                        <div class="editable-list-container">
+
+                                            <div class="add-item-section">
+                                                <RadzenTextBox @bind-Value="@newItemText" Placeholder="Ingrese el Booking BL" style="width: 250px;" Disabled="@(referenciaSelected.IdReferencia.Equals(0))" />
+                                                <RadzenButton Click="@AddItem" Text="Agregar" Icon="add" ButtonStyle="ButtonStyle.Primary" class="ml-2" Disabled="@(!CanAddItem)" />
+                                            </div>
+
+                                        </div>
+                                            @if (listaReferenciaBookingBLs.Any())
+                                            {
+                                                <RadzenDataList Data="@listaReferenciaBookingBLs" class="mt-3" Style="max-height: 400px; overflow-y: auto;">
+                                                    <Template Context="monitorReferenciaBookingBL">
+                                                        <div class="list-item">
+
+                                                            @if (itemBeingEdited?.BookingBl == monitorReferenciaBookingBL.BookingBl)
+                                                            {
+                                                                <div class="edit-form">
+                                                                    <RadzenTextBox @bind-Value="@editItemText" Style="width: 250px; margin-left: 0.5rem;" />
+                                                                    <div class="edit-actions">
+                                                                        <RadzenButton Click="@(() => SaveEdit(monitorReferenciaBookingBL))" 
+                                                                                    Icon="save" 
+                                                                                    ButtonStyle="ButtonStyle.Success" 
+                                                                                    Size="ButtonSize.Small" />
+                                                                        <RadzenButton Click="@CancelEdit" 
+                                                                                    Icon="cancel" 
+                                                                                    ButtonStyle="ButtonStyle.Secondary" 
+                                                                                    Size="ButtonSize.Small" 
+                                                                                    class="ml-2" />
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            else
+                                                            {
+                                                                <div class="item-content">
+                                                                    <span class="item-text">@monitorReferenciaBookingBL.BookingBl</span>
+                                                                </div>
+                                                                <div class="item-actions">
+                                                                    <RadzenButton Click="@(() => StartEdit(monitorReferenciaBookingBL))"
+                                                                                Icon="edit" 
+                                                                                ButtonStyle="ButtonStyle.Info" 
+                                                                                Size="ButtonSize.Small" />
+                                                                    <RadzenButton Click="@(() => RemoveItem(monitorReferenciaBookingBL))" 
+                                                                                
+                                                                                Icon="delete" 
+                                                                                ButtonStyle="ButtonStyle.Danger" 
+                                                                                Size="ButtonSize.Small" 
+                                                                                class="ml-2" />
+                                                                </div>
+                                                            }
+                                                        </div>
+                                                    </Template>
+                                                </RadzenDataList>
+                                            }
+                                            else
+                                            {
+                                                <div class="empty-list-message mt-3">
+                                                    <RadzenIcon Icon="info" class="mr-2" />
+                                                    <span>La lista está vacía. Agrega el Booking BL de la Referencia.</span>
+                                                </div>
+                                            }
+
+                                        </div>
+                                </div>
+                            </RadzenStack>
+                        </RadzenTabsItem>
+                        <RadzenTabsItem Text="Mercancía">
+                                <div class="row">
+                                    <div class="col-sm-12 col-md-12">
+                                        <RadzenSplitButton Click=@(args => OnClickSplitButton(args, "SplitButton with text and icon")) Text="Acciones Inventario" 
+                                                ButtonStyle="ButtonStyle.Danger"
+                                                Disabled="@disabledBtnInventario"
+                                                Icon="lists">
+                                            <ChildContent>
+                                                <RadzenSplitButtonItem Text="Agregar Mercancía" Value="1" Icon="account_box" />
+                                                <RadzenSplitButtonItem Text="Agregar Pretarja" Value="2" Icon="account_balance_wallet" />
+                                            </ChildContent>
+                                        </RadzenSplitButton>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenLabel Text="Mercancias" Component="REF_MERCANCIAS"/>
+                                        <RadzenTextArea Style="width: 100%; background-color: antiquewhite;" aria-label="TextArea"
+                                            @bind-Value="referenciaSelected.Mercancias"
+                                         Name="REF_MERCANCIAS" />
+                                    </div>                                    
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenLabel Text="Observaciones" Component="REF_OBSERVACIONES"/>
+                                        <RadzenTextArea Style="width: 100%" aria-label="TextArea" 
+                                        @bind-Value="referenciaSelected.Observaciones"
+                                        Name="REF_OBSERVACIONES" />
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenFieldset Text="Inicial">
+                                            <div class="row">
+                                                <div class="col-sm-6 col-md-6">
+                                                    <RadzenLabel Text="Cantidad" Component="REF_BULTO_INICIAL"/>
+                                                    <RadzenNumeric Name="REF_BULTO_INICIAL" TValue="int" Style="width: 100%; background-color: antiquewhite;" ShowUpDown="false" @bind-Value="referenciaSelected.BultosInical" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "enter value" }})" />
+                                                </div>                                    
+                                                <div class="col-sm-6 col-md-6">
+                                                    <RadzenLabel Text="Peso (Kg)" Component="REF_PESO_INICIAL"/>
+                                                    <RadzenNumeric Name="REF_PESO_INICIAL" TValue="decimal" Format="#.000" Style="width: 100%; background-color: antiquewhite;" ShowUpDown="false" @bind-Value="referenciaSelected.PesoInicial" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "enter value" }})" />
+                                                </div>
+                                            </div>
+                                        </RadzenFieldset>
+                                    </div>
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenFieldset Text="Final">
+                                            <div class="row">
+                                                <div class="col-sm-6 col-md-6">
+                                                    <RadzenLabel Text="Cantidad" Component="REF_BULTO_FINAL"/>
+                                                    <RadzenNumeric Name="REF_BULTO_FINAL" Disabled="@disabledCompentReferencia" TValue="int" Style="width: 100%; background-color: antiquewhite;" ShowUpDown="false" @bind-Value="referenciaSelected.BultosFinal" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "enter value" }})" />
+                                                </div>                                    
+                                                <div class="col-sm-6 col-md-6">
+                                                    <RadzenLabel Text="Peso" Component="REF_PESO_FINAL"/>
+                                                    <RadzenNumeric Name="REF_PESO_FINAL" Disabled="@disabledCompentReferencia" TValue="decimal" Style="width: 100%; background-color: antiquewhite;" Format="#.000" ShowUpDown="false" @bind-Value="referenciaSelected.PesoFinal" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "enter value" }})" />
+                                                </div>
+                                            </div>
+                                        </RadzenFieldset>
+                                    </div>
+                                </div>
+                        </RadzenTabsItem>
+                        <RadzenTabsItem Text="Información Administrativa">
+                            <RadzenStack>
+                                <div class="row">
+                                    @* <div class="col-sm-6 col-md-2">
+                                        <RadzenLabel Text="Clave" Component="REF_CLAVE_CLIENTE"/>
+                                        <RadzenTextBox Style="width: 100%" Name="REF_CLAVE_CLIENTE" />
+                                    </div> *@
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenLabel Text="Cliente" Component="REF_RAZONSOCIAL_CLIENTE"/>
+                                        <RadzenAutoComplete @bind-Value=@referenciaSelected.Cliente Data=@listaCliente
+                                            Name="REF_RAZONSOCIAL_CLIENTE" Change=@OnChangeCliente class="rz-text-uppercase"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataCliente Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Cliente" }})" />
+                                    </div>                                    
+                                </div>
+                                <div class="row">
+                                    @* <div class="col-sm-6 col-md-2">
+                                        <RadzenLabel Text="" Component="REF_CLAVE_FACTURARA"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_CLAVE_FACTURARA" />
+                                    </div> *@
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenLabel Text="Facturar A" Component="REF_RAZONSOCIAL_FACTURARA"/>
+                                        <RadzenAutoComplete @bind-Value=@referenciaSelected.FacturarA Data=@listaFacturarA
+                                            Name="REF_RAZONSOCIAL_FACTURARA" Change=@OnChangeFacturarA class="rz-text-uppercase"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataFacturarA Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Facturar A" }})" />
+                                    </div>                                    
+                                </div>
+                                <div class="row">
+                                    @* <div class="col-sm-6 col-md-2">
+                                        <RadzenLabel Text="" Component="REF_CLAVE_PROVEEDOR"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_CLAVE_PROVEEDOR" />
+                                    </div> *@
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenLabel Text="Proveedor / Destinatario" Component="REF_RAZONSOCIAL_PROVEEDOR"/>
+                                        <RadzenAutoComplete @bind-Value=@referenciaSelected.ProveedorDest Data=@listaProveedorDestinatario
+                                            Name="REF_RAZONSOCIAL_PROVEEDOR" Change=@OnChangeProveedorDestinatario class="rz-text-uppercase"
+                                            ValueProperty="@nameof(RespListarCoincidenciasDTO.Id)"
+                                            TextProperty="@nameof(RespListarCoincidenciasDTO.RazonSocial)" LoadData=@OnLoadDataProveedorDestinatario Style="width: 100%; text-transform: capitalize;" 
+                                            InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Proveedor / Destinatario" }})" />
+                                    </div>                                    
+                                </div>
+                                <div class="row">
+                                    @* <div class="col-sm-6 col-md-2">
+                                        <RadzenLabel Text="" Component="REF_CLAVE_IMPOEXPO"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_CLAVE_IMPOEXPO" />
+                                    </div> *@
+                                    <div class="col-sm-6 col-md-6">
+                                        <RadzenLabel Text="Importador / Exportador" Component="REF_RAZONSOCIAL_IMPOEXPO"/>
+                                        <RadzenTextBox Style="width: 100%;" Name="REF_RAZONSOCIAL_IMPOEXPO" />
+                                    </div>                                    
+                                </div>
+                            </RadzenStack>
+                        </RadzenTabsItem>
+                        <RadzenTabsItem Text="Inventario">
+                            <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+                                <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                                    <RadzenColumn Size="2" class="text-start">
+                                    <RadzenSplitButton Click=@(args => OnClickSplitButtonInventario(args, "Acciones Servicios")) Text="Acciones" 
+                                            ButtonStyle="ButtonStyle.Danger"
+                                            Disabled="@disabledBtnInventario"
+                                            Icon="lists">
+                                        <ChildContent>
+                                            <RadzenSplitButtonItem Text="Agregar Servicio Tarja" Value="1" Icon="home_repair_service" />
+                                             <RadzenSplitButtonItem Text="Agregar Servicio Partida" Value="2" Icon="home_repair_service" />
+                                        </ChildContent>
+                                    </RadzenSplitButton>
+                                    </RadzenColumn>
+                                    <RadzenColumn Size="10" class="text-start align-content-center">
+                                        @if (!totalRegistrosInventario.Equals(0)) {
+                                            <RadzenText TextStyle="TextStyle.H5">No. Tarja (@totalRegistrosInventario)</RadzenText>
+                                        }
+                                    </RadzenColumn>
+                                </RadzenRow>
+                            </RadzenStack>
+                            <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.Center" Style="height: 100%;">
+                                                             
+                                <RadzenDataGrid class="rz-p-4"
+                                            @ref="gridTarjaInventario"
+                                            Count="@totalRegistrosInventario" PageSize="@registrosPorPaginaInventario" ShowPagingSummary="true" 
+                                            SelectionMode="DataGridSelectionMode.Multiple"
+                                            PagerHorizontalAlign="HorizontalAlign.Left"
+                                            @bind-Value=@selectedTarjaInventario
+                                            style="border-radius:7px;"
+                                            AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                                            FilterPopupRenderMode="PopupRenderMode.OnDemand" 
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            Data="@(listaMonitorTarjasInventario)" LoadData="@ObtenerDatosInventario"  
+                                            IsLoading=@isLoadingInventario ColumnWidth="200px" 
+                                            TItem="MonitorTarja"
+                                            RowExpand="RowExpandTarjaInventario"
+                                            RowRender="@RowRenderTarjaInventario"
+                                            ExpandMode="DataGridExpandMode.Single"
+                                            Density="Density.Compact" AllowAlternatingRows="false">
+                                    @* ----------------------------------------------------------------------------------------------------------- *@
+                                    <Template Context="monitorTarja">
+                                        <RadzenDataGrid AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                                            style="border-radius:7px; width: 100%;"
+                                            @ref="gridMonitorPartidaInventario"
+                                            PagerHorizontalAlign="HorizontalAlign.Left"
+                                            SelectionMode="DataGridSelectionMode.Multiple"
+                                            AllowColumnResize="true"
+                                            ColumnWidth="200px"
+                                            Count="@totalRegistrosPartidaInventario" 
+                                            PageSize="@registrosPorPaginaPartidaInventario" ShowPagingSummary="true" 
+                                            LoadData="@ObtenerDatosTarjaInventario"
+                                            @bind-Value=@selectedPartidaInventario
+                                            Data="@listaMonitorPartidaInventario">
+                                            <Columns>
+                                                <RadzenDataGridColumn Width="35px" Sortable="false" Filterable="false"  Frozen="true">
+                                                    <HeaderTemplate>
+                                                        <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                                                        Value="@(selectedPartidaInventario == null || selectedPartidaInventario?.Any() != true ? false : !listaMonitorPartidaInventario.All(i => selectedPartidaInventario.Contains(i)) ? null : listaMonitorPartidaInventario.Any(i => selectedPartidaInventario.Contains(i)))"
+                                                        Change="@(args => selectedPartidaInventario = args == true ? listaMonitorPartidaInventario.ToList() : null)" />
+                                                    </HeaderTemplate>
+                                                    <Template Context="data">
+                                                        <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedPartidaInventario != null && selectedPartidaInventario.Contains(data))" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                                                            TValue="bool" Change=@(args => { if(!allowRowSelectPartidaInventarioOnRowClick) { gridMonitorPartidaInventario.SelectRow(data); }}) />
+                                                    </Template>
+                                                </RadzenDataGridColumn>
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.NumeroPartida)" Title="#Partida" Width="80px" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Marcas)" Title="Marcas" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Numeros)" Title="Números" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Mercancia)" Title="Mercancía" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.Estadias)" Title="Estadías" />
+                                                <RadzenDataGridColumn Title="#Servicios" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.BultosInicial)" Title="Cantidad" />
+                                                <RadzenDataGridColumn Property="@nameof(MonitorPartida.PesoInicial)" Title="Peso" />
+                                                <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Frozen="false" 
+                                                    FrozenPosition="FrozenColumnPosition.Right" Width="80px">
+                                                <Template Context="data">
+                                                    <RadzenButton Icon="home_repair_service" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                                        @onclick:stopPropagation="true">
+                                                    </RadzenButton>
+                                                </Template>
+                                                </RadzenDataGridColumn>
+                                            </Columns>
+                                        </RadzenDataGrid>
+                                    </Template>
+                                    @* ----------------------------------------------------------------------------------------------------------- *@
+                                    <Columns>
+                                        
+                                        <RadzenDataGridColumn Width="60px" Sortable="false" Filterable="false">
+                                            <HeaderTemplate>
+                                                <RadzenCheckBox TabIndex="-1" TriState="false" TValue="bool?" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select all items" }})"
+                                                Value="@(selectedTarjaInventario == null || selectedTarjaInventario?.Any() != true ? false : !listaMonitorTarjasInventario.All(i => selectedTarjaInventario.Contains(i)) ? null : listaMonitorTarjasInventario.Any(i => selectedTarjaInventario.Contains(i)))"
+                                                Change="@(args => selectedTarjaInventario = args == true ? listaMonitorTarjasInventario.ToList() : null)" />
+                                            </HeaderTemplate>
+                                            <Template Context="data">
+                                                <RadzenCheckBox TabIndex="-1" TriState="false" Value="@(selectedTarjaInventario != null && selectedTarjaInventario.Contains(data))" InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select item" }})"
+                                                    TValue="bool" Change=@(args => { if(!allowRowSelectOnRowClick) { gridTarjaInventario.SelectRow(data); }}) />
+                                            </Template>
+                                        </RadzenDataGridColumn>
+                                        
+                                        @* <RadzenDataGridColumn Property="@nameof(MonitorTarja.ClaveReferencia)" Title="Tarja" /> *@
+                                        <RadzenDataGridColumn Width="160px" Property="FolioTarja" Title="Tarja">
+                                            <Template Context="dataTarja">
+                                                <RadzenButton ButtonStyle="ButtonStyle.Info" Variant="Variant.Flat" Shade="Shade.Lighter" Icon="info" class="rz-m-1" 
+                                                Click=@(() => OpenaTarjaReferencia(dataTarja)) Text="@dataTarja.ClaveReferencia" />
+                                            </Template>
+                                        </RadzenDataGridColumn>
+
+                                        <RadzenDataGridColumn Title="Tipo de Servicio" Filterable="false">
+                                            <Template Context="monitorTarja">
+                                                 @(obtenerTipoServicio(monitorTarja.TipoServicio))
+                                            </Template>
+                                        </RadzenDataGridColumn>
+                                        @* <RadzenDataGridColumn Property="@nameof(MonitorTarja.Estado)" Title="Estado" /> *@
+                                        <RadzenDataGridColumn Title="Estado" Width="100px" Filterable="true" Property="@nameof(MonitorTarja.Estado)">
+                                            <Template Context="monitorTarja">
+                                                <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleEstadoTarja(monitorTarja.Estado)" Text="@(monitorTarja.Estado.ToString())" />
+                                            </Template>
+                                        </RadzenDataGridColumn>
+                                        <RadzenDataGridColumn Property="@nameof(MonitorTarja.CantidadServicios)" Title="# Servicios" />
+                                        <RadzenDataGridColumn Property="@nameof(MonitorTarja.NumeroPartidas)" Title="Partidas" />
+                                        <RadzenDataGridColumn Property="@nameof(MonitorTarja.TotalPeso)" Title="Peso" />
+                                        <RadzenDataGridColumn Property="@nameof(MonitorTarja.TotalPesoSaldo)" Title="Peso (Saldo)" />
+                                        <RadzenDataGridColumn Property="@nameof(MonitorTarja.ZonaAlmacen)" Title="Área" />
+                                        @* <RadzenDataGridColumn Title="Fecha Captura" Filterable="false">
+                                            <Template Context="monitorTarja">
+                                                @(monitorTarja.FechaAlta == DateTime.MinValue ? "" : monitorTarja.FechaAlta.ToString())
+                                            </Template>
+                                        </RadzenDataGridColumn> *@
+                                        <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Frozen="false" 
+                                        FrozenPosition="FrozenColumnPosition.Right" Width="80px">
+                                                <Template Context="data">
+                                                    <RadzenButton Icon="home_repair_service" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                                        @onclick:stopPropagation="true">
+                                                    </RadzenButton>
+                                                </Template>
+                                            </RadzenDataGridColumn>
+                                    </Columns>
+                                </RadzenDataGrid>
+                                 
+                            </RadzenStack>
+                        </RadzenTabsItem>  
+                        <RadzenTabsItem Text="Servicios">
+                            <VistaListadoFoliosServicio MonitorReferenciaSelected="@referenciaSelected" />
+                        </RadzenTabsItem>      
+                    </Tabs>
+                </RadzenTabs>
+        </div>
+    </div>
+    
+    @* <div class="row g-3 flex-between-end mb-5">
+        <div class="col-12">
+             <div class="row">
+                <div class="col-sm-6 col-md-4">
+                    &nbsp;
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    &nbsp;
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    &nbsp;
+                </div>
+            </div>
+        </div>  
+    </div> *@
+    </RadzenTemplateForm>
+    }
+</div>
+
+@code {
+
+    [Parameter] public int? IdReferencia { get; set; }
+
+    MonitorReferencia referenciaSelected = new MonitorReferencia();
+
+    DialogSettings _settings;
+
+    DateTime? valFechaEntrada = DateTime.Now;
+
+    string FolioReferencia = string.Empty;
+
+    bool popup;
+
+    bool allowRowSelectOnRowClick = true;
+
+    bool allowRowSelectPartidaInventarioOnRowClick = true;
+
+    int valTipoOperacion = 1;
+
+    int valTipoMercancia = 2;
+
+    int valEstadoReferencia = 1;
+
+    bool disabledTipoOperacion = false;
+
+    bool disabledCompentReferencia = true;
+
+    bool disabledBtnInventario = true;
+
+    bool disabledEdoReferencia = true;
+
+    bool disableFolioReferencia = true;
+
+    bool disabledFCapturaReferencia = true;
+    private bool isLoading = false;
+    
+
+    DateTime? valFechaCaptura = DateTime.Now;
+
+    RadzenDataGrid<MonitorTarja> gridTarjaInventario;
+
+    RadzenDataGrid<MonitorPartida> gridMonitorPartidaInventario;
+
+    List<MonitorTarja> listaMonitorTarjasInventario;
+
+    List<MonitorPartida> listaMonitorPartidaInventario;
+
+    IList<MonitorTarja> selectedTarjaInventario;
+
+    IList<MonitorPartida> selectedPartidaInventario;
+
+    List<MonitorViaje> listaReferenciaBuque;
+
+    ICollection<RespListarCoincidenciasDTO> listaCliente;
+
+    ICollection<RespListarCoincidenciasDTO> listaFacturarA;
+
+    ICollection<RespListarCoincidenciasDTO> listaProveedorDestinatario;
+
+    ICollection<RespListarCoincidenciasDTO> listaAduanaSeccion;
+
+    private LoadDataArgs _args;
+
+    int IdMonitorTarjaSelected = 0;
+
+    bool isLoadingInventario = false;
+
+    int totalRegistrosInventario;
+
+    int registrosPorPaginaInventario = 10;
+
+    int numeroDePaginaInventario = 1;
+
+    int totalRegistrosPartidaInventario;
+
+    int registrosPorPaginaPartidaInventario = 10;
+
+    int numeroDePaginaPartidaInventario = 1;
+
+    @* --------------------------------------------------------------- *@
+
+    private List<string> items = new List<string>();
+
+    public List<MonitorReferenciaBookingBL> listaReferenciaBookingBLs;
+        
+    private string newItem = string.Empty;
+
+    private string newItemText = string.Empty;
+
+    private int? newItemId;
+
+    // Variables para edición
+    private MonitorReferenciaBookingBL? itemBeingEdited;
+
+    private string editItemText = string.Empty;
+
+    private int? editItemId;
+
+    private bool CanAddItem => !string.IsNullOrWhiteSpace(newItemText);
+
+
+    @* --------------------------------------------------------------- *@
+
+    [Inject] private ITarjaService _tarjaService { get; set; }
+
+    [Inject] private IViajeService _viajeService { get; set; }
+
+    [Inject] private ICatClientesService _clienteService { get; set; }
+
+    [Inject] private ICatAduanaService _catAduanaService { get; set; }
+
+    [Inject] private IReferenciaBookingBLService _referenciaBookingBLService {get; set;}
+
+    [Inject] private IOrdenService _ordenService {get; set;}
+
+    [Inject] private ICatProveedorService? _catProveedorService { get; set; }
+
+    public DateTime? ParseDate(string input)
+    {
+        string[] formats = { "dd-MM-yyyy", "dd/MM/yyyy", "dd-MM-yy", "dd/MM/yy", "ddMMyyyy", "ddMMyy", "dd-MM", "dd/MM", "ddMM" };
+
+        foreach (var format in formats)
+        {
+            if (DateTime.TryParseExact(input, format, null, System.Globalization.DateTimeStyles.None, out var result))
+            {
+                return result;
+            }
+        }
+
+        return null;
+    }
+
+    SortedList<int, string> listTipoOperacion = new SortedList<int, string>
+        {
+            { 1, "Importación" },
+            { 2, "Exportación" }
+        };
+    
+    SortedList<int, string> listTipoMercancia = new SortedList<int, string>
+        {
+            { 1, "Contenedor" },
+            { 2, "Carga Suelta" }
+        };
+
+    SortedList<int, string> listEstadoReferencia = new SortedList<int, string>
+        {
+            { 1, "Preliminar" },
+            { 2, "Programado" },
+            { 3, "Cancelado" },
+            { 4, "Cerrado" }
+        };
+
+    [Inject] private IReferenciaWMSService? _referenciaWMSService { get; set; }
+
+    [Inject] private IPartidaService? _partidaService { get; set; }
+
+    protected override async Task OnInitializedAsync() 
+    {
+        try 
+        {
+
+            ////Console.WriteLine("-> IdReferencia:" + IdReferencia);
+
+            listTipoMercancia = new SortedList<int, string>
+            {
+                { 1, "Contenedor" },
+                { 2, "Carga Suelta" }
+            };
+
+            listTipoOperacion = new SortedList<int, string>
+            {
+                { 1, "Importación" },
+                { 2, "Exportación" }
+            };
+
+            listEstadoReferencia = new SortedList<int, string>
+            {
+                { 1, "Preliminar" },
+                { 2, "Programado" },
+                { 3, "Cancelado" },
+                { 4, "Cerrado" }
+            };
+
+            items = new List<string>();
+            
+            listaReferenciaBookingBLs = new List<MonitorReferenciaBookingBL>();
+
+            items.Add("HLDEREERVVV");
+
+        } catch (InvalidOperationException ex) {
+            ////Console.WriteLine(ex.Message);
+        }
+
+        disabledTipoOperacion = false;
+
+        if (IdReferencia.Equals(0) || IdReferencia == null) {
+            //TODO: Buscar Referencia e inicializar objecto
+            referenciaSelected = new MonitorReferencia();
+            FolioReferencia = String.Empty;
+        } else {
+            referenciaSelected = new MonitorReferencia();
+            FolioReferencia = String.Empty;
+
+            var _resultBase = await _referenciaWMSService!.ObtenerReferenciaPorId((int)IdReferencia);
+
+            if (_resultBase.Success) {
+                referenciaSelected = _resultBase.Data;
+
+                FolioReferencia = referenciaSelected.Folio;
+
+                listaReferenciaBookingBLs = _resultBase.Data.ListaReferenciaBookingBLs;
+
+                ////Console.WriteLine("-> Referencia: " + FolioReferencia);
+
+                disabledTipoOperacion = true;
+
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+
+    }
+
+    protected override async void OnParametersSet()
+    {
+        // need logic to run every time you navigate to this component? Put it here.
+         if (!IdReferencia.Equals(0) && IdReferencia != null) {
+            referenciaSelected = new MonitorReferencia();
+            FolioReferencia = String.Empty;
+
+            var _resultBase = await _referenciaWMSService!.ObtenerReferenciaPorId((int)IdReferencia);
+
+            if (_resultBase.Success) {
+
+                referenciaSelected = _resultBase.Data;
+
+                FolioReferencia = referenciaSelected.Folio;
+
+                ////Console.WriteLine("-> Referencia: " + FolioReferencia);
+
+                listaReferenciaBookingBLs = referenciaSelected.ListaReferenciaBookingBLs;
+
+                valTipoOperacion = (int)referenciaSelected.TipoOperacion;
+
+                valEstadoReferencia = (int)referenciaSelected.EstadoReferencia;
+
+                disabledBtnInventario = false;
+
+                disabledTipoOperacion = true;
+
+            }
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+        base.OnParametersSet();
+    }
+
+    async void OnClickSplitButton(RadzenSplitButtonItem item, string buttonName)
+    {
+        if (item != null)
+        {
+            switch(item.Value) {
+                case "1" : await OpenBuscarTarjasReferencia(); 
+                            await InvokeAsync(StateHasChanged);
+                        break;
+                default:
+                break;
+
+            }
+
+        }
+        @* 
+        if (item != null)
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "SplitButton Item Clicked", Detail = $"{buttonName}, item with value {item.Value} clicked" });
+        }
+        else
+        {
+            NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "SplitButton Clicked", Detail = $"{buttonName} clicked" });
+        } 
+        *@
+    }
+
+    async void OnClickSplitButtonInventario(RadzenSplitButtonItem item, string buttonName)
+    {
+        if (item != null)
+        {
+            switch(item.Value) {
+                case "1" :      
+                            await OpenAsignarServicioInventario(ServicioAplicado.Tarja); 
+                            await InvokeAsync(StateHasChanged);
+                        break;
+                case "2" :      
+                            await OpenAsignarServicioInventario(ServicioAplicado.Inventario); 
+                            await InvokeAsync(StateHasChanged);
+                        break;
+                default:
+                    break;
+
+            }
+
+        }
+    }
+
+    async Task OpenaTarjaReferencia(MonitorTarja monitorTarja) {
+
+        //Console.WriteLine("--> monitorTarja: " + JsonSerializer.Serialize(monitorTarja));
+
+        ReferenciaDTO referenciaDTO = new ReferenciaDTO();
+        referenciaDTO.FolioReferencia = monitorTarja.FolioReferencia;
+        referenciaDTO.IdReferencia = monitorTarja.IdReferencia;
+        referenciaDTO.IdTarja = monitorTarja.IdTarja;
+
+        string _referenciaDTO = JsonSerializer.Serialize(referenciaDTO);
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_referenciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        //navigationManager.NavigateTo($"/tarja-crear/{base64EncodedData}");
+        await JSRuntime.InvokeVoidAsync("abrirEnNuevaVentana", $"/tarja-crear/{base64EncodedData}");
+
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Info, Summary = "Button Clicked", Detail = text });
+    }
+
+    private async Task ObtenerDatosInventario(LoadDataArgs args) {
+
+        if (!String.IsNullOrEmpty(FolioReferencia)) {
+
+            isLoadingInventario = true;
+
+            //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+            ////Console.WriteLine("-> Obtener Datos referencia : " + referenciaSelected.IdReferencia);
+
+            ConsultaCatalogoBase<ConsultaTarja> _consultaTarja = new ConsultaCatalogoBase<ConsultaTarja>();
+            _consultaTarja.Entidad = new ConsultaTarja();
+            _consultaTarja.Entidad.IdReferencia = (int)referenciaSelected.IdReferencia;
+
+            if (args != null) {
+                numeroDePaginaInventario = ((int)args.Skip/registrosPorPaginaInventario) + 1;
+            }
+
+            _consultaTarja.NumeroDePagina = numeroDePaginaInventario;
+            _consultaTarja.RegistrosPorPagina = registrosPorPaginaInventario;
+
+            var _listMonitorTarjas = await _tarjaService!.ObtenerListaPaginadaPorIdReferencia(_consultaTarja);
+
+            ////Console.WriteLine("--> PoC ");
+
+            totalRegistrosInventario = (int)_listMonitorTarjas.Paginado.TotalRegistros;
+
+            ////Console.WriteLine("--> totalRegistros: " + totalRegistrosInventario);
+
+            listaMonitorTarjasInventario = _listMonitorTarjas.Data;
+
+            //selectedTarjaInventario = listaMonitorTarjasInventario.Take(1).ToList();                
+
+            isLoadingInventario = false;            
+
+            await InvokeAsync(StateHasChanged);
+
+        }
+
+    }
+
+    private bool ValidarDatos(MonitorReferencia monitorReferencia) {
+        ////Console.WriteLine("-> Se validan datos de la Referencia");
+        bool _validarDatos = true;
+        string _mensaje = string.Empty;
+
+        _mensaje = "Validar datos de la Referencia";
+
+        if (!String.IsNullOrEmpty(monitorReferencia.Mercancias)) {
+            ////Console.WriteLine("-> Se validan datos de la Referencia");
+            if (monitorReferencia.Mercancias.Trim().Length.Equals(0)) {
+                JSRuntime.InvokeVoidAsync("eval", $@"document.getElementById(""REF_MERCANCIAS"").focus()");
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+                _validarDatos = false;
+            } 
+        } else {
+            _mensaje = "Favor de registra una descripción de la mercancía";
+            JSRuntime.InvokeVoidAsync("eval", $@"document.getElementById(""REF_MERCANCIAS"").focus()");
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+            _validarDatos = false;
+        }
+
+        if (monitorReferencia.IdCatAduana.Equals(0)) {
+            _mensaje = "Favor de selecciona la Aduana de Despacho";
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+            _validarDatos = false;
+
+        }
+
+        if (monitorReferencia.IdCliente.Equals(0)) {
+            _mensaje = "Favor de selecciona el Cliente de la Operación";
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+            _validarDatos = false;
+
+        }
+
+        return _validarDatos;
+
+    }
+    async void OnSubmit(MonitorReferencia monitorReferencia)
+    {
+        string _mensaje = String.Empty;
+        isLoading = true;
+        ////Console.WriteLine("-> OnSubmit model : " + JsonSerializer.Serialize(monitorReferencia));
+
+        if (ValidarDatos(monitorReferencia)) {
+
+            monitorReferencia.IdEmpresaLogin = 1;
+            monitorReferencia.Folio = FolioReferencia;
+            monitorReferencia.TipoMercancia = (TipoMercanciaInventario)valTipoMercancia;
+            monitorReferencia.TipoOperacion = (TipoOperacionAduanera)valTipoOperacion;
+            monitorReferencia.EstadoReferencia = (EstadoReferencia)valEstadoReferencia;
+
+            monitorReferencia.FechaAlta = valFechaCaptura;
+            if (monitorReferencia.IdReferencia.Equals(0)) {
+                monitorReferencia.CRUDAction = ECRUDAction.Create;
+            } else {
+                monitorReferencia.CRUDAction = ECRUDAction.Update;
+            }
+
+            InvokeAsync(async () =>
+            {
+
+                var _resultBase = await _referenciaWMSService!.Guardar(monitorReferencia);
+
+                if (_resultBase.Success) {
+                    monitorReferencia.IdReferencia = _resultBase.Id;
+                    monitorReferencia.Folio = _resultBase.Data.Folio;
+
+                    referenciaSelected.Folio = _resultBase.Data.Folio; 
+                    referenciaSelected.IdReferencia = _resultBase.Data.IdReferencia;
+                    FolioReferencia = _resultBase.Data.Folio;
+                    IdReferencia = _resultBase.Data.IdReferencia;
+                    disabledBtnInventario = false;
+                    disabledTipoOperacion = true;
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Referencia, se guardo correctamente", Detail = _mensaje, Duration = 4000 });
+                    
+                } else {
+                    _mensaje = _resultBase.MensajeRespuesta;
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+                    
+                }
+
+                DialogService.Close();
+
+             });
+
+          //  await BusyDialog("Procesando ...");
+
+        }
+
+        await InvokeAsync(StateHasChanged);
+        isLoading = false;
+    }
+
+    async void OnInvalidSubmit(FormInvalidSubmitEventArgs args)
+    {
+        ////Console.WriteLine("-> OnInvalidSubmit args : " + JsonSerializer.Serialize(args));
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    async Task EliminarReferencia() {
+
+        string _mensaje = String.Empty;
+        bool _accionEliminar = false;
+
+        if (referenciaSelected != null) {
+
+            if (!referenciaSelected.IdReferencia.Equals(0)) 
+            {
+
+                _accionEliminar = true;
+
+                var result = await DialogServiceConfirm.Confirm("Desea Eliminar la Referencia?", "Referencia", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                bool _confirmar = result.HasValue ? (bool)result : false;
+
+                if (_confirmar) {
+
+                    var _result = await _referenciaWMSService.Eliminar(referenciaSelected.IdReferencia);
+
+                    if (_result.Success) {
+
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "La Referencia, se eliminó correctamente", Detail = _mensaje, Duration = 4000 });
+                        await CancelarRegistroReferencia();
+
+                    } else {
+
+                        _mensaje = _result.MensajeRespuesta;
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Eliminar Referencia", Detail = _mensaje, Duration = 4000 });
+
+                    }
+
+                }
+
+            }
+
+        }
+
+        if (!_accionEliminar) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Eliminar Referencia", 
+                Detail = "No existe Referencia seleccionada", Duration = 4000 });
+
+        }
+
+
+    }
+
+    async Task CancelarRegistroReferencia()
+    {
+        // TODO: Inicializar valores de los componentesy
+        referenciaSelected = new MonitorReferencia();
+        FolioReferencia = string.Empty;
+        referenciaSelected.Folio = string.Empty;
+        referenciaSelected.TipoMercancia = TipoMercanciaInventario.CargaSuelta;
+        referenciaSelected.Mercancias = String.Empty;
+        valTipoMercancia = 1;
+        valTipoOperacion = 1;
+        valEstadoReferencia = 1;
+        totalRegistrosInventario = 0;
+        valFechaCaptura = DateTime.Now;
+        disabledBtnInventario = true;
+        disabledTipoOperacion = false;
+        listaMonitorTarjasInventario = new List<MonitorTarja>();
+        listaMonitorPartidaInventario = new List<MonitorPartida>();
+        listaReferenciaBookingBLs = new List<MonitorReferenciaBookingBL>();
+
+        await InvokeAsync(StateHasChanged);
+        
+        navigationManager.NavigateTo($"/referencia-crear");
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await DialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+    public async Task OpenBuscarTarjasReferencia()
+    {
+
+        //Console.WriteLine("-> OpenBuscarTarjasReferencia referenciaSelected : " + JsonSerializer.Serialize(referenciaSelected));
+
+        await DialogServiceBuscarRerencia.OpenAsync<VistaModalMercanciaReferencia>($"Tarjas Referencia: {FolioReferencia}",
+               new Dictionary<string, object>() { { "IdReferencia", referenciaSelected.IdReferencia }, { "FolioReferencia", FolioReferencia} },
+               new DialogOptions() 
+               {
+                   Resizable = true, 
+                   Draggable = true,
+                   Width = "680px", 
+                   Height = "505px"
+                });
+
+    }
+
+    private ResultBase ValidarMonitorTarjaSelected(ServicioAplicado _servicioPara)
+    {
+        string _mensaje = "Favor de Seleccionar al menos un elemento del Inventario";
+
+        ResultBase _resultBase = new ResultBase();
+
+        if (_servicioPara.Equals(ServicioAplicado.Tarja)) {
+
+            if (selectedTarjaInventario == null) {
+                _resultBase.MensajeRespuesta = _mensaje;
+            } else {
+                if (selectedTarjaInventario.Count.Equals(0)) {
+                    _resultBase.MensajeRespuesta = _mensaje;
+                }
+            }
+
+        } else if (_servicioPara.Equals(ServicioAplicado.Inventario)) {
+
+            if (selectedPartidaInventario == null) {
+                _resultBase.MensajeRespuesta = _mensaje;
+            } else {
+                if (selectedPartidaInventario.Count.Equals(0)) {
+                    _resultBase.MensajeRespuesta = _mensaje;
+                }
+            }
+
+        }
+
+        return _resultBase;
+
+    }
+
+    //OpenAsignarServicioInventario
+    public async Task OpenAsignarServicioInventario(ServicioAplicado _servicioPara)
+    {
+
+        List<MonitorTarja> listaMonitorTarjaSelected = new List<MonitorTarja>();
+        
+        List<MonitorPartida> listaMonitorPartidaSelected = new List<MonitorPartida>();
+
+        List<RelacionInventarioServicio> _relacionInvetarioServicioList = new List<RelacionInventarioServicio>();
+
+        MonitorFolioServicio monitorFolioServicioSelected = new MonitorFolioServicio();
+
+        ResultBase resultBase = new ResultBase();
+
+        resultBase = ValidarMonitorTarjaSelected(_servicioPara);
+
+        if (resultBase.Success) {
+
+            if (_servicioPara.Equals(ServicioAplicado.Tarja)) {
+
+                foreach(var item in selectedTarjaInventario) {
+
+                    var _relacionInventarioServicio = new RelacionInventarioServicio();
+                    
+                    _relacionInventarioServicio.TipoServicioAplicado = ServicioAplicado.Tarja;
+                    _relacionInventarioServicio.IdReferencia = referenciaSelected.IdReferencia;
+                    _relacionInventarioServicio.IdTarja = item.IdTarja;
+                    _relacionInventarioServicio.FolioTarjaInventario = item.ClaveReferencia;
+
+                    _relacionInvetarioServicioList.Add(_relacionInventarioServicio);
+                }
+
+                listaMonitorTarjaSelected = selectedTarjaInventario.ToList();
+
+            } else if(_servicioPara.Equals(ServicioAplicado.Inventario)) {
+
+                if (selectedPartidaInventario != null)
+                {
+
+                    foreach(var item in selectedPartidaInventario) {
+
+                        var _relacionInventarioServicio = new RelacionInventarioServicio();
+                        
+                        _relacionInventarioServicio.TipoServicioAplicado = ServicioAplicado.Inventario;
+                        _relacionInventarioServicio.IdReferencia = referenciaSelected.IdReferencia;
+                        _relacionInventarioServicio.IdPartidaInventario = item.IdInventario;
+                        _relacionInventarioServicio.FolioTarjaInventario = item.ClaveReferenciaTarja;
+
+                        _relacionInvetarioServicioList.Add(_relacionInventarioServicio);
+                    }
+
+                    listaMonitorPartidaSelected = selectedPartidaInventario.ToList();
+
+                }
+
+            }
+
+        @* //listaMonitorTarjaSelected = selectedTarjaInventario.ToList(); *@
+
+        @* //Console.WriteLine("-> OnInvalidSubmit args : " + JsonSerializer.Serialize(selectedTarjaInventario)); *@
+
+        selectedTarjaInventario = null;
+
+        selectedPartidaInventario = null;
+
+        await DialogServiceBuscarRerencia.OpenAsync<VistaModalAsignarFolioServicio>($"Servicios Solicitados",
+               new Dictionary<string, object>() { 
+                    { "IdReferencia", referenciaSelected.IdReferencia },
+                    { "IdClienteReferencia", referenciaSelected.IdCliente },
+                    { "RazonSocialClienteReferencia", referenciaSelected.Cliente },
+                    { "IdFacturarAReferencia", referenciaSelected.IdFacturarA },
+                    { "NombreFacturarAReferencia", referenciaSelected.FacturarA },
+                    { "ServicioPara", _servicioPara },
+                    { "listaMonitorTarjaSelected" , listaMonitorTarjaSelected },
+                    { "listaMonitorPartidaSelected", listaMonitorPartidaSelected},
+                    { "listaRelacionInventarioServicioSelected", _relacionInvetarioServicioList},
+                    { "monitorFolioServicioSelected", monitorFolioServicioSelected}
+                },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Resize = OnResize,
+                   Drag = OnDrag,
+                   Width = "830px", 
+                   Height = "535px"
+                });
+
+            await ObtenerDatosInventario(_args);
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Agregar Servicio", Detail = resultBase.MensajeRespuesta, Duration = 4000 });
+
+        }
+    }
+
+    public async Task OpenBuscarReferencia()
+    {
+
+        await DialogServiceBuscarRerencia.OpenAsync<VistaModalBuscarReferencia>($"Buscar Referencia",
+               new Dictionary<string, object>() { { "IdReferencia", 0 } },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Width = "880px", 
+                   Height ="570px"
+                });
+
+        listaMonitorTarjasInventario = new List<MonitorTarja>();
+
+        selectedTarjaInventario = null;        
+
+    }
+
+    async void  OnChangeTabReferencia(int index)
+    {
+        ////Console.WriteLine($"Tab with index {index} was selected.");
+
+        if (index.Equals(3)) {
+
+            await ObtenerDatosInventario(_args);
+            
+        }
+
+    }
+
+    @* ------------------------------------------------------------------------------------------------------------------ *@
+
+    private async Task ObtenerDatosTarjaInventario(LoadDataArgs args) {
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        await LoadStateAsync();
+
+        if (args != null) {
+            
+            numeroDePaginaPartidaInventario = ((int)args.Skip/registrosPorPaginaPartidaInventario) + 1;
+            
+        }
+
+        //order.OrderDetails = dbContext.OrderDetails.Include("Product").Where(o => o.OrderID == order.OrderID).ToList();
+        ConsultaCatalogoBase<ConsultaPartida> _consultaPartida = new ConsultaCatalogoBase<ConsultaPartida>();
+        _consultaPartida.Entidad = new ConsultaPartida();
+        _consultaPartida.Entidad.IdTarja = IdMonitorTarjaSelected;
+
+        if (args != null) {
+            numeroDePaginaPartidaInventario = ((int)args.Skip/registrosPorPaginaPartidaInventario) + 1;
+        }
+
+        _consultaPartida.NumeroDePagina = numeroDePaginaPartidaInventario;
+        _consultaPartida.RegistrosPorPagina = registrosPorPaginaPartidaInventario;
+
+        var result = await _partidaService!.ObtenerListaPaginadaPorIdTarja(_consultaPartida);
+
+        if (result.Success) {
+
+            listaMonitorPartidaInventario = result.Data;
+
+            totalRegistrosPartidaInventario = (int)result.Paginado.TotalRegistros;
+        }
+
+        DialogService.Close();
+
+        await InvokeAsync(StateHasChanged);
+
+        await SaveStateAsync();
+
+    }
+
+    void RowRenderTarjaInventario(RowRenderEventArgs<MonitorTarja> args)
+    {
+        //args.Expandable = args.Data.ShipCountry == "France" || args.Data.ShipCountry == "Brazil";
+        if (args.Data.listaMonitorPartidas != null)
+            args.Expandable = args.Data.listaMonitorPartidas.Any();
+    }
+
+    async void RowExpandTarjaInventario(MonitorTarja monitorTarja)
+    {
+
+            ////Console.WriteLine("-> RowExpandTarjaInventario args : " + JsonSerializer.Serialize(monitorTarja));
+
+            IdMonitorTarjaSelected = monitorTarja.IdTarja;
+
+            InvokeAsync(async () =>
+            {
+                await LoadStateAsync();
+
+                //order.OrderDetails = dbContext.OrderDetails.Include("Product").Where(o => o.OrderID == order.OrderID).ToList();
+                ConsultaCatalogoBase<ConsultaPartida> _consultaPartida = new ConsultaCatalogoBase<ConsultaPartida>();
+                _consultaPartida.Entidad = new ConsultaPartida();
+                _consultaPartida.Entidad.IdTarja = monitorTarja.IdTarja;
+                _consultaPartida.NumeroDePagina = numeroDePaginaPartidaInventario;
+                _consultaPartida.RegistrosPorPagina = registrosPorPaginaPartidaInventario;
+
+                var result = await _partidaService!.ObtenerListaPaginadaPorIdTarja(_consultaPartida);
+
+                if (result.Success) {
+
+                    listaMonitorPartidaInventario = result.Data;
+
+                    totalRegistrosPartidaInventario = (int)result.Paginado.TotalRegistros;
+                }
+
+                DialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+                await SaveStateAsync();
+
+             });
+
+            await BusyDialog("Cargando Información...");
+
+            
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (firstRender)
+        {
+            if (listaMonitorTarjasInventario != null) {
+                await gridTarjaInventario.ExpandRow(listaMonitorTarjasInventario.FirstOrDefault());
+            }
+        }
+    }
+
+    async Task OnLoadDataReferenciaBuque(LoadDataArgs args)
+    {
+
+        var resultBase = await _viajeService.ObtenerPorReferenciaBuqueViajeContains(args.Filter);
+        if (resultBase.Success) {
+
+            listaReferenciaBuque = resultBase.Data;
+
+            if (listaReferenciaBuque.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", Detail = "No se encontró el viaje solicitado.", Duration = 4000 });
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Viaje", Detail = "No se encontró el viaje solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeAduanaSeccion(object value) {
+        referenciaSelected.IdCatAduana = 0;
+        referenciaSelected.AduanaSeccion = null;
+
+        if (listaAduanaSeccion != null) {
+            if (!listaAduanaSeccion.Count().Equals(0)) {
+
+                var selectedAduanaSeccion = listaAduanaSeccion
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedAduanaSeccion != null)
+                {
+                    var selectedId = selectedAduanaSeccion.Id;
+                    referenciaSelected.IdCatAduana = selectedAduanaSeccion.Id;
+                    referenciaSelected.AduanaSeccion = selectedAduanaSeccion.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    async Task OnLoadDataAduanaSeccion(LoadDataArgs args) {
+
+        listaAduanaSeccion = await _catAduanaService.GetAduanasConincidencia(args.Filter);
+        if (listaCliente.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Aduana Sección", Detail = "No se encontró la Aduana solicitada.", Duration = 4000 });
+        }
+
+
+    }
+    
+    async Task OnLoadDataFacturarA(LoadDataArgs args) {
+
+        listaFacturarA = await _clienteService.GetClientesConincidencia(args.Filter);
+        if (listaFacturarA.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Facturar A", Detail = "No se encontró el Facturar A solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeFacturarA(object value) {
+        referenciaSelected.IdFacturarA = 0;
+        referenciaSelected.FacturarA = null;
+
+        if (listaFacturarA != null) {
+            if (!listaFacturarA.Count().Equals(0)) {
+
+                var selectedFacturarA = listaFacturarA
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedFacturarA != null)
+                {
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    var selectedId = selectedFacturarA.Id;
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    referenciaSelected.IdFacturarA = selectedFacturarA.Id;
+                    referenciaSelected.FacturarA = selectedFacturarA.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    async Task OnLoadDataProveedorDestinatario(LoadDataArgs args) {
+
+        listaProveedorDestinatario = await _catProveedorService.ObtenerProveedoresConincidencia(args.Filter);
+        if (listaProveedorDestinatario.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Proveedor / Destinatario", Detail = "No se encontró el Proveedor / Destinatario solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeProveedorDestinatario(object value) {
+        referenciaSelected.IdProveedorDest = 0;
+        referenciaSelected.ProveedorDest = null;
+
+        if (listaProveedorDestinatario != null) {
+            if (!listaProveedorDestinatario.Count().Equals(0)) {
+
+                var selectedProveedorDest = listaProveedorDestinatario
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedProveedorDest != null)
+                {
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    var selectedId = selectedProveedorDest.Id;
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    referenciaSelected.IdProveedorDest = selectedProveedorDest.Id;
+                    referenciaSelected.ProveedorDest = selectedProveedorDest.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    async Task OnLoadDataCliente(LoadDataArgs args) {
+
+        listaCliente = await _clienteService.GetClientesConincidencia(args.Filter);
+        if (listaCliente.Count.Equals(0)) {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cliente", Detail = "No se encontró el Cliente solicitado.", Duration = 4000 });
+        }
+
+    }
+
+    void OnChangeCliente(object value) {
+        referenciaSelected.IdCliente = 0;
+        referenciaSelected.Cliente = null;
+
+        if (listaCliente != null) {
+            if (!listaCliente.Count().Equals(0)) {
+
+                var selectedCliente = listaCliente
+                .FirstOrDefault(c => c.RazonSocial == value?.ToString());
+
+                if (selectedCliente != null)
+                {
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    var selectedId = selectedCliente.Id;
+                    //////Console.WriteLine($"-> selectedCliente.Id : {selectedCliente.Id}");
+                    referenciaSelected.IdCliente = selectedCliente.Id;
+                    referenciaSelected.Cliente = selectedCliente.RazonSocial;
+                }
+
+            }
+        }
+
+    }
+
+    void OnChangeReferenciaBuque(object value)
+    {
+        referenciaSelected.ReferenciaBuque = 0;
+        referenciaSelected.IdViaje = 0;
+        referenciaSelected.FolioViaje = null;
+
+        if (listaReferenciaBuque != null) {
+            if (!listaReferenciaBuque.Count().Equals(0)) {
+
+                var selectedReferenciaBuque = listaReferenciaBuque
+                .FirstOrDefault(c => c.FolioViaje == value?.ToString());
+
+                if (selectedReferenciaBuque != null)
+                {
+                    var selectedId = selectedReferenciaBuque.IdViaje;
+                    referenciaSelected.IdViaje = selectedReferenciaBuque.IdViaje;
+                    referenciaSelected.ReferenciaBuque = selectedReferenciaBuque.ReferenciaBuque;
+                    referenciaSelected.FolioViaje = selectedReferenciaBuque.FolioViaje;
+
+                }
+
+            }
+        }
+
+    }
+
+    @* ------------------------------------------------------------------------------------------------------------------ *@
+
+    private async void AddItem()
+    {
+        if (!string.IsNullOrWhiteSpace(newItemText))
+        {
+            var _existeItem = listaReferenciaBookingBLs.Where(p => p.BookingBl.Equals(newItemText)).Any();
+
+            if (!_existeItem) {
+
+                InvokeAsync(async () =>
+                {
+                    
+                    //items.Add(newItem.Trim());
+                    MonitorReferenciaBookingBL _referenciaBookingBL = new MonitorReferenciaBookingBL();
+                    _referenciaBookingBL.IdReferencia = referenciaSelected.IdReferencia;
+                    _referenciaBookingBL.BookingBl = newItemText;
+                    _referenciaBookingBL.CRUDAction = ECRUDAction.Create;
+
+                    var _result = await _referenciaBookingBLService.Guardar(_referenciaBookingBL);
+
+                    if (_result.Success) {
+
+                        listaReferenciaBookingBLs.Add(_referenciaBookingBL);
+
+                    }
+                    
+                    newItemText = string.Empty;
+                    
+                    DialogService.Close();
+
+                    await InvokeAsync(StateHasChanged);
+
+                });
+
+                await BusyDialog("Guardando Información...");
+
+            }
+
+        }
+    }
+
+    private async void RemoveItem(MonitorReferenciaBookingBL itemToRemove)
+    {
+        //items.Remove(itemToRemove.BookingBl);
+
+        var _existeItem = listaReferenciaBookingBLs.Where(p => p.BookingBl.Equals(itemToRemove.BookingBl)).Any();
+
+        if (_existeItem) {
+
+            InvokeAsync(async () =>
+            {
+
+                var _resultBase = await _referenciaBookingBLService.Eliminar(itemToRemove.IdReferenciaBookingBl);
+
+                if (_resultBase.Success) {
+
+                    listaReferenciaBookingBLs.RemoveAll(p => p.BookingBl.Equals(itemToRemove.BookingBl) && p.IdReferenciaBookingBl.Equals(itemToRemove.IdReferenciaBookingBl));
+
+                }
+
+                DialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Procesando Solicitud...");
+
+        }
+    }
+
+    private void StartEdit(MonitorReferenciaBookingBL item)
+    {
+        itemBeingEdited = item;
+        editItemText = item.BookingBl;
+        editItemId = item.IdReferenciaBookingBl;
+    }
+
+    private async void SaveEdit(MonitorReferenciaBookingBL originalItem)
+    {
+        if (itemBeingEdited != null && editItemId.HasValue && !string.IsNullOrWhiteSpace(editItemText))
+        {
+
+             var _existeItem = listaReferenciaBookingBLs.Where(p => p.BookingBl.Equals(editItemText)).Any();
+
+            if (!_existeItem) {
+
+                InvokeAsync(async () =>
+                {
+
+                    originalItem.BookingBl = editItemText.Trim();
+                    originalItem.CRUDAction = ECRUDAction.Update;
+
+                    var _result = await _referenciaBookingBLService.Guardar(originalItem);
+
+                    DialogService.Close();
+
+                    await InvokeAsync(StateHasChanged);
+
+                });
+
+                await BusyDialog("Procesando Solicitud...");
+
+                
+            } else if (!editItemText.Equals(originalItem.BookingBl)) {
+                
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Referencia Booking BL", Detail = "Ya se encuentra registrado el Booking BL en la Referencia.", Duration = 4000 });
+
+            }
+
+            CancelEdit();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        itemBeingEdited = null;
+        editItemText = string.Empty;
+        editItemId = null;
+    }
+
+    private string obtenerTipoServicio(TipoServicioTarja tipoServicioTarja) 
+    {
+
+        string _tipoServicio = String.Empty;
+
+        switch(tipoServicioTarja) {
+            case TipoServicioTarja.EntradaAlmacen :
+                _tipoServicio = "Entrada de Almacén";
+                break;
+            case TipoServicioTarja.EntradaPorTransferencia :
+                _tipoServicio = "Entrada Por Transferencia";
+                break;
+            case TipoServicioTarja.EntradaPatioExterno :
+                _tipoServicio = "Entrada Patio Externo";
+                break;
+            default : 
+                _tipoServicio = tipoServicioTarja.ToString();
+                break;
+
+        }
+
+        return _tipoServicio;
+
+    }
+
+    private BadgeStyle BadgeStyleEstadoTarja(EstadoTarja estadoTarja) {
+
+        switch(estadoTarja) {
+
+            case EstadoTarja.Confirmado : return BadgeStyle.Success;
+            case EstadoTarja.Preliminar: return BadgeStyle.Warning;
+            case EstadoTarja.Cancelado : return BadgeStyle.Danger;
+            case EstadoTarja.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+    @* ------------------------------------------------------------------------------------------------------------------ *@
+
+    void OnDrag(System.Drawing.Point point)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog drag. Left:{point.X}, Top:{point.Y}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Left = $"{point.X}px";
+        Settings.Top = $"{point.Y}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+
+    void OnResize(System.Drawing.Size size)
+    {
+        JSRuntime.InvokeVoidAsync("eval", $"console.log('Dialog resize. Width:{size.Width}, Height:{size.Height}')");
+
+        if(Settings == null)
+        {
+            Settings = new DialogSettings();
+        }
+
+        Settings.Width = $"{size.Width}px";
+        Settings.Height = $"{size.Height}px";
+
+        InvokeAsync(SaveStateAsync);
+    }
+    public DialogSettings Settings 
+    { 
+        get
+        {
+            return _settings;
+        }
+        set
+        {
+            if (_settings != value)
+            {
+                _settings = value;
+                InvokeAsync(SaveStateAsync);
+            }
+        }
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "DialogSettings");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _settings = JsonSerializer.Deserialize<DialogSettings>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+    }
+
+    public class DialogSettings
+    {
+        public string Left { get; set; }
+        public string Top { get; set; }
+        public string Width { get; set; }
+        public string Height { get; set; }
+    }
+
+}
+

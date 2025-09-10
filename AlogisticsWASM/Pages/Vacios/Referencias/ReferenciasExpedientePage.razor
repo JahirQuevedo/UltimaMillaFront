@@ -1,0 +1,156 @@
+﻿@page "/referenciasexpediente/{paramIdOrden:int}/{paramIdReferencia:int}"
+
+
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using AlogisticsWASM.Layout.Vacios.Referencias
+@inject NotificationService NotificationService
+@using Microsoft.AspNetCore.Authorization
+@inject UsuarioTokenDTO UsuarioTokenDTO
+@inject IConfiguration configuration
+
+@attribute [Authorize]
+
+<div class="content mt-10">
+    <div class="row g-3 mb-2">
+        <div class="rz-m-2">
+            <RadzenBreadCrumb>
+                <RadzenBreadCrumbItem Path="/" Text="Home" />
+                <RadzenBreadCrumbItem Path="/referenciasRZ" Text="Referencias" />
+                <RadzenBreadCrumbItem Text="Referencia Expediente" />
+            </RadzenBreadCrumb>
+        </div>
+        <div class="col-auto">
+
+            <RadzenText TextStyle="TextStyle.H6" Text="Detalle referencia" TextAlign="TextAlign.Left" />
+        </div>
+    </div>
+    <RadzenStack Gap="1rem">
+
+        <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+                     Expand=@(() => Change("Panel expanded")) Collapse=@(() => Change("Panel collapsed"))>
+            <HeaderTemplate>
+                <RadzenText TextStyle="TextStyle.H6" class="rz-display-flex rz-align-items-center rz-m-0">
+                    <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Datos generales, Ref.Alo:@strPcontenedor </b>
+                </RadzenText>
+            </HeaderTemplate>
+            <ChildContent>
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                        <div class="container text-left">
+                            <div class="row">
+                                <div class="col" style="display: inline-block;">
+                                    <span>
+                                        <b>Orden:</b> @_objOrden.IdOrden
+                                    </span>
+
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>Ref.Alo:</b> @_objOrden.ReferenciaALO
+                                    </span>
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>Ref.Cliente:</b>
+                                    </span>
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>L.Negocio:</b> @_objOrden.CatLineaNegocio.Nombre
+                                    </span>
+                                </div>
+                                
+                                <div class="col">
+
+                                    <span>
+                                        <b>Aduana:</b> @_objOrden.catAduana.Acronimo
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </RadzenRow>
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-4">
+                        <div class="container text-left">
+                            <div class="row">
+                                <div class="col">
+
+                                    <span>
+                                        <b>Transportista:</b> @_objOrden.peticionesReferencias.FirstOrDefault().Transporte_RazonSocial
+                                    </span>
+                                </div>                                
+                                <div class="col">
+
+                                    <span>
+                                        <b>F.Solicitud:</b> @_objOrden.FechaRegistro
+                                    </span>
+                                </div>
+                                
+                                <div class="col">
+                                    <span>
+                                        <b>Ticket:</b> @_objOrden.peticionesReferencias.FirstOrDefault().Ticket
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </RadzenRow>
+                </RadzenCard>
+            </ChildContent>
+        </RadzenPanel>
+        @*  <RadzenButton Click=@(args => CrearReferencia()) Text="Crear" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Style="width:200px;" /> *@
+
+        <RadzenDataGrid AllowFiltering="true" AllowPaging="true" AllowSorting="true" Render="OnContenedoresDataGridRender"
+                        Data="@_IEContenedores">
+            <Template Context="contenedor">
+                <RadzenDataGrid AllowFiltering="true" AllowPaging="true" AllowSorting="true"
+                                Data="@_IEContenedores.Where(x=>x.IdContenedor==contenedor.IdContenedor).SelectMany(s => s.Servicios?? new List<PeticionesServicios>()).AsQueryable().ToList()">
+
+
+                    <Columns>
+                        <RadzenDataGridColumn Property="@nameof(PeticionesServicios.FechaRegistro)" FormatString="{0:d}" Title="F.Solicitud" Width="80px" />
+                        <RadzenDataGridColumn Property="@nameof(PeticionesServicios.DescServicio)" Title="Servicio" Width="120px" />
+                        <RadzenDataGridColumn Property="@nameof(PeticionesServicios.EstadoServicio)" Title="Estado" Width="80px" />
+                    </Columns>
+                </RadzenDataGrid>
+            </Template>
+            <Columns>
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.IdReferencia)" Title="ID" Width="80px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Contenedor)" Title="Contenedor" Width="100px">
+                    @*  <Template Context="order">
+                    <RadzenImage Path="@order.Employee?.Photo" style="width: 32px; height: 32px;" class="rz-border-radius-4 rz-me-2" AlternateText="@(order.Employee?.FirstName + " " + order.Employee?.LastName)" />
+                    @order.Employee?.FirstName @order.Employee?.LastName
+                    </Template> *@
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Aduana)" Title="Aduana" Width="80px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.RefenciaCliente)" Title="Ref.Cliente" Width="100px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.ClaveTipoContenedor)" Title="Ref.Cliente" Width="100px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Patio_RazonSocial)" Title="Patio" Width="100px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Cliente_RazonSocial)" Title="Clienet" Width="100px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Consignado_RazonSocial)" Title="Consignado" Width="100px" />
+                <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Naviera_RazonSocial)" Title="Naviera" Width="100px" />
+
+            </Columns>
+        </RadzenDataGrid>
+
+
+
+
+
+
+    </RadzenStack>
+
+</div>
+
+@code {
+
+}

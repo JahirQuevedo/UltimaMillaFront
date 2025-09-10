@@ -1,0 +1,191 @@
+﻿@page "/vistaModalMercanciaReferencia/{IdReferencia:int}/{FolioReferencia}"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject NavigationManager navigationManager
+@inject Radzen.DialogService dialogService
+@attribute [Authorize]
+@* <style>
+    .rz-frozen-cell {
+        background-color: rgb(255, 204, 170);
+    }
+
+    .rz-column-title {
+
+        background-color: rgb(255, 204, 170);
+        padding: .5em .5em .5em .5em;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+    } 
+</style> *@
+
+
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+    <RadzenStack>
+        <RadzenRow>
+            <RadzenColumn Size="12" SizeMD="12">
+                <RadzenButton Click=@(() => CrearTarjaReferenciaSelected()) Text="Crear Tarja" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />   
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenDataGrid class="rz-p-4"
+                    Count="@totalRegistros" 
+                    PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    @bind-Value=@selectedTarja
+                    style="border-radius:7px;"
+                    AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" 
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    Data="@(listaMonitorTarjas)" LoadData="@ObtenerDatos"  IsLoading=@isLoading ColumnWidth="200px" 
+                    Density="Density.Compact" AllowAlternatingRows="false">
+            <Columns>
+                <RadzenDataGridColumn Property="@nameof(MonitorTarja.ClaveReferencia)" Title="Folio" />
+                <RadzenDataGridColumn Property="@nameof(MonitorTarja.TipoServicio)" Title="Tipo Servicio" FormatString="{0:P}" />
+                <RadzenDataGridColumn Property="@nameof(MonitorTarja.Estado)" Title="Estado" FormatString="{0:P}" />
+                <RadzenDataGridColumn Title="Fecha Captura" Filterable="false">
+                    <Template Context="monitorTarja">
+                        @(monitorTarja.FechaAlta == DateTime.MinValue ? "" : monitorTarja.FechaAlta.ToString())
+                    </Template>
+                </RadzenDataGridColumn>
+                 <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="false" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                        <Template Context="data">
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                Click=@(() => abrirRegistroTarja(data))
+                                @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                        </Template>
+                    </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+    @* <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Click=@(() => ObtenerReferenciaSelected()) Variant="Variant.Flat" Text="Seleccionar" Style="width: 120px" />
+    </RadzenStack> *@
+</RadzenStack>
+
+@code {
+
+    RadzenDataGrid<MonitorTarja> gridTarjas;
+
+    [Parameter] public int IdReferencia { get; set; }
+
+    [Parameter] public string FolioReferencia { get; set;}
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    ReferenciaDTO referenciaDTO;
+
+    MonitorTarja monitorTarja;
+
+    List<MonitorTarja> listaMonitorTarjas;
+
+    IList<MonitorTarja> selectedTarja;
+
+    private LoadDataArgs _args;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 5;
+
+    int numeroDePagina = 1;
+    
+    [Inject] private ITarjaService? _tarjaService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        ////Console.WriteLine("-> OnParametersSetAsync - IdReferencia: " + IdReferencia);
+
+        monitorTarja = new MonitorTarja();
+
+        listaMonitorTarjas = new List<MonitorTarja>();
+
+        monitorTarja.IdReferencia = IdReferencia;
+        monitorTarja.FolioReferencia = FolioReferencia;
+
+        await ObtenerDatos(_args);
+
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaTarja> _consultaTarja = new ConsultaCatalogoBase<ConsultaTarja>();
+        _consultaTarja.Entidad = new ConsultaTarja();
+        _consultaTarja.Entidad.IdReferencia = IdReferencia;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+
+        _consultaTarja.NumeroDePagina = numeroDePagina;
+        _consultaTarja.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorTarjas = await _tarjaService!.ObtenerListaPaginadaPorIdReferencia(_consultaTarja);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorTarjas.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listaMonitorTarjas = _listMonitorTarjas.Data;
+
+        selectedTarja = listaMonitorTarjas.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+    private void CrearTarjaReferenciaSelected() {
+
+        referenciaDTO = new ReferenciaDTO();
+        referenciaDTO.FolioReferencia = FolioReferencia;
+        referenciaDTO.IdReferencia = IdReferencia;
+
+        string _referenciaDTO = JsonSerializer.Serialize(referenciaDTO);
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_referenciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/tarja-crear/{base64EncodedData}");
+
+        dialogService.Close(true);
+
+    }
+
+    private void abrirRegistroTarja(MonitorTarja _monitorTarja) {
+
+        ////Console.WriteLine("--> monitorTarja: " + JsonSerializer.Serialize(_monitorTarja));
+
+        referenciaDTO = new ReferenciaDTO();
+        referenciaDTO.FolioReferencia = FolioReferencia;
+        referenciaDTO.IdReferencia = _monitorTarja.IdReferencia;
+        referenciaDTO.IdTarja = _monitorTarja.IdTarja;
+
+        string _referenciaDTO = JsonSerializer.Serialize(referenciaDTO);
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_referenciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/tarja-crear/{base64EncodedData}");
+
+        dialogService.Close(true);
+
+    }
+
+
+}

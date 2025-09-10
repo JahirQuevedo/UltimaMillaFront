@@ -1,0 +1,21 @@
+﻿@using ALOGRepositorios.Services.Catalogos.ICatalogos
+@inject ICatTipoEstadoService tipoService
+
+<span class="badge badge-phoenix @ObtenerClaseEstatus()">@estatus</span>
+
+@code {
+    [Parameter]
+    [EditorRequired]
+    public string estatus { get; set; } = string.Empty!;
+
+
+    private string ObtenerClaseEstatus() {
+        return estatus switch {
+            "Abierto" => "badge-phoenix-warning",
+            "Cancelado" => "badge-phoenix-danger",
+            "Terminado" => "badge-phoenix-success",
+            "Proceso" => "badge-phoenix-warning",
+            _ => "badge-phoenix-warning" // Clase por defecto si no coincide con las opciones anteriores
+        };
+    }
+}

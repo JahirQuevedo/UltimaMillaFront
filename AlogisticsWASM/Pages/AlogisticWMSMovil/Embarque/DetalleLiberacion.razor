@@ -1,0 +1,236 @@
+﻿@page "/embarque-detalleLiberacion/{DataEmbarque}"
+@page "/embarque-detalleLiberacion"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+
+@inject DialogService BusyDialogService
+
+@attribute [Authorize]
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("embarque-consultaLiberacion")) />
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Mercancía</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+<RadzenDataList PageSize="4" AllowPaging="true" 
+    LoadData=@LoadData IsLoading=@isLoading Style="width:100%;" WrapItems="@(!permiteVirtualization)"
+    Data="@_listaMonitorInventarioSalida" TItem="MonitorInventarioAlmacen" class="rz-p0">
+    <Template Context="monitorInventario">
+
+            <RadzenStack class="@(!monitorInventario.FechaEmbarque.Equals(DateTime.MinValue)  ? "rz-background-color-success-lighter" : !monitorInventario.FechaEmbarque.Equals(DateTime.MinValue) ? "rz-background-color-warning-lighter" : "rz-background-color-base-50")">
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="rz-text-truncate">
+                        <b>Mercancía</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="rz-text-truncate">
+                        VEHICULO
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="rz-text-truncate">
+                        <b>Números</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="rz-text-truncate">
+                        @(monitorInventario.Numeros)
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="rz-text-truncate">
+                        <b>Peso</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="rz-text-truncate">
+                       @(monitorInventario.Peso.ToString())
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="4" class="rz-text-truncate">
+                        <b>Embalaje</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="8" class="rz-text-truncate">
+                       VEHICULOS
+                    </RadzenColumn>
+                </RadzenRow>
+
+                @if (!monitorInventario.FechaEmbarque.Equals(DateTime.MinValue)) {
+                    <hr style="border: none; background-color: var(--rz-base-600); height: 1px; margin: 0;" />
+                    <RadzenRow>
+                        <RadzenColumn Size="4" class="rz-text-truncate">
+                        <b>F. Embarque</b>
+                        </RadzenColumn>
+                        <RadzenColumn Size="8" class="rz-text-truncate">
+                            @monitorInventario.FechaEmbarque
+                        </RadzenColumn>
+                    </RadzenRow>
+                }
+
+            </RadzenStack>
+    </Template>
+</RadzenDataList>
+
+@code {
+
+    [Parameter] public string DataEmbarque { get; set; }
+
+    int totalRegistrosInventarioSalida;
+
+    int registrosPorPaginaInventarioSalida = 50;
+    
+    int numeroDePaginaInventarioSalida = 1;
+
+    bool permiteVirtualization = false;
+
+    List<MonitorInventarioAlmacen> _listaMonitorInventarioSalida = new List<MonitorInventarioAlmacen>();
+
+    MonitorLiberacionInventario _monitorLiberacionInventario = new MonitorLiberacionInventario();
+
+    IList<MonitorInventarioAlmacen> selectedInventarioSalida;
+
+    ControlEmbarqueDTO _controlEmbarqueDTO = new ControlEmbarqueDTO();
+
+    [Inject] private ILiberacionService? _liberacionService {get; set; }
+
+    bool isLoading = true;
+
+    LoadDataArgs _args;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        
+        await LoadStateEmbarqueAsync();
+
+        
+        await LoadData(_args);
+        
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+        //Console.WriteLine("OnParametersSet");
+
+        if (DataEmbarque != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataEmbarque);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+//Console.WriteLine("Decoded: " + decodedString);
+
+            _controlEmbarqueDTO =  new ControlEmbarqueDTO();
+
+            _controlEmbarqueDTO = JsonConvert.DeserializeObject<ControlEmbarqueDTO>(decodedString);
+
+        }
+
+    }
+
+    async Task LoadData(LoadDataArgs args)
+    {
+        isLoading = true;
+
+        //Console.WriteLine("LoadData");
+
+         ConsultaCatalogoBase<ConsultaLiberacionInventario> _consulta = new ConsultaCatalogoBase<ConsultaLiberacionInventario>();
+        _consulta.Entidad = new ConsultaLiberacionInventario();
+        _consulta.Entidad.IdOrdenSalida = _monitorLiberacionInventario.IdLiberacion;
+        _consulta.NumeroDePagina = numeroDePaginaInventarioSalida;
+        _consulta.RegistrosPorPagina = registrosPorPaginaInventarioSalida;
+
+
+        InvokeAsync(async () =>
+            {
+
+                var result = await _liberacionService!.ObtenerDetalleInventarioListaPaginada(_consulta);
+
+                if (result.Success) {
+
+                    _listaMonitorInventarioSalida = result.Data;
+
+                    totalRegistrosInventarioSalida = (int)result.Paginado.TotalRegistros;
+
+                    selectedInventarioSalida = _listaMonitorInventarioSalida.Take(1).ToList();
+                }
+
+                isLoading = false;
+
+                BusyDialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+        });
+
+        await BusyDialog("Cargando Información...");
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    private async Task LoadStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultList = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorLiberacionInventario");
+        if (!string.IsNullOrEmpty(resultList))
+        {
+            _monitorLiberacionInventario = System.Text.Json.JsonSerializer.Deserialize<MonitorLiberacionInventario>(resultList);
+        }
+    }
+
+    private async Task SaveStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorLiberacionInventario", System.Text.Json.JsonSerializer.Serialize<MonitorLiberacionInventario>(_monitorLiberacionInventario));
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+}

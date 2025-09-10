@@ -1,0 +1,42 @@
+﻿@page "/comentarios"
+
+@using ALOG.Modelos.Modelos.Catalogos
+
+<div>
+    <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Gap="2rem" class="layout-estable">
+        <RadzenColumn Size="12">
+            <RadzenFormField Text="Aduanas" Variant="Variant.Outlined">
+                @if (_estaCargando) {
+                    <RadzenProgressBarCircular ShowValue="true"
+                                               ProgressBarStyle="ProgressBarStyle.Primary"
+                                               Mode="ProgressBarMode.Indeterminate"
+                                               Size="ProgressBarCircularSize.Small" />
+                } else {
+                    <RadzenDropDown AllowClear="true"
+                                    ValueProperty="@nameof(CatAduana.IdCatAduana)"
+                                    TextProperty="@nameof(CatAduana.Nombre)"
+                                    Style="width: 100%; max-width: 400px;"
+                                    @bind-Value=_idAduanaSeleccionada
+                                    Name="DropDownVirtualization"
+                                    AllowVirtualization="true"
+                                    AllowFiltering="true"
+                                    Data=@_aduanas />
+                }
+            </RadzenFormField>
+        </RadzenColumn>
+
+        <RadzenColumn Size="12">
+            <RadzenFormField Text="Comentarios" Variant="Variant.Outlined" Style="width: 100%;">
+                <RadzenTextArea Change=@(args => OnChange(args, "TextArea with placeholder"))
+                                aria-label="TextArea with placeholder"
+                                Placeholder="Agregar comentarios"
+                                @bind-Value=_comentarios
+                                Style="width: 100%; height: 200px;" />
+            </RadzenFormField>
+        </RadzenColumn>
+            <RadzenColumn Size="12" class="rz-text-align-center rz-p-2">
+                <RadzenButton Click=@(args => Aceptar()) Text="Aceptar" ButtonStyle="ButtonStyle.Primary" />
+                <RadzenButton Click=@(args => Cancelar()) Text="Cancelar" ButtonStyle="ButtonStyle.Secondary" />
+            </RadzenColumn>
+    </RadzenRow>
+</div>

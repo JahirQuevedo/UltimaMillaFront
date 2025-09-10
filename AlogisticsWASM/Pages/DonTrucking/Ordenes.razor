@@ -1,0 +1,200 @@
+﻿@page "/Ordenes"
+@using ALOG.Modelos.Modelos.Logisticos;
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Layout.Logisticos
+@inject IOrdenService ordenService 
+
+    <nav class="mb-3 mt-10 invisible" aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="#!">Page 1</a></li>
+            <li class="breadcrumb-item"><a href="#!">Page 2</a></li>
+            <li class="breadcrumb-item active">Default</li>
+        </ol>
+    </nav>
+    <div class="mb-9">
+        <div class="row g-3 mb-4">
+            <div class="col-auto">
+                <h2 class="mb-0">Ordenes</h2>
+            </div>
+        </div>
+        <ul class="nav nav-links mb-3 mb-lg-2 mx-n3">
+            <li class="nav-item">
+                <a class="nav-link active" aria-current="page" href="#">
+                    <span>Todos </span>
+                    <span class="text-body-tertiary fw-semibold">(@_encabezados?.Count())</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link">
+                    <span>Completadas </span>
+                    <span class="text-body-tertiary fw-semibold">(@_ordenesCompletadas)</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link">
+                    <span>En proceso</span>
+                    <span class="text-body-tertiary fw-semibold">(@_ordenesEnProceso)</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link">
+                    <span>Canceladas</span>
+                    <span class="text-body-tertiary fw-semibold">(@_ordenesCanceladas)</span>
+                </a>
+            </li>
+        </ul>
+
+        <div id="orderTable" data-list='{"valueNames":["order","total","customer","payment_status","fulfilment_status","delivery_type","date"],"page":10,"pagination":true}'>
+            <div class="mb-4">
+                <div class="row g-3">
+                    <div class="col-auto">
+                        <div class="search-box">
+                            <form class="position-relative">
+                                <input class="form-control search-input search" type="search" placeholder="Buscar por cliente" aria-label="Search" @bind:get="ClienteFiltrar" @bind:set="BuscarPorCliente" @bind:event="oninput" />
+                                <span class="fas fa-search search-box-icon"></span>
+
+                            </form>
+                        </div>
+                    </div>
+                    <div class="col-auto scrollbar overflow-hidden-y flex-grow-1 invisible">
+                        <div class="btn-group position-static" role="group">
+                            <div class="btn-group position-static text-nowrap" role="group">
+                                <button class="btn btn-phoenix-secondary px-7 flex-shrink-0" type="button" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                                    Payment status<span class="fas fa-angle-down ms-2"></span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider" />
+                                    </li>
+                                    <li><a class="dropdown-item" href="#">Separated link</a></li>
+                                </ul>
+                            </div>
+                            <div class="btn-group position-static text-nowrap" role="group">
+                                <button class="btn btn-sm btn-phoenix-secondary px-7 flex-shrink-0" type="button" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                                    Fulfilment status<span class="fas fa-angle-down ms-2"></span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="#">Action</a></li>
+                                    <li><a class="dropdown-item" href="#">Another action</a></li>
+                                    <li><a class="dropdown-item" href="#">Something else here</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider" />
+                                    </li>
+                                    <li><a class="dropdown-item" href="#">Separated link</a></li>
+                                </ul>
+                            </div>
+                            <button class="btn btn-sm btn-phoenix-secondary px-7 flex-shrink-0">More filters </button>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-link text-body me-4 px-0 invisible"><span class="fa-solid fa-file-export fs-9 me-2"></span>Exportar</button>
+                        <button class="btn btn-primary" @onclick="CrearOrden">
+                            <span class="fas fa-plus me-2"></span>Crear orden
+                        </button>
+                        @* <a class="dropdown-item" style="cursor: pointer" @onclick="() => CrearOrden()">Crear orden</a> *@
+                        @* <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCreacionEdicion" href="crear-orden" @onclick="CrearOrden">
+                            <span class="fas fa-plus me-2"></span>Crear orden
+                        </button> *@
+                    </div>
+                </div>
+            </div>
+
+            <div class="mx-n4 px-4 mx-lg-n6 px-lg-6 bg-body-emphasis border-top border-bottom border-translucent position-relative top-1">
+                <div class="table-responsive scrollbar mx-n1 px-1">
+                    <table class="table table-sm fs-9 mb-0">
+                        <thead>
+                            <tr>
+                                <th class="white-space-nowrap fs-9 align-middle ps-0" style="width:26px;">
+                                    <div class="form-check mb-0 fs-8">
+                                        <input class="form-check-input" id="checkbox-bulk-order-select" type="checkbox" data-bulk-select='{"body":"order-table-body"}' />
+                                    </div>
+                                </th>
+                                <th class="sort white-space-nowrap align-middle pe-3" scope="col" data-sort="order" style="width:5%;">Orden</th>
+                                <th class="sort align-middle text-end" scope="col" data-sort="total" style="width:6%;">Viaje</th>
+                                <th class="sort align-middle text-start ps-8" scope="col" data-sort="customer" style="width:28%;">Cliente</th>
+                                <th class="sort align-middle pe-3" scope="col" data-sort="payment_status" style="width:10%;">Factura</th>
+                                <th class="sort align-middle text-start pe-3" scope="col" data-sort="fulfilment_status" style="width:10%;">Bodega</th>
+                                <th class="sort align-middle text-start" scope="col" data-sort="delivery_type" style="width:10%;">Fecha de solicitud</th>
+                                <th class="sort align-middle text-start" scope="col" data-sort="delivery_type" style="width:10%;">Fecha de salida</th>
+                                <th class="sort align-middle text-end pe-0" scope="col" data-sort="date">Servicio</th>
+                                <th class="sort align-middle text-end pe-0" scope="col" data-sort="date">Estado</th>
+                                <th class="sort text-body-tertiary text-end align-middle pe-0 ps-4" style="width:5%" scope="col"></th>
+                            </tr>
+                        </thead>
+                        @if (pagedData is null) {
+                            <Loading></Loading>
+                        } else if (pagedData.Count() > 0) {
+                            
+                            @foreach (var encabezado in pagedData) {
+                                <tbody class="list" id="order-table-body">
+                                    <tr class="hover-actions-trigger btn-reveal-trigger position-static">
+                                        <td class="fs-9 align-middle px-0 py-3">
+                                            <div class="form-check mb-0 fs-8">
+                                                <input class="form-check-input" type="checkbox" data-bulk-select-row='{"order":2453,"total":87,"customer":{"avatar":"/team/32.webp","name":"Carry Anna"},"payment_status":{"label":"Complete","type":"badge-phoenix-success","icon":"check"},"fulfilment_status":{"label":"Cancelled","type":"badge-phoenix-secondary","icon":"x"},"delivery_type":"Cash on delivery","date":"Dec 12, 12:56 PM"}' />
+                                            </div>
+                                        </td>
+                                        <td class="order align-middle white-space-nowrap py-0"><a class="fw-semibold" style="cursor: pointer" @onclick="() => VerDetalles(encabezado)">#@encabezado.IdDtUltMillaEnc</a></td>
+                                        <td class="total align-middle text-end fw-semibold text-body-highlight">@encabezado.Viaje</td>
+                                        <td class="customer align-middle white-space-nowrap ps-8">
+                                            <h6 class="mb-0 text-body">@encabezado.catClientes.RazonSocial</h6>
+                                        </td>
+                                        <td class="delivery_type align-middle white-space-nowrap text-body fs-9 text-start">@encabezado.FacturaCliente</td>
+                                        <td class="date align-middle white-space-nowrap text-body-tertiary fs-9 ps-4 text-start">@encabezado.Bodega</td>
+                                        <td class="date align-middle white-space-nowrap text-body-tertiary fs-9 ps-4 text-start">@encabezado.FechaSolicitud</td>
+                                        <td class="date align-middle white-space-nowrap text-body-tertiary fs-9 ps-4 text-start">@encabezado.FechaSalida</td>
+                                        <td class="date align-middle white-space-nowrap text-body-tertiary fs-9 ps-4 text-end">@encabezado.catServicios.Descripcion</td>
+                                        <td class="date align-middle white-space-nowrap text-body-tertiary fs-9 ps-4 text-end"><EstatusDT estatus="@encabezado.catTipoEstados.Nombre" /></td>
+                                        <td class="align-middle text-end white-space-nowrap pe-0 action">
+                                            <div class="btn-reveal-trigger position-static">
+                                                <button class="btn btn-sm dropdown-toggle dropdown-caret-none transition-none btn-reveal fs-10" type="button" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                                                    <span class="fas fa-ellipsis-h fs-10"></span>
+                                                </button>
+                                                <div class="dropdown-menu dropdown-menu-end py-2">
+                                                    <a class="dropdown-item" style="cursor: pointer" @onclick="() => VerDetalles(encabezado)">Ver detalles</a>
+                                                    <a class="dropdown-item" style="cursor: pointer; display: none" data-bs-toggle="modal" data-bs-target="#modalEditarEncabezado" @onclick="() => EditarOrden(encabezado)">Editar</a>
+                                                    <div class="dropdown-divider" style="display:none"></div>
+                                                    <a class="dropdown-item text-danger" style="cursor: pointer; display: none;">Eliminar</a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            }
+                        }
+                            
+                        
+                    </table>
+                </div>
+                <div class="row align-items-center justify-content-between py-2 pe-0 fs-9">
+                    <div class="col-auto d-flex invisible">
+                        <p class="mb-0 d-none d-sm-block me-3 fw-semibold text-body" data-list-info="data-list-info"></p>
+                        <a class="fw-semibold" href="#!" data-list-view="*">
+                            Ver todos
+                            <span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span>
+                        </a>
+                        <a class="fw-semibold d-none" href="#!" data-list-view="less">
+                            Ver menos
+                            <span class="fas fa-angle-right ms-1" data-fa-transform="down-1"></span>
+                        </a>
+                    </div>
+                    <div class="col-auto d-flex">
+                        <button class="page-link" data-list-pagination="prev" @onclick="PrevPage" ><span class="fas fa-chevron-left"></span></button>
+                        <ul class="mb-0 pagination"></ul>
+                        <button class="page-link pe-0" data-list-pagination="next" @onclick="NextPage"><span class="fas fa-chevron-right"></span></button>
+                    </div>
+                    @* <div class="col-auto d-flex">
+                        <button class="page-link" data-list-pagination="prev" @onclick="PrevPage" disabled="@(!CanGoPrev)"><span class="fas fa-chevron-left"></span></button>
+                        <ul class="mb-0 pagination"></ul>
+                        <button class="page-link pe-0" data-list-pagination="next" @onclick="NextPage" disabled="@(!CanGoNext)"><span class="fas fa-chevron-right"></span></button>
+                    </div> *@
+                </div>
+            </div>
+        </div>        
+    </div>
+
+@* <FormularioEditarEncabezado Encabezado = "_encabezadoSeleccionado"
+                            OnEncabezadoEditado = "ObtenerEncabezadoEditado" /> *@

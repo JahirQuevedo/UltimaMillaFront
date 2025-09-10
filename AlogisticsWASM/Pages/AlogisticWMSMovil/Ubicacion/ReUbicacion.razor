@@ -1,0 +1,236 @@
+﻿@page "/reubicacion/{DataRecepcion}"
+@page "/reubicacion"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("recepcion-reportdannios"))  />
+    </RadzenColumn>
+    <RadzenColumn Size="6" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" Visible=false ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("ubicacion"))  />
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Ubicación</RadzenText>
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">&nbsp;</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+<RadzenStack AlignItems="AlignItems.Center" class="rz-p-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">VNLTA36E95XZ129850</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center align-content-start">
+            ID Mercancía
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+<RadzenStack class="rz-pt-5" AlignItems="AlignItems.Center" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenStack AlignItems="AlignItems.Start" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+        JustifyContent="JustifyContent.Normal">
+        <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+            <RadzenColumn Size="10" SizeMD="10" SizeLG="10" class="rz-mb-5">
+                <RadzenFormField Text="Ubicación" Variant="Variant.Text" Style="width: 100%;">
+                    <RadzenTextBox Value="AF1C5" />
+                </RadzenFormField>
+            </RadzenColumn>
+            <RadzenColumn Size="2" SizeMD="2" SizeLG="2" class="text-center">
+                <RadzenButton Icon="qr_code_scanner" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClick("Folio Tarja button")) />
+            </RadzenColumn>
+        </RadzenRow>
+    </RadzenStack>
+</RadzenStack>
+
+<RadzenRow>
+    <RadzenColumn Size="12" class="text-center">
+        <RadzenButton Click=@(args => OnClick("CONFIRMAR")) Text="Confirmar" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+    </RadzenColumn>
+</RadzenRow>
+
+@code {
+
+    [Parameter] public string DataRecepcion { get; set; }
+
+    MonitorPartida monitorPartida = new MonitorPartida();
+
+    List<MonitorPartida> listaMonitorPartida = new List<MonitorPartida>();
+
+    List<MonitorRecepcionMercancia> _listaMonitorRecepcionMercancia = new List<MonitorRecepcionMercancia>();
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+    int valEstadoRecepcion = 1;
+
+    bool permiteVirtualization = false;
+    int count;
+
+    bool disabledTieneAveria = true;
+
+    bool isLoading;
+
+    int registrosPorPagina = 50;
+
+    int totalRegistros;
+
+    int numeroDePagina = 1;
+
+    [Inject] private IPartidaService? _partidaService { get; set; }
+
+    [Inject] private IZonaAlmacenService? _zonaAlmacenService { get; set; }
+
+    [Inject] private IUbicacionAlmacenService? _ubicacionAlmacenService { get; set; }
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; } 
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        _listaMonitorRecepcionMercancia = new List<MonitorRecepcionMercancia>();
+
+        await LoadStateRecepcionAsync();
+
+        _monitorRecepcionMercancia =  new MonitorRecepcionMercancia();
+
+        _monitorRecepcionMercancia = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+       //Console.WriteLine("OnInitializedAsync");
+
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+       //Console.WriteLine("OnParametersSet");
+
+        if (DataRecepcion != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataRecepcion);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+           //Console.WriteLine("Decoded: " + decodedString);
+
+            _recepcionMercanciaDTO =  new RecepcionMercanciaDTO();
+
+            _recepcionMercanciaDTO = JsonConvert.DeserializeObject<RecepcionMercanciaDTO>(decodedString);
+
+        }
+
+    }
+
+    async Task LoadData(LoadDataArgs args)
+    {
+        isLoading = true;
+
+       //Console.WriteLine("LoadData");
+
+        ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+        _consultaRecepcion.Entidad = new ConsultaRecepcion();
+        _consultaRecepcion.Entidad.TipoClasificacionRecepcion = (TipoClasificacionRecepcion)valEstadoRecepcion;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+
+        _consultaRecepcion.NumeroDePagina = numeroDePagina;
+        _consultaRecepcion.RegistrosPorPagina = registrosPorPagina;
+
+        if (_recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) {
+
+            _consultaRecepcion.Entidad.ClaveReferenciaTarja = _recepcionMercanciaDTO.ClaveReferenciaTarja;
+
+        } else if (_recepcionMercanciaDTO.TipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Partida)) {
+
+            _consultaRecepcion.Entidad.IdMercancia = _recepcionMercanciaDTO.IdMercancia;
+
+        }
+
+        var _result = await _recepcionService.ObtenerListaPaginada(_consultaRecepcion);
+
+        if (_result.Success) {
+
+            if (!_result.Data.Count.Equals(0)) {
+
+                _listaMonitorRecepcionMercancia = _result.Data;
+
+                var _recepcionMercancia = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+                if (_recepcionMercancia != null) {
+
+                    if (_recepcionMercancia.RecoleccionTarjaConfirmada) {
+
+                        disabledTieneAveria = true;
+
+                    } else {
+
+                        disabledTieneAveria = false;
+                    }
+                }
+
+                totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+            }
+
+        }
+
+        isLoading = false; 
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    private async Task LoadStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultListRecepcion = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "ListaMonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(resultListRecepcion))
+        {
+            _listaMonitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<List<MonitorRecepcionMercancia>>(resultListRecepcion);
+        }
+    }
+
+    private async Task SaveStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "ListaMonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<List<MonitorRecepcionMercancia>>(_listaMonitorRecepcionMercancia));
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+}

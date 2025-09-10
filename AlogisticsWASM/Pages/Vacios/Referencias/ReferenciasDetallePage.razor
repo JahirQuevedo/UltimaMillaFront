@@ -1,0 +1,190 @@
+﻿@page "/referenciasdet/{paramIdOrden:int}/{paramstrTipoAccion}"
+
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using Microsoft.AspNetCore.Authorization
+@using Radzen
+@using Radzen.Blazor
+@inject NotificationService NotificationService
+@inject SweetAlertService Swal;
+@inject Radzen.DialogService DialogService
+@inject UsuarioTokenDTO _UsuarioTokenDTO
+@inject IConfiguration configuration
+
+
+@attribute [Authorize]
+
+<style>
+    :root {
+        --rz-grid-header-color: white;
+        --rz-grid-header-background-color: darkred;
+    }
+
+
+    
+
+   /*  .rz-grid-table {
+        width: unset;
+    }
+
+    .custom-header {
+        font-weight: bold;
+        background-color: #f0f0f0;
+    } */
+</style>
+<div class="content mt-2">
+    @* <div class="row g-3 mb-2">
+        <div class="rz-m-2">
+            <RadzenBreadCrumb>
+                <RadzenBreadCrumbItem Path="/" Text="Home" />
+                <RadzenBreadCrumbItem Path="/referenciasRZ" Text="Referencias" />
+                <RadzenBreadCrumbItem Text="Referencia Detalle" />
+            </RadzenBreadCrumb>
+        </div>
+        <div class="col-auto">
+
+            <RadzenText TextStyle="TextStyle.H6" Text="Detalle referencia" TextAlign="TextAlign.Left" />
+        </div>
+    </div> *@
+    <RadzenStack Gap="1rem">
+        @* <RadzenButton Text="Open Modal" Click="OpenModal" /> *@
+        <RadzenPanel AllowCollapse="true" class="rz-my-2 rz-mx-auto" Style="width: 100%;"
+                     Expand=@(() => Change("Panel expanded")) Collapse=@(() => Change("Panel collapsed"))>
+            <HeaderTemplate>
+                <RadzenText TextStyle="TextStyle.H6" class="rz-display-flex rz-align-items-center rz-m-0">
+                    <RadzenIcon Icon="filter_alt" class="rz-me-1" /><b>Datos generales </b>
+                </RadzenText>
+            </HeaderTemplate>
+            <ChildContent>
+                <RadzenCard Variant="Variant.Outlined">
+                    <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-2">
+                        <div class="container text-left">
+                            <div class="row">
+                                <div class="col" style="display: inline-block;">
+                                    <span>
+                                         <b>Orden:</b> @_objOrden.IdOrden 
+                                    </span>
+
+                                </div>
+                                <div class="col" >
+                                    <span>
+                                        <b>F.Solicitud:</b> @_objOrden.FechaRegistro
+                                    </span>
+
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>Ref.Alo:</b>  @(_objOrden.ReferenciaALO == null ? "" : _objOrden.ReferenciaALO) 
+                                    </span>
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>Sucursal:</b> @(strSucursal)
+                                    </span>
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>Cliente:</b>  @strClienteRazonSocial
+                                    </span>
+                                </div>
+                                <div class="col">
+
+                                    <span>
+                                        <b>Aduana:</b> @strAduana
+                                    </span>
+                                </div>
+
+                            </div>
+                        </div>
+
+                    </RadzenRow>
+                    @*  <RadzenRow JustifyContent="JustifyContent.Normal" class="rz-my-4">
+                    <div class="container text-left">
+                    <div class="row">
+                    <div class="col">
+
+                    <span>
+                    <b>Transportista:</b> @_objOrden.peticionesReferencias.FirstOrDefault().Transporte_RazonSocial
+                    </span>
+                    </div>
+                    <div class="col">
+
+                    <span>
+                    <b>Solicitante:</b>
+                    </span>
+                    </div>
+                    <div class="col">
+
+                    <span>
+                    <b>F.Solicitud:</b> @_objOrden.FechaRegistro
+                    </span>
+                    </div>
+                    <div class="col">
+
+                    <span>
+                    <b>L.Negocio:</b> @_objOrden.CatLineaNegocio.Nombre
+                    </span>
+                    </div>
+                    <div class="col">
+                    <span>
+                    <b>Ticket:</b> @_objOrden.peticionesReferencias.FirstOrDefault().Ticket
+                    </span>
+                    </div>
+
+                    </div>
+                    </div>
+
+                    </RadzenRow> *@
+                </RadzenCard>
+            </ChildContent>
+        </RadzenPanel>
+        @*  <RadzenButton Click=@(args => CrearReferencia()) Text="Crear" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" Style="width:200px;" /> *@
+
+        @if (isLoading)
+        {
+            <div class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12" style="max-width: 600px;">
+                <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" ProgressBarStyle="ProgressBarStyle.Primary">
+                    <Template>Wait</Template>
+                </RadzenProgressBarCircular>
+            </div>
+        }else{
+
+
+            if (@_IEReferencias.Where(x => x.IdReferencia == intIdReferencia).FirstOrDefault().IdCatReferenciaEstado != 7)
+            {
+                blhabilitacontroles = dicAccesoActualizar;
+            }
+            else blhabilitacontroles = false;
+
+            <GridContenedoresCmp 
+                ParamdicAcceso=@dicAcceso
+                ParamUsuarioTokenDTO=@_UsuarioTokenDTO
+                paramIdOrden=@_objOrden.IdOrden 
+                paramIdReferencia=@intIdReferencia paramMostraServicios=true
+                                 paramMostarControles=blhabilitacontroles
+                                 paramContenedores="@_IEReferencias.Where(x =>x.IdReferencia==intIdReferencia).SelectMany(refDto => refDto.Contenedores ?? new List<PeticionesContenedores>()).AsQueryable().ToList()"></GridContenedoresCmp>
+        }
+
+
+
+
+
+
+    </RadzenStack>
+
+</div>
+
+@code {
+    async Task OpenModal()
+    {
+        var parameters = new Dictionary<string, object> { { "pIdServicio", 1 } };
+        await DialogService.OpenAsync<ModalDocumentosCarga>("My Modal", parameters);
+    }
+}

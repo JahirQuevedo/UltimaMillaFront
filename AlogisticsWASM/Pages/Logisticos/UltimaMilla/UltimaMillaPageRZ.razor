@@ -1,0 +1,490 @@
+﻿@page "/UltimaMillaRZ"
+@using ALOG.Modelos.Modelos.DTLogistico
+
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using ALOG.Modelos.Modelos.Logisticos;
+
+@using Microsoft.AspNetCore.Authorization
+@inject NotificationService NotificationService
+@inject UsuarioTokenDTO UsuarioTokenDTO
+@inject IConfiguration configuration
+@inject Radzen.DialogService DialogService
+
+@attribute [Authorize]
+
+
+
+
+<style>
+    :root {
+        --rz-grid-header-color: white;
+        --rz-grid-header-background-color: darkred;
+    }
+    /* ------------- Contenedor principal ------------- */
+    .full-grid {
+        display: flex;
+        flex-direction: column;
+       /*  height: calc(100vh - 180px); */ /* ajusta el 180px a la altura de tus filtros/breadcrumb */
+    }
+
+    /* 1. Uniforma altura y alineación de filas */
+    .rz-datagrid .rz-datatable td {
+        vertical-align: middle;
+        height: 64px;
+        padding: 0.5rem;
+    }
+
+    /* 2. Evita desbordes de texto */
+    .rz-datagrid .rz-datatable td {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Quita bordes de celdas */
+    .rz-datagrid .rz-datatable td,
+    .rz-datagrid .rz-datatable th {
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+
+        /* ------------- Card y Grid flexibles ------------- */
+        .full-grid .rz-card {
+            flex: 1 1 auto;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        .full-grid .rz-datagrid {
+            flex: 1 1 auto;
+            height: 100%;
+        }
+
+        /* ------------- Encabezado ------------- */
+        .full-grid .rz-datagrid-header {
+            background-color: red; /* fondo oscuro */
+        }
+
+        .full-grid .rz-column {
+            background-color: red !important; /* títulos en rojo */
+            color: white;
+            font-weight: bold;
+        }
+
+        /* ------------- Filas alternadas ------------- */
+        .full-grid .rz-datagrid-data tbody tr:nth-child(odd) {
+            background-color: white;
+        }
+
+        .full-grid .rz-datagrid-data tbody tr:nth-child(even) {
+            background-color: #f5f5f5;
+        }
+
+    /* ------------- “Chips” de Estado ------------- */
+    .status-chip {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        text-align: center;
+        min-width: 64px;
+    }
+
+    /* ABIERTO */
+    .status-1 {
+        background-color: #000000; /* negro */
+        color: white;
+    }
+
+    /* EN PROCESO */
+    .status-2 {
+        background-color: #ffb425; /* naranja */
+        color: black;
+    }
+
+    /* TERMINADO */
+    .status-3 {
+        background-color: #4caf50; /* verde */
+        color: white;
+    }
+
+    /* CANCELADO */
+    .status-4 {
+        background-color: #f44336; /* rojo */
+        color: white;
+    }
+
+    /* PENDIENTE */
+    .status-5 {
+        background-color: #9e9e9e; /* gris medio */
+        color: white;
+    }
+
+
+    .chips-container {
+        display: flex;
+        gap: 0.25rem; /* Reducido para que estén casi pegadas */
+        justify-content: flex-end;
+        /* min-height: 50px; */
+        /* margin-bottom: 0.5rem;
+        padding-right: 1rem; */
+    }
+
+    .estado-chip {
+        background-color: gray;
+        padding: 0 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: white;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* separa texto y número */
+        min-width: 120px;
+        height: 40px;
+        border-radius: 4px;
+        gap: 8px;
+    }
+
+        .estado-chip .notificacion {
+            background-color: red;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 50px; /* se adapta mejor a números largos */
+            line-height: 1;
+            min-width: 24px;
+            text-align: center;
+        }
+
+
+    /* ------------- Iconos con fondo ------------- */
+    .icon-container {
+        width: 28px;
+        height: 28px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+    }
+    .icon-document {
+        background-color: gray;
+    }
+    .icon-truck {
+        background-color: #1976d2;        
+    }
+    /* azul */
+    .icon-ship {
+        background-color: #388e3c;        
+    }
+    /* verde oscuro */
+    .icon-plane {
+        background-color: #fbc02d;        
+    }
+    /* amarillo */
+    .icon-container img {
+        width: 16px;
+        height: 16px;
+    }
+    .icon-trash {
+        background-color: red;
+    }
+    .icon-gps {
+        background: green;
+    }
+</style>
+@if (position == 0)
+{
+    <style>
+        .rz-panel-titlebar {
+        flex-direction: row-reverse;
+        justify-content: left;
+        }
+    </style>
+}
+
+
+<div class="content mt">
+    <div class="row g-3 mb-2">
+
+        <div class="rz-m-2">
+            <RadzenBreadCrumb>
+                <RadzenBreadCrumbItem Path="/" Text="Home" />
+                <RadzenBreadCrumbItem Text="Ultima Milla" />
+            </RadzenBreadCrumb>
+        </div>
+        <div class="col-auto">
+            <h4 class="mb-0">Servicios de Ultima Milla</h4>
+        </div>
+    </div>
+
+    <RadzenStack Orientation="Orientation.Horizontal"
+    AlignItems="AlignItems.Center"
+    Gap="0.25rem"
+    Wrap="FlexWrap.Wrap"
+    Style="width: 100%;">
+
+        <!-- Iconos de transporte -->
+        <RadzenStack Orientation="Orientation.Horizontal"
+        AlignItems="AlignItems.Center"
+        Gap="0.25rem"
+        Style="height: 38px;">
+            <RadzenButton Style="padding: 0; border: none; background: transparent; height: 38px;">
+                <img src="/img/UltimaMilla/Avion_dark.svg" style="height: 30px;" />
+            </RadzenButton>
+            <RadzenButton Style="padding: 0; border: none; background: transparent; height: 38px;">
+                <img src="/img/UltimaMilla/Camion_dark.svg" style="height: 30px;" />
+            </RadzenButton>
+            <RadzenButton Style="padding: 0; border: none; background: transparent; height: 38px;">
+                <img src="/img/UltimaMilla/Barco_dark.svg" style="height: 30px;" />
+            </RadzenButton>
+        </RadzenStack>
+
+        <!-- Filtros -->
+        @* <RadzenTextBox Style="width: 160px; height: 38px;" Placeholder="Cliente" @bind-Value="objFiltroSolicitudes.RazonSocial" /> *@
+        <!-- Cliente -->
+        <div style="display:flex; flex-wrap:wrap; align-items:flex-start; gap:10px;">
+
+            <!-- Cliente -->
+            <div style="display:flex; flex-direction:column; width:160px;">
+                <RadzenLabel Text="Cliente" Component="Cliente" />
+                <RadzenDropDown Name="Cliente"
+                                @bind-Value="objFiltroSolicitudes.IdCatCliente"
+                                Data="@lstCatClientes"
+                                TextProperty="RazonSocial"
+                                ValueProperty="IdCatCliente"
+                                Style="height: 38px;"
+                                AllowFiltering="true"
+                                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                FilterOperator="StringFilterOperator.Contains"
+                                FilterAutoCompleteType="AutoCompleteType.On"
+                                Change="@(() => FiltrarDTO())" />
+            </div>
+
+            <!-- Estado -->
+            <div style="display:flex; flex-direction:column; width:160px;">
+                <RadzenLabel Text="Estado" Component="Estado" />
+                <RadzenDropDown Name="Estado"
+                                @bind-Value="objFiltroSolicitudes.IdCatTipoEstado"
+                                Data="@lstCatTipoEstados"
+                                TextProperty="Nombre"
+                                ValueProperty="IdCatTipoEstados"
+                                Style="height: 38px;"
+                                Change="@(() => FiltrarDTO())" />
+            </div>
+
+            <!-- F. Posicionamiento -->
+            <div style="display:flex; flex-direction:column; width:140px;">
+                <RadzenLabel Text="F. Posicionamiento" Component="FechaPosicionamientoInicio" />
+                <RadzenDatePicker Name="FechaPosicionamientoInicio"
+                                  @bind-Value="objFiltroSolicitudes.FechaPosicionamientoInicio"
+                                  DateFormat="dd/MM/yyyy"
+                                  Placeholder="Salida"
+                                  Style="height: 38px;"
+                                  Change="@(() => FiltrarDTO())" />
+            </div>
+
+            <!-- F. Entrega -->
+            <div style="display:flex; flex-direction:column; width:140px;">
+                <RadzenLabel Text="F. Entrega" Component="FechaPosicionamientoFin" />
+                <RadzenDatePicker Name="FechaPosicionamientoFin"
+                                  @bind-Value="objFiltroSolicitudes.FechaPosicionamientoFin"
+                                  DateFormat="dd/MM/yyyy"
+                                  Placeholder="Llegada"
+                                  Style="height: 38px;"
+                                  Change="@(() => FiltrarDTO())" />
+            </div>
+
+            <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px;">
+
+                <!-- Aquí irían tus filtros... -->
+
+                <!-- Botón limpiar filtros -->
+                <div style="width:auto; padding-top:1rem;">
+                    <RadzenButton Icon="filter_alt_off"
+                                  Click="@(() => BorrarFiltro())"
+                                  Style="border-radius:8px; height:38px;" />
+                </div>
+
+                <!-- Botón crear solicitud -->
+                <div style="width:auto; padding-top: 1rem;">
+                    <RadzenButton Click="@(() => OpenModal("C"))"
+                                  Text="Crear Solicitud"
+                                  Icon="add_circle"
+                                  ButtonStyle="ButtonStyle.Primary"
+                                  Style="width:150px; height:38px; border-radius:8px; background-color:blue;" />
+                </div>
+
+            </div>
+
+        </div>
+
+       @*  <RadzenButton Click="@(() => SolicitudTransportista())"
+        Text="SOL.TRANSPORTE"
+        Icon="add_circle"
+        ButtonStyle="ButtonStyle.Primary"
+        Style="width: 160px; height: 38px; background-color: blue; border-radius: 8px;" />
+ *@
+    </RadzenStack>
+
+
+</div>
+
+@if (cargando)
+{
+    <RadzenCard Style="border-radius: 12px; padding: 1rem 2rem; margin-top: 1rem; min-height: 300px;">
+        <RadzenFieldset Text="Cargando Registros" Style="border-radius: 12px;">
+            <div style="display: flex; justify-content: center; align-items: center; flex-direction: column; height: 200px;">
+                <em class="mb-3">Cargando registros...</em>
+                <RadzenProgressBarCircular ShowValue="true"
+                Mode="ProgressBarMode.Indeterminate"
+                Size="ProgressBarCircularSize.Large"
+                ProgressBarStyle="ProgressBarStyle.Primary">
+                    <Template>Cargando</Template>
+                </RadzenProgressBarCircular>
+            </div>
+        </RadzenFieldset>
+    </RadzenCard>
+}
+
+else if(cargando == false)
+{
+    <div class="full-grid">
+        <!-- -->
+        <RadzenCard Variant="Variant.Outlined" Class="rz-card">
+
+            <div class="chips-container">
+                <div class="estado-chip">
+                    Abierto
+                    <span class="notificacion">@lstSLOSolicitudes.Count(s => s.catTipoEstado?.TipoEstado == "A")</span>
+                </div>
+                <div class="estado-chip">
+                    Proceso
+                    <span class="notificacion">@lstSLOSolicitudes.Count(s => s.catTipoEstado?.TipoEstado == "P")</span>
+                </div>
+            </div>
+
+
+            <RadzenDataGrid @ref="gridSolicitudes"
+            Data="@lstSLOSolicitudes"                           
+            Style="
+                                --rz-grid-cell-border: none;
+                                --rz-grid-bottom-cell-border: none;
+                                --rz-grid-right-cell-border: none;
+                                border-radius:12px;
+            "
+            TItem="SLOSolicitudes"
+            AllowPaging="true"
+            PageSize="@pageSize"
+            Class="rz-datagrid"
+            ShowPagingSummary="false"
+            ShowPagination="true">
+                <Columns>
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Tipo Transporte">
+                        <Template Context="item">
+                            @item.catTipoOperacion?.Nombre
+                        </Template>
+                    </RadzenDataGridColumn>                                          
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Ref.Alo">
+                        <Template Context="data">
+                            @data.Orden?.ReferenciaALO
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="ReferenciaCliente" Title="Ref.Cte" />
+                    @* <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Cliente">
+                        <Template Context="s">
+                            <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                                <img src="/img/UltimaMilla/ALOIcon.ico"
+                                alt="ALO"
+                                style="width: 40px; height: 24px;" />
+                            </div>
+                        </Template>
+                    </RadzenDataGridColumn> *@
+
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Nombre del cliente">
+                        <Template Context="data">
+                            @data.Cliente?.RazonSocial
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="Booking" Title="Booking" />
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Mercancías">
+                        <Template Context="data">
+                            @string.Join(", ", data.sloSOlicitudesDetalle?
+                                     .Where(d => d.Activo && d.catTipoMercancia != null)
+                                     .Select(d => d.catTipoMercancia.Nombre)
+                                     ?? Enumerable.Empty<string>())
+                        </Template>
+                    </RadzenDataGridColumn>
+                    @* <RadzenDataGridColumn TItem="DtUltimaMillaEnc" Property="Cargamento" Title="Cargamento" /> *@
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="catClienteUbicacionOrigen.NombreLugar" Title="Origen"/>                       
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="catClienteUbicacionDestino.NombreLugar" Title="Destino" />
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="FechaPosicionamiento" Title="Inicia" />
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="FechaFin" Title="Termina" />
+
+                    <!-- Estado con “chip” de color -->
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Estado" Width="7%">
+                        <Template Context="data">
+                            @* <span class=@($"status-chip status-{data.catTipoEstados?.IdCatTipoEstados}")>
+                                @data.catTipoEstados?.Nombre
+                            </span> *@
+                            <span class=@($"status-chip status-{data.catTipoEstado?.IdCatTipoEstados}")>
+                                @data.catTipoEstado?.Nombre
+                            </span>
+                        </Template>
+                    </RadzenDataGridColumn>
+
+                    @* <RadzenDataGridColumn TItem="DtUltimaMillaEnc" Property="catTipoEstados.Nombre" Title="Status"/> *@
+                    <!-- Icono según tipo -->
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Acciones">
+                        <Template Context="solicitud">
+                            <div class='icon-container icon-document'
+                                 @onclick='@(() => OpenModal("E", solicitud))'>
+                                <img src="img/UltimaMilla/document.svg" />
+                            </div>
+
+                            <div class="icon-container icon-truck"
+                                @onclick='@(() => SolicitudTransportista("C",solicitud))'>
+                                <img src="img/UltimaMilla/Camion.svg"/>
+                            </div>                           
+                            <div class="icon-container icon-gps"
+                                 @onclick='@(() => ControlTower(solicitud))'>
+                                <img src="img/UltimaMilla/gps.svg"/>
+                            </div>
+                            <div class="icon-container">
+                            @if (solicitud.IdCatTipoEstado == 1)
+                            {
+                                <div class="icon-container icon-trash"
+                                     @onclick='@(() => BajaSolicitud(solicitud.IdSLOSolicitud))'>
+                                    <img src="img/UltimaMilla/trash.svg" />
+                                </div>
+                            }
+                            </div>
+
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+        </RadzenCard>
+    </div>
+}
+else if(cargando = false && lstSLOSolicitudes == null)
+{
+    <p>No existen Datos en la DB</p>
+}
+
+@* <div class="icon-container icon-plane"
+     @onclick="@(() => MostrarEstado(servicios.First(), "avion"))"
+     style="cursor: pointer;">
+    <img src="img/UltimaMilla/plane_fill.svg" />
+</div> *@
+

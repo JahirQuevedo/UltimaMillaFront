@@ -1,0 +1,597 @@
+﻿@page "/recepcion-reportdannios/{DataRecepcion}"
+@page "/recepcion-reportdannios"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Newtonsoft.Json
+
+@inject IJSRuntime JSRuntime
+@inject DialogService DialogService
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@inject DialogService DialogServiceConfirm
+@attribute [Authorize]
+
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnBack())  />
+    </RadzenColumn>
+    @* <RadzenColumn Size="6" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("ubicacion"))  />
+    </RadzenColumn> *@
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">REPORTE DE DAÑOS</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+<RadzenStack AlignItems="AlignItems.Center" class="rz-p-5 rz-background-color-base-300 rz-border-base-300 rz-border-radius-2" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center align-content-start">
+            ID Mercancía
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Center">
+        <RadzenColumn Size="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H6">@(_recepcionMercanciaDTO.IdMercancia)</RadzenText>
+        </RadzenColumn>
+    </RadzenRow>
+    @if  (!_monitorRecepcionMercancia.IdUbicacionAlmacen.Equals(0)) {
+    <RadzenRow AlignItems="AlignItems.Center">
+         <RadzenColumn Size="2" class="text-center align-content-start rz-pr-5">
+            <RadzenIcon Icon="warehouse" style="font-size: 32px;" />
+        </RadzenColumn>
+        <RadzenColumn Size="5" class="text-center align-content-start">
+            <b>Zona</b><br/>@(_monitorRecepcionMercancia.ClaveZonaAlmacenaje)
+        </RadzenColumn>
+        <RadzenColumn Size="5" class="text-center align-content-start">
+            <b>Ubicación</b><br/>@(_monitorRecepcionMercancia.ClaveUbicacion)
+        </RadzenColumn>
+    </RadzenRow>
+    }
+</RadzenStack>
+<RadzenStack AlignItems="AlignItems.Stretch" class="rz-p-0 rz-mt-5" Gap="5px"
+    JustifyContent="JustifyContent.Normal" Style="width:100%;">
+        <RadzenRow AlignItems="AlignItems.Stretch" Gap="1.5rem" class="rz-p-sm-5">
+            <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="rz-mb-5">
+                <RadzenFormField Text="Código de Daño" Variant="Variant.Text" Style="width:100%;">
+                    <RadzenAutoComplete @bind-Value=@monitorBitacoraAveria.DescripcionCodgioDesperfecto Data=@listaCodigoDesperfecto 
+                        Change=@OnChangeCodigoDesperfecto class="rz-text-uppercase"
+                        ValueProperty="@nameof(CodigoDesperfecto.Id)"
+                        TextProperty="@nameof(CodigoDesperfecto.Descripcion)" LoadData=@OnLoadDataCodigoDesperfecto 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Código Desperfecto" }})" />
+                </RadzenFormField>
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+            <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="rz-mb-5">
+                <RadzenFormField Text="Tipo de Daño" Variant="Variant.Text" Style="width: 100%;">
+                    <RadzenAutoComplete @bind-Value=@monitorBitacoraAveria.DescripcionTipoDesperfecto Data=@listaTipoDesperfecto
+                        Change=@OnChangeTipoDesperfecto class="rz-text-uppercase"
+                        ValueProperty="@nameof(TipoDesperfecto.Id)"
+                        TextProperty="@nameof(TipoDesperfecto.Descripcion)" LoadData=@OnLoadDataTipoDesperfecto 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Tipo Desperfecto" }})" />
+                </RadzenFormField>
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+            <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="rz-mb-5">
+                <RadzenFormField Text="Severidad del Daño" Variant="Variant.Text" Style="width: 100%;">
+                    <RadzenAutoComplete @bind-Value=@monitorBitacoraAveria.DescripcionTipoSeveridad Data=@listaTipoSeveridad
+                        Change=@OnChangeTipoSeveridad class="rz-text-uppercase"
+                        ValueProperty="@nameof(TipoSeveridad.Id)"
+                        TextProperty="@nameof(TipoSeveridad.Descripcion)" LoadData=@OnLoadDataTipoSeveridad 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Tipo Severidad" }})" />
+                </RadzenFormField>
+            </RadzenColumn>
+        </RadzenRow>
+        <RadzenRow AlignItems="AlignItems.Start" Gap="1.5rem" class="rz-p-sm-5">
+            <RadzenColumn Size="12" SizeMD="12" SizeLG="12">
+                <RadzenFormField Text="Observaciones del Daño" Variant="Variant.Text" Style="width: 100%;">
+                    <RadzenTextBox @bind-Value=@monitorBitacoraAveria.DescripcionAveria />
+                </RadzenFormField>
+            </RadzenColumn>
+        </RadzenRow>
+</RadzenStack>
+
+<RadzenRow AlignItems="AlignItems.Center" class="rz-mt-5">
+    <RadzenColumn Size="6" class="text-center">
+        <RadzenButton Icon="taxi_alert" Text="Guardar Averia" Disabled=@_monitorRecepcionMercancia.ProcesoRecepcionCompletado ButtonStyle="ButtonStyle.Primary" Click=@(args => OnRegistroBitacoraAveria())  />
+    </RadzenColumn>
+    <RadzenColumn Size="6" class="text-center">
+        <RadzenButton Icon="photo_camera" Text="Registrar Foto" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnRecepcionFotoCamara())  />
+    </RadzenColumn>
+    @* <RadzenColumn Size="4" class="text-center">
+        <RadzenButton Icon="photo_library" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("recepcion-fotogaleria"))  />
+    </RadzenColumn> *@
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" class="rz-mt-5">
+    <RadzenColumn Size="12" class="text-center align-content-start">
+        <RadzenButton Click=@(args => OnBitacoraAveria()) Text="Bitácora de Daños" Icon="receipt_long" ButtonStyle="ButtonStyle.Primary" />
+    </RadzenColumn>
+</RadzenRow>
+
+@if (_monitorRecepcionMercancia.AplicaUbicacionMercancia) {
+
+        <RadzenRow AlignItems="AlignItems.Center" class="rz-mt-5">
+            <RadzenColumn Size="12" class="text-center align-content-start">
+                <RadzenButton Click=@(args => OnUbicacionZonaAlmacenaje()) Text="Ubicar en Zona de Almacenaje" Icon="my_location" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+            </RadzenColumn>
+        </RadzenRow>
+
+}
+
+@if (!_monitorRecepcionMercancia.ProcesoRecepcionCompletado) {
+
+    <RadzenRow AlignItems="AlignItems.Center" class="rz-mt-5">
+        <RadzenColumn Size="12" class="text-center align-content-start">
+            <RadzenButton Click=@(args => OnFinalizarRecepcion()) Text="Finalizar Ingreso" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+        </RadzenColumn>
+    </RadzenRow>
+
+}
+@* <RadzenRow AlignItems="AlignItems.Center" class="rz-mt-10">
+    <RadzenColumn Size="12" class="text-center align-content-start">
+        <RadzenButton Click=@(args => OnClick("UBICAR")) Text="Ubicar" Icon="check_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+    </RadzenColumn>
+</RadzenRow> *@
+
+@code {
+
+    [Parameter] public string DataRecepcion { get; set; }
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+    List<MonitorBitacoraAveria> listaMonitorBitacoraAveria = new List<MonitorBitacoraAveria>();
+
+    MonitorBitacoraAveria monitorBitacoraAveria = new MonitorBitacoraAveria();
+
+    List<CodigoDesperfecto> listaCodigoDesperfecto = new List<CodigoDesperfecto>();
+
+    List<TipoDesperfecto> listaTipoDesperfecto = new List<TipoDesperfecto>();
+
+    List<TipoSeveridad> listaTipoSeveridad = new List<TipoSeveridad>();
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; } 
+
+    [Inject] private ICodigoDesperfectoService? _codigoDesperfectoService { get; set; }
+
+    [Inject] private ITipoDesperfectoService? _tipoDesperfectoService { get; set; }
+
+    [Inject] private ITipoSeveridadService? _tipoSeveridadService { get; set; }
+
+    [Inject] private IBitacoraAveriaService? _bitacoraAveriaService { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+         if (DataRecepcion != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataRecepcion);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            
+
+            monitorBitacoraAveria = new MonitorBitacoraAveria();
+
+            _recepcionMercanciaDTO =  new RecepcionMercanciaDTO();
+
+            _recepcionMercanciaDTO = JsonConvert.DeserializeObject<RecepcionMercanciaDTO>(decodedString);
+                
+            ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+            _consultaRecepcion.Entidad = new ConsultaRecepcion();
+            _consultaRecepcion.Entidad.TipoClasificacionRecepcion = TipoClasificacionRecepcion.Todos;
+            _consultaRecepcion.Entidad.IdInventario = _recepcionMercanciaDTO.IdInventario;
+
+            
+
+            var _result = await _recepcionService?.ObtenerListaPaginada(_consultaRecepcion);
+
+            if (_result.Success) {
+
+                
+
+                _monitorRecepcionMercancia = _result.Data.Take(1).SingleOrDefault();
+
+                listaMonitorBitacoraAveria = new List<MonitorBitacoraAveria>();
+
+                listaMonitorBitacoraAveria = _monitorRecepcionMercancia.ListaMonitorBitacoraAveria;
+
+                
+
+            }
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+    }
+
+    private ResultBase ValidarDatosBitacoraAveria() {
+
+        var result = new ResultBase();
+
+        if (monitorBitacoraAveria.IdCodigoDesperfecto.Equals(0)) {
+            result.MensajeRespuesta = "Favor de registrar el Código de Daño.";
+        } else if (monitorBitacoraAveria.IdTipoDesperfecto.Equals(0)) {
+            result.MensajeRespuesta = "Favor de registrar el Tipo de Daño";
+        } else if (monitorBitacoraAveria.IdTipoSeveridad.Equals(0)) {
+            result.MensajeRespuesta = "Favor de registrar el Tipo de Severidad";
+        } else if (String.IsNullOrEmpty(monitorBitacoraAveria.DescripcionAveria)) {
+            result.MensajeRespuesta = "Favor de registrar las Observaciones del Daño";
+        } else if (String.IsNullOrWhiteSpace(monitorBitacoraAveria.DescripcionAveria)) {
+            result.MensajeRespuesta = "Favor de registrar las Observaciones del Daño y no dejar espacios vacíos";
+        }
+
+        return result;
+
+    }
+
+    async void OnRegistroBitacoraAveria() {
+
+        var result = new ResultBase();
+
+        result = ValidarDatosBitacoraAveria();
+
+        if (result.Success) {
+
+            monitorBitacoraAveria.CRUDAction = ECRUDAction.Create;
+            monitorBitacoraAveria.IdInventario = _monitorRecepcionMercancia.IdInventario;
+
+            //Console.WriteLine("-> monitorBitacoraAveria : " + System.Text.Json.JsonSerializer.Serialize(monitorBitacoraAveria));
+
+            var _result = await _bitacoraAveriaService?.Guardar(monitorBitacoraAveria);
+
+            if (_result.Success) {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Bitácora Daños", Detail = "Se registró en la bitácora de averia: " + _result.MensajeRespuesta, Duration = 4000 });
+
+                monitorBitacoraAveria = new MonitorBitacoraAveria();
+
+                await InvokeAsync(StateHasChanged);
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Bitácora Daños", Detail = "Error: " + _result.MensajeRespuesta, Duration = 4000 });
+
+            }
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Bitácora Daños", Detail = "Error: " + result.MensajeRespuesta, Duration = 4000 });
+
+        }
+
+    }
+
+    async void OnBitacoraAveria() {
+
+        ConsultaCatalogoBase<ConsultaBitacoraAveria> _consulta = new ConsultaCatalogoBase<ConsultaBitacoraAveria>();
+        _consulta.Entidad = new ConsultaBitacoraAveria();
+        _consulta.Entidad.IdInventario = _monitorRecepcionMercancia.IdInventario;
+        _consulta.NumeroDePagina = 1;
+        _consulta.RegistrosPorPagina = 1;
+
+
+        var _result = await _bitacoraAveriaService?.ObtenerListaPaginadaPorIdInventario(_consulta);
+
+        if (_result.Success) {
+
+            if (!_result.Data.Count.Equals(0)) {
+
+                await DialogService.OpenAsync<VistaModalBitacoraAveria>($"Bitácora de Averias",
+                    new Dictionary<string, object>() { { "IdInventario", _monitorRecepcionMercancia.IdInventario } },
+                    new DialogOptions() 
+                    {
+                        Resizable = false, 
+                        Draggable = false,
+                        Width = "400px", 
+                        Height ="710px"
+                        });
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "No hay registros en Bitácora de Daños", Duration = 4000 });
+
+            }
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "Error: " + _result.MensajeRespuesta, Duration = 4000 });
+
+        }
+    }
+
+    async void OnUbicacionZonaAlmacenaje() {
+
+        MonitorPartida monitorPartida = new MonitorPartida();
+        
+        var _result = await DialogService.OpenAsync<VistaModalUbicacion>($"Ubicación Zona Almacenaje",
+            new Dictionary<string, object>() { { "IdInventario", _monitorRecepcionMercancia.IdInventario }, { "monitorRecepcionMercancia", _monitorRecepcionMercancia } },
+            new DialogOptions() 
+            {
+                Resizable = false, 
+                Draggable = false,
+                Width = "400px", 
+                Height ="710px"
+                });
+
+        if (_result != null) {
+            monitorPartida = (MonitorPartida)_result;
+            //Console.WriteLine("-> OnUbicacionZonaAlmacenaje monitorPartida : " + System.Text.Json.JsonSerializer.Serialize(monitorPartida));
+            if (!monitorPartida.IdUbicacion.Equals(0)) {
+
+                _monitorRecepcionMercancia.IdUbicacionAlmacen = monitorPartida.IdUbicacion;
+                _monitorRecepcionMercancia.ClaveUbicacion = monitorPartida.ClaveUbicacion;
+                _monitorRecepcionMercancia.ClaveZonaAlmacenaje = monitorPartida.ClaveZonaAlmacenaje;
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "No hay registro de Ubicación de Mercancía", Duration = 4000 });
+
+            }
+        } else {
+            //Console.WriteLine("-> OnUbicacionZonaAlmacenaje sin respuesta : ");
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+            
+    }
+
+    async void OnRecepcionFotoCamara() {
+
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+        await SaveStateAsync();
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/recepcion-fotocamara/{base64EncodedData}");
+
+    }
+
+    async void OnBack() {
+
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+        await SaveStateAsync();
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/recepcion-consulta/{base64EncodedData}");
+
+    }
+
+    void OnChange(string value, string name)
+    {
+        //Console.WriteLine($"{name} value changed to {value}");
+    }
+
+    private async void OnFinalizarRecepcion()
+    {
+
+        bool _validaDatos = true;
+
+        //Console.WriteLine($"Value _monitorRecepcionMercancia: {_monitorRecepcionMercancia}");
+
+        _monitorRecepcionMercancia.AplicaConfirmarMercancia = true;
+
+        var _result = await _recepcionService?.FinalizarRecepcion(_monitorRecepcionMercancia);
+
+        if (_result.Success) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Recepción", Detail = "Proceso Finalizado Correctamente.", Duration = 4000 });
+
+            OnBack();
+
+        } else {
+
+            if (_result.Data.ConfirmaRecepcionMercancia && _result.Data.AplicaConfirmarMercancia) {
+
+                var result = await DialogServiceConfirm.Confirm(_result.MensajeRespuesta + " ¿ Desea Finalizar la RECEPCIÓN?", "Recepción", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                _validaDatos = result.HasValue ? (bool)result : false;
+
+                if (_validaDatos) {
+                    _monitorRecepcionMercancia.ConfirmaRecepcionMercancia = true;
+
+                    OnFinalizarRecepcion();
+                } else {
+                    _monitorRecepcionMercancia.ConfirmaRecepcionMercancia = false;
+                }
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "Error: " + _result.MensajeRespuesta, Duration = 4000 });
+
+            }
+        }
+
+    }
+
+    void OnChangeCodigoDesperfecto(object value)
+    {
+
+        monitorBitacoraAveria.IdCodigoDesperfecto = 0;
+        monitorBitacoraAveria.DescripcionCodgioDesperfecto = null;
+
+        if (listaCodigoDesperfecto != null) {
+            if (!listaCodigoDesperfecto.Count().Equals(0)) {
+
+                var selectedCodigoDesperfecto = listaCodigoDesperfecto
+                .FirstOrDefault(c => c.Descripcion == value?.ToString());
+
+                if (selectedCodigoDesperfecto != null)
+                {
+                    var selectedId = selectedCodigoDesperfecto.Id;
+                    monitorBitacoraAveria.IdCodigoDesperfecto = selectedCodigoDesperfecto.Id;
+                    monitorBitacoraAveria.DescripcionCodgioDesperfecto = selectedCodigoDesperfecto.Descripcion;
+
+                }
+
+            }
+        }
+    }
+
+    void OnChangeTipoDesperfecto(object value)
+    {
+
+        monitorBitacoraAveria.IdTipoDesperfecto = 0;
+        monitorBitacoraAveria.DescripcionTipoDesperfecto = null;
+
+        if (listaTipoDesperfecto != null) {
+            if (!listaTipoDesperfecto.Count().Equals(0)) {
+
+                var selectedTipoDesperfecto = listaTipoDesperfecto
+                .FirstOrDefault(c => c.Descripcion == value?.ToString());
+
+                if (selectedTipoDesperfecto != null)
+                {
+                    var selectedId = selectedTipoDesperfecto.Id;
+                    monitorBitacoraAveria.IdTipoDesperfecto = selectedTipoDesperfecto.Id;
+                    monitorBitacoraAveria.DescripcionTipoDesperfecto = selectedTipoDesperfecto.Descripcion;
+
+                }
+
+            }
+        }
+    }
+
+    void OnChangeTipoSeveridad(object value)
+    {
+
+        monitorBitacoraAveria.IdTipoSeveridad = 0;
+        monitorBitacoraAveria.DescripcionTipoSeveridad = null;
+
+        if (listaTipoSeveridad != null) {
+            if (!listaTipoSeveridad.Count().Equals(0)) {
+
+                var selectedTipoSeveridad = listaTipoSeveridad
+                .FirstOrDefault(c => c.Descripcion == value?.ToString());
+
+                if (selectedTipoSeveridad != null)
+                {
+                    var selectedId = selectedTipoSeveridad.Id;
+                    monitorBitacoraAveria.IdTipoSeveridad = selectedTipoSeveridad.Id;
+                    monitorBitacoraAveria.DescripcionTipoSeveridad = selectedTipoSeveridad.Descripcion;
+
+                }
+
+            }
+        }
+    }
+
+    async Task OnLoadDataCodigoDesperfecto(LoadDataArgs args)
+    {
+
+        var resultBase = await _codigoDesperfectoService.ObtenerPorDescripcionContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaCodigoDesperfecto = resultBase.Data;
+
+            if (listaCodigoDesperfecto.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Código Desperfecto", Detail = "No se encontró el registro solicitado.", Duration = 4000 });
+                
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Código Desperfecto", Detail = "No se encontró el registro solicitado.", Duration = 4000 });
+
+        }
+
+    }
+
+    async Task OnLoadDataTipoDesperfecto(LoadDataArgs args)
+    {
+
+        var resultBase = await _tipoDesperfectoService.ObtenerPorDescripcionContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaTipoDesperfecto = resultBase.Data;
+
+            if (listaTipoDesperfecto.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Tipo Desperfecto", Detail = "No se encontró el registro solicitado.", Duration = 4000 });
+                
+            }
+        } else {
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Tipo Desperfecto", Detail = "No se encontró el registro solicitado.", Duration = 4000 });
+
+        }
+
+    }
+
+    async Task OnLoadDataTipoSeveridad(LoadDataArgs args)
+    {
+
+        var resultBase = await _tipoSeveridadService.ObtenerPorDescripcionContiene(args.Filter);
+        if (resultBase.Success) {
+
+            listaTipoSeveridad = resultBase.Data;
+
+            if (listaTipoSeveridad.Count.Equals(0)) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Tipo Severidad", Detail = "No se encontró el registro solicitado.", Duration = 4000 });
+                
+            }
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Tipo Severidad", Detail = "No se encontró el registro solicitado.", Duration = 4000 });
+
+        }
+
+    }
+
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _monitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<MonitorRecepcionMercancia>(result);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<MonitorRecepcionMercancia>(_monitorRecepcionMercancia));
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+
+}

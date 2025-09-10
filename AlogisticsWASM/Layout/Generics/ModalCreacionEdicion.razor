@@ -1,0 +1,35 @@
+﻿@using ALOG.Modelos.Modelos
+@using ALOG.Modelos.Modelos.DTLogistico
+@using ALOG.Modelos.Modelos.Vacios
+@using AlogisticsWASM.Layout.Formularios
+@typeparam TModel
+
+<div class="modal fade" id="modalCreacionEdicion" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">@_tituloFormulario</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-xl-12">
+                        <form class="row g-3 mb-6">
+                            @if (typeof(TModel) == typeof(PeticionesContenedores)) {
+                                <FormularioContenedor @ref="_formularioContenedor" Contenedor="@(Modelo as PeticionesContenedores)" />
+                            } else if (typeof(TModel) == typeof(PeticionesReferencias)) {
+                                @* <FormularioReferencia @ref="_formulario" Referencia="@(Modelo as Referencia)" /> *@
+                            }else if (typeof(TModel) == typeof(DtAcarreos)) {
+                                <FormularioAcarreo  />
+                            }
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-phoenix-primary px-5" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary px-5 px-sm-15" data-bs-dismiss="modal" @onclick="GuardarModelo">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,85 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.Vacios
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-my-4">
+    <RadzenButton Disabled="@(editMode == DataGridEditMode.Single && ordersToInsert.Count() > 0)"
+                  ButtonStyle="ButtonStyle.Primary"
+                  Text="Agregar contenedor"
+                  Click="@InsertRow"
+                  Icon="add_circle"/>
+</RadzenStack>
+
+<RadzenDataGrid @ref="_gridContenedores"
+                FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                AllowRowSelectOnRowClick="@_allowRowSelectOnRowClick"
+                FilterPopupRenderMode="PopupRenderMode.OnDemand"
+                ExpandMode="DataGridExpandMode.Single"
+                EditMode="@editMode"
+                Data="@_contenedores"
+                ColumnWidth="200px"
+                AllowFiltering="false"
+                AllowSorting="true"
+                AllowPaging="true"
+                PageSize="10"
+                RowRender="@(OnRowRender)">
+
+    <Template Context="contenedor">
+        @if (@ChildContent != null)
+            @ChildContent(contenedor)
+    </Template>
+
+    <Columns>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Contenedor">
+            <Template Context="contenedor">@contenedor?.Contenedor</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Tipo cont.">
+            <Template Context="contenedor">@contenedor?.ClaveTipoContenedor</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Folio maniobra">
+            <Template Context="contenedor">@contenedor?.FolioManiobra</Template>
+            <EditTemplate Context="contenedor">
+                <RadzenTextBox @bind-Value="contenedor.FolioManiobra" Name="FolioManiobra" Style="width:100%;  display: block" aria-label="Ingresa el folio de maniobras" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="BL">
+            <Template Context="contenedor">@contenedor?.BL</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Ref. Cliente">
+            <Template Context="contenedor">@contenedor?.RefenciaCliente</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Cliente">
+            <Template Context="contenedor">@contenedor?.Cliente_RazonSocial</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Consignado">
+            <Template Context="contenedor">@contenedor?.Consignado_RazonSocial</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Naviera">
+            <Template Context="contenedor">@contenedor?.Naviera_RazonSocial</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesContenedores" Title="Patio">
+            <Template Context="contenedor">@contenedor?.catPatios?.RazonSocial</Template>
+        </RadzenDataGridColumn>
+        
+        <RadzenDataGridColumn Context="contenedor" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="100px">
+            <Template Context="contenedor">
+                <RadzenButton Icon="edit"  ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@(args => EditRow(contenedor))" @onclick:stopPropagation="true" />
+                <RadzenButton Icon="delete" Visible="false" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" Shade="Shade.Lighter" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(contenedor))" @onclick:stopPropagation="true" />
+            </Template>
+            <EditTemplate Context="contenedor">
+                <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Success" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@((args) => SaveRow(contenedor))" aria-label="Save" />
+                <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" Click="@((args) => CancelEdit(contenedor))" aria-label="Cancel" />
+                <RadzenButton Icon="delete" Visible="false" ButtonStyle="ButtonStyle.Danger" Variant="Variant.Flat" Size="ButtonSize.Medium" Shade="Shade.Lighter" class="rz-my-1 rz-ms-1" Click="@(args => DeleteRow(contenedor))" aria-label="Delete" />
+            </EditTemplate>
+        </RadzenDataGridColumn>
+
+    </Columns>
+</RadzenDataGrid>

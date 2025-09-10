@@ -1,0 +1,51 @@
+﻿@using ALOG.Modelos.Modelos.Graficas
+@inject IJSRuntime JS
+@code {
+    private EChartOption chartOptions;
+    [Parameter] public List<DataPoint> Data { get; set; } = new List<DataPoint>();
+    IJSObjectReference modulo;
+
+    protected override async Task OnInitializedAsync() {
+
+    }
+
+    protected override async Task OnParametersSetAsync() {
+
+        if (Data.Count() > 0) {
+            modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./assets/js/common.js");
+            await ConstruirGrafica();
+
+        }
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender) {
+        // if (firstRender) {
+        //     await ConstruirGrafica();
+        // }
+    }
+
+    private async Task ConstruirGrafica() {
+        chartOptions = new EChartOption {
+                Series = new List<Series>{
+                    new Series{
+                        Name = "Servicios solicitados",
+                        Data = Data,
+                        Label = { Show = true, Position = "center"},
+                        Emphasis = new Emphasis { Label = new Label{ Show = true, FontSize = 20, FontWeight = "normal" } }
+                        // {
+                        //     new DataPoint { Value = 1048, Name = "Search Engine" },
+                        //     new DataPoint { Value = 735, Name = "Direct" },
+                        //     new DataPoint { Value = 580, Name = "Email" },
+                        //     new DataPoint { Value = 484, Name = "Union Ads" },
+                        //     new DataPoint { Value = 300, Name = "Video Ads" }
+                        // }
+                    }
+                }
+            };
+
+        await modulo.InvokeVoidAsync("initializeEChart", "myChart", chartOptions);
+    }
+}
+
+<div id="myChart" style="width: 100%; height: 400px;"></div>

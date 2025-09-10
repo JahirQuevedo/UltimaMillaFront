@@ -1,0 +1,171 @@
+﻿@page "/ordenes-detalles/{IdEncabezado:int}"
+@using AlogisticsWASM.Layout.Logisticos
+
+<div class="content mt-10">
+    <nav class="mb-3" aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="/ordenes">Mis ordenes</a></li>
+            <li class="breadcrumb-item active">Detalles</li>
+        </ol>
+    </nav>
+    <div class="mb-9">
+        <h2 class="mb-0">Orden <span>#@_encabezado?.IdOrden</span></h2>
+        <div class="d-sm-flex flex-between-center mt-3 mb-3">
+            <div class="d-flex">
+                <button class="btn btn-primary me-5" @onclick="SetEsEditableEncabezado">
+                    Editar Orden
+                </button>
+                <button class="btn btn-link text-body me-4 px-0" @onclick="CancelarAccion"><span class="fa-solid fa fa-times fs-9 me-2"></span>Cancelar</button>
+            </div>
+        </div>
+
+        <div class="d-sm-flex flex-between-center mb-3">
+            <FormularioEditarEncabezado Encabezado="_encabezadoSeleccionado" 
+                                        EsEditable="_esEditable" 
+                                        OnEncabezadoEditado="ObtenerEncabezadoEditado"
+                                        OnEstaEditado="ObtenerEstaEditando"
+                                        />
+        </div>
+
+        @if (pagedData == null) {
+            <Loading></Loading>
+        } else if (pagedData.Count() == 0) {
+            <NoRegistros></NoRegistros>
+        } else {
+            
+                <div class="row g-5 gy-7">
+                    <div class="col-12 col-xl-8 col-xxl-9">
+                        <div id="orderTable" data-list='{"valueNames":["products","color","size","price","quantity","total"],"page":10}'>
+                            <div class="table-responsive scrollbar">
+                                <table class="table fs-9 mb-0 border-top border-translucent">
+                                    <thead>
+                                        <tr>
+                                            <th class="sort align-middle ps-4" scope="col" style="width:200px;">NumeroParte</th>
+                                            <th class="sort align-middle ps-4" scope="col" data-sort="color" style="width:150px;">Piezas</th>
+                                            <th class="sort align-middle ps-4" scope="col" data-sort="size" style="width:300px;">Pallet</th>
+                                            <th class="col align-middle ps-4" scope="col" data-sort="size" style="width:300px;"></th>
+                                            <th class="col align-middle ps-4" scope="col" data-sort="size" style="width:300px;"></th>
+                                        </tr>
+                                    </thead>
+                                
+                                    <tbody class="list" id="order-table-body">
+                                    @foreach (var detalle in pagedData) {
+                                        <tr class="hover-actions-trigger btn-reveal-trigger position-static">
+                                            <td class="color align-middle white-space-nowrap text-body py-0 ps-4">
+                                                @if (filaEnEdicionId == detalle.IdDtUltimaMillaDet)
+                                                {
+                                                    <input class="form-control" type="text" @bind="@detalle.NumeroParte" />
+                                                } else {
+                                                    @detalle.NumeroParte
+                                                }
+                                            </td>
+                                            <td class="color align-middle white-space-nowrap text-body py-0 ps-4">
+                                                @if (filaEnEdicionId == detalle.IdDtUltimaMillaDet) {
+                                                    <input class="form-control" type="text" @bind="@detalle.Piezas" />
+                                                } else {
+                                                    @detalle.Piezas
+                                                }
+                                            </td>
+                                            <td class="color align-middle white-space-nowrap text-body py-0 ps-4">
+                                                @if (filaEnEdicionId == detalle.IdDtUltimaMillaDet)
+                                                {
+                                                    <input class="form-control" type="text" @bind="@detalle.Pallet" />
+                                                } else {
+                                                    @detalle.Pallet
+                                                }
+                                            </td>
+                                            <td class="align-middle text-end white-space-nowrap pe-0 action">
+                                                @if (filaEnEdicionId == detalle.IdDtUltimaMillaDet)
+                                                {
+                                                    <button class="btn btn-sm btn-primary" @onclick="@(() => GuardarCambios(detalle))">Guardar</button>
+                                                    <button class="btn btn-sm btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+                                                }
+                                            </td>                                            
+                                            <td class="align-middle text-end white-space-nowrap pe-0 action">
+                                                <div class="btn-reveal-trigger position-static">
+                                                    <button class="btn btn-sm dropdown-toggle dropdown-caret-none transition-none btn-reveal fs-10" type="button" data-bs-toggle="dropdown" data-boundary="window" aria-haspopup="true" aria-expanded="false" data-bs-reference="parent">
+                                                        <span class="fas fa-ellipsis-h fs-10"></span>
+                                                    </button>
+                                                    <div class="dropdown-menu dropdown-menu-end py-2">
+                                                        <a class="dropdown-item" style="cursor: pointer;" @onclick="() => SetEstaEditando(detalle.IdDtUltimaMillaDet)">Editar</a>
+                                                        <div class="dropdown-divider"></div>
+                                                        <a class="dropdown-item text-danger" style="cursor: pointer;">Eliminar</a>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                    </tbody>                                    
+                                </table>
+                            </div>
+                        </div>
+                        <div class="d-flex flex-between-center py-3 border-bottom border-translucent mb-6 invisible" style="display: none">
+                            <p class="text-body-emphasis fw-semibold lh-sm mb-0">Items subtotal :</p>
+                            <p class="text-body-emphasis fw-bold lh-sm mb-0">$1690</p>
+                        </div>
+                    </div>
+                    <div class="col-12 col-xl-4 col-xxl-3">
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h3 class="card-title mb-4">Resumen</h3>
+                                        <div>
+                                            <div class="d-flex justify-content-between">
+                                                <p class="text-body fw-semibold">Factura :</p>
+                                            <p class="text-danger fw-semibold">@_encabezadoSeleccionado?.FacturaCliente</p>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <p class="text-body fw-semibold">Bodega :</p>
+                                            <p class="text-body-emphasis fw-semibold">@_encabezadoSeleccionado?.Bodega</p>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <p class="text-body fw-semibold">Viaje :</p>
+                                            <p class="text-body-emphasis fw-semibold">@_encabezadoSeleccionado?.Viaje</p>
+                                            </div>                                            
+                                            
+                                            @* <div class="d-flex justify-content-between" style="display: none">
+                                                <p class="text-body fw-semibold">Subtotal :</p>
+                                                <p class="text-body-emphasis fw-semibold">$665</p>
+                                            </div>
+                                            <div class="d-flex justify-content-between" style="display: none">
+                                                <p class="text-body fw-semibold">Shipping Cost :</p>
+                                                <p class="text-body-emphasis fw-semibold">$30</p>
+                                            </div> *@
+                                        </div>
+                                        @* <div class="d-flex justify-content-between border-top border-translucent border-dashed pt-4">
+                                            <h4 class="mb-0">Total :</h4>
+                                            <h4 class="mb-0">$695.20</h4>
+                                        </div> *@
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h3 class="card-title mb-4">Estatus de la orden</h3>
+                                        <h6 class="mb-2">Estatus</h6>
+                                    <select class="form-select mb-4" aria-label="delivery type" @bind="@_encabezadoSeleccionado.IdTipoEstado">
+                                            @foreach (var tipo in _tiposEstado) {
+                                            <option value="@tipo.Id" @onclick="@(() => ActualizarTipoEstatdo(tipo.Id))">@tipo.Nombre</option>
+                                            }
+                                        </select>
+                                    @*<h6 class="mb-2">Fulfillment status @mostrarToast</h6>
+                                         <select class="form-select" aria-label="delivery type">
+                                            <option value="cod">Unfulfilled</option>
+                                            <option value="card">Fulfilled</option>
+                                            <option value="paypal">Pending</option>
+                                        </select> *@
+                                    </div>
+                                
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>            
+        }
+        
+    </div>
+    
+</div>
+<ModalErrores Errores="@_errores"/>

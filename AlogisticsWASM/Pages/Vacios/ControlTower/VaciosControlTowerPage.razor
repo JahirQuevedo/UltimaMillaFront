@@ -1,0 +1,94 @@
+﻿@page "/controltower"
+
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOG.Modelos.Modelos.Orden
+@using AlogisticsWASM.Pages.Vacios.ControlTower.OrdenesEnProceso
+@using AlogisticsWASM.Layout.Vacios.Filtros
+
+<style>
+    :root {
+    --rz-grid-header-color: white;
+    --rz-grid-header-background-color: darkred;
+    }
+
+    .centrar {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        user-select: none;
+        white-space: nowrap;
+    }
+</style>
+
+<div class="row g-3 mb-2">
+    <div class="rz-m-2">
+        <RadzenBreadCrumb>
+            <RadzenBreadCrumbItem Path="/" Text="Home" />
+            <RadzenBreadCrumbItem Path="/referenciasRZ" Text="Vacios" />
+            <RadzenBreadCrumbItem Text="Vacíos Control Tower" />
+        </RadzenBreadCrumb>
+    </div>
+    <div class="col-auto">
+        <h4 class="mb-0">Vacíos Control Tower</h4>
+    </div>
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+    <FiltroContenedoresCmp @ref="_filtroContenedores" OrdenesFiltradas="@GetOrdenesFiltradas"/>
+</RadzenStack>
+
+<RadzenRow JustifyContent="JustifyContent.Normal" AlignItems="AlignItems.Center" Style="margin-bottom: 2rem;">
+    <RadzenColumn Size="4">
+        <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Style="height: 100%; padding-top: 0.7rem;">
+            <RadzenButton Text="Iniciar proceso" Click="IniciarProceso" Visible="_mostrarBotonesInicioProceso" IsBusy="_isBusyInciarProceso" Icon="@(_isBusyInciarProceso ? "refresh" : "play_circle")" Disabled="@(_ordenesSeleccionadas.Count() == 0)" ButtonStyle="ButtonStyle.Primary" />
+            <RadzenButton Text="Asignar patio" IsBusy="_isBusyAsignarPatio" Click="AsignarPatios" Visible="_mostrarBotonesInicioProceso" Disabled="@(_totalContenedoresPendientesSeleccionados == 0)" ButtonStyle="ButtonStyle.Secondary" />
+        </RadzenStack>
+    </RadzenColumn>
+</RadzenRow>
+
+
+<RadzenTabs Change=@OnChange TabPosition="TabPosition.Top" RenderMode="TabRenderMode.Client" style="min-height: 412px;">
+    <Tabs>
+
+        <RadzenTabsItem Text="Contenedores pendientes">
+            <GridOrdenesCmp OnOrdenesSeleccionadasChanged="@GetOrdenesSeleccionadas"
+                            OnIdOrdenCancelar="@(valor => CancelarOrden(valor))"
+                            MostrarBotonesAccion="true"
+                            EstaCargando="_cargando"
+                            @ref="_gridOrdenesCmp"
+                            MostrarChecks="true"
+                            Ordenes="@_ordenes">
+                <ChildContent Context="orden">
+                    <GridContenedoresPendientesCmp @ref="_gridContenedoresPendientes"                                                       
+                                                    Contenedores="@orden.peticionesReferencias.SelectMany(r => r.Contenedores).ToList()"
+                                                    OnContenedoresSeleccionadosChanged="@ActualizarSeleccionados"
+                                                    OnRecargarDatos="RecargarDatosAsync"
+                                                    IdOrdenCancelar="GetIdOrdenCancelar"
+                                                    Ordenes="@_ordenesSeleccionadas"
+                                                    Orden="orden" />
+                </ChildContent>
+            </GridOrdenesCmp>
+        </RadzenTabsItem>
+
+        <RadzenTabsItem Text="Contenedores en proceso">
+            <GridOrdenesCmp @ref="_gridOrdenesProcesoCmp" MostrarChecks="false" Ordenes="@_ordenesProceso" MostrarBotonesAccion="false">
+                    <ChildContent Context="orden">
+                    <GridContenedoresProcesoCmp Contenedores="orden?.peticionesReferencias?.FirstOrDefault()?.Contenedores.ToList()"
+                                                OnRecargarDatos="RecargarDatosAsync"
+                                                UsuarioTokenDTO="UsuarioTokenDTO"
+                                                @key="orden.IdOrden"
+                                                Orden="orden">
+                            <ChildContent Context="contenedor">
+                            <GridServiciosCmp UsuarioTokenDTO="UsuarioTokenDTO" Contenedor="contenedor" Orden="orden" OnRecargarDatos="RecargarDatosAsync">
+                                    <ChildContent Context="servicio">
+                                        <GridExpedienteDigitalCmp Servicio="servicio" Orden="orden"/>
+                                    </ChildContent>
+                                </GridServiciosCmp>
+                            </ChildContent>
+                        </GridContenedoresProcesoCmp>
+                    </ChildContent>
+                </GridOrdenesCmp>
+        </RadzenTabsItem>
+    </Tabs>
+</RadzenTabs>

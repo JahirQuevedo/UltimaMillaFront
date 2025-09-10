@@ -1,0 +1,564 @@
+@page "/vaciosplantilla"
+
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOG.Modelos.Modelos.DTO.Vacios
+@using System.IO
+@using ALOGRepositorios.Helpers
+@using Microsoft.AspNetCore.Authorization
+
+@* @attribute [Authorize(Roles = "CLIENTE")] *@
+
+<style>
+    .centrar {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        user-select: none;
+        white-space: nowrap;
+    }
+
+    #ddUpload {
+        left: 0;
+        --rz-upload-button-bar-background-color: transparent;
+        --rz-upload-button-bar-padding: 0;
+    }
+
+        #ddUpload .rz-fileupload-buttonbar .rz-fileupload-choose {
+            width: 100%;
+            text-align: center;
+            font-size: 16px;
+            padding: 100px 0;
+        }
+</style>
+
+<div class="row g-3 mb-2">
+    <div class="rz-m-2">
+        <RadzenBreadCrumb>
+            <RadzenBreadCrumbItem Path="/" Text="Home" />
+            <RadzenBreadCrumbItem Path="/referenciasRZ" Text="Vacios" />
+            <RadzenBreadCrumbItem Text="Solicitud" />
+        </RadzenBreadCrumb>
+    </div>
+    <div class="col-auto">
+        <h4 class="mb-0">Solicitud de Servicios de vacíos</h4>
+    </div>
+</div>
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4" Wrap="FlexWrap.Wrap">
+    <RadzenButton Click="GenerarSolicitud" Text="Generar solicitud" Disabled="@(_contenedoresManiobras.Count == 0 && _contenedoresEir.Count == 0)" ButtonStyle="ButtonStyle.Primary" />
+    <RadzenUpload @ref="_uploadBl"
+                  Change="@((args) => OnDocumentoCargado(args))"
+                  Disabled="@(_seleccionadosMV.Count() == 0)"
+                  ChooseText="Cargar documento BL"
+                  Accept="application/pdf"
+                  MaxFileSize="@ExcelService.TAMANIO_PERMITIDO"
+                  Multiple="false"
+                  Auto="true" />
+
+    <RadzenUpload @ref="_uploadEir"
+                  ChooseText="Cargar documento EIR de lleno"
+                  Accept="application/pdf"
+                  Change="@((args) => OnDocumentoCargado(args))"
+                  MaxFileSize="10485760"
+                  Multiple="false"
+                  Auto="true"
+                  Disabled="@(_seleccionadosEIR.Count() == 0)" />
+</RadzenStack>
+@* Disabled=@(_contenedoresManiobras.Count() == 0 && _contenedoresEir.Count() == 0) *@
+@if (!_esClienteExterno)
+{
+    <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" class="rz-mb-4" Wrap="FlexWrap.Wrap">
+
+        <RadzenDropDown AllowClear="true"
+                        ValueProperty="@nameof(CatClientes.IdCatCliente)"
+                        TextProperty="@nameof(CatClientes.RazonSocial)"
+                        Style="width: 100%; max-width: 400px;"
+                        @bind-Value=_referencia.IdCatClienteSolicitante
+                        Name="DropDownVirtualization"
+                        Placeholder="Selecciona cliente solicitante"
+                        AllowVirtualization="true"
+                        AllowFiltering="true"
+                        Data=@_clientesSolicitantes
+                        Change="SetClienteSolicitanteAsync" />
+
+    </RadzenStack>
+}
+
+<RadzenTabs Change=@OnChange TabPosition="TabPosition.Top" RenderMode="TabRenderMode.Client" style="min-height: 489.33px;">
+    <Tabs>
+        @*=========================== TAB PARA SOLICITAR EL SERVICIO DE MV =================================================*@
+        <RadzenTabsItem Text="Maniobra de vacío">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenUpload @ref="_uploadMV"
+                              Accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                              ChooseText="Seleccionar plantilla de solicitud de MV"
+                              Change="@((args) => OnUploadChangedAsync(args, "MV"))"
+                              Multiple="false"
+                              class="mb-3"
+                              Auto="true" />
+            </RadzenStack>
+            @if (_isLoading)
+            {
+                <div class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12 centrar" style="max-width: 600px;">
+                    <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" ProgressBarStyle="ProgressBarStyle.Primary">
+                        <Template>Cargando</Template>
+                    </RadzenProgressBarCircular>
+                </div>
+            }
+            else
+            {
+                <GridPeticionContenedorCmp @key="_keyGrid" @ref="_gridContenedorCmpMV"
+                                           Contenedores="@_contenedoresManiobras"
+                                           ContenedorActualizado="GetContenedorActualizado"
+                                           ContenedoresActualizados="ActualizarContenedoresMV"
+                                           OnSeleccionContenedores="@(contenedores => OnSeleccionadosActualizados(contenedores))"
+                                           MostrarColumnaAcciones="true"
+                                           TabType="MV"
+                                           TipoServicio="@_indexTab">
+                    <ColumnTemplate>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Width="70px" Filterable="false">
+                            <HeaderTemplate>
+                                <span title="Gestión de recuperación garantías">GG</span>
+                            </HeaderTemplate>
+                            <Template Context="contenedor">
+                                <RadzenCheckBox TValue="bool"
+                                                Value="@(_servicioGG.ContainsKey(contenedor.Contenedor) && _servicioGG[contenedor.Contenedor])"
+                                                Change="@(isChecked => OnServicioCheckChanged(contenedor, 3, isChecked))" />
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Width="70px" Filterable="false">
+                            <HeaderTemplate>
+                                <span title="Gestión corte demoras">GD</span>
+                            </HeaderTemplate>
+                            <Template Context="contenedor">
+                                <RadzenCheckBox TValue="bool"
+                                                Value="@(_servicioGD.ContainsKey(contenedor.Contenedor) && _servicioGD[contenedor.Contenedor])"
+                                                Change="@(isChecked => OnServicioCheckChanged(contenedor, 4, isChecked))" />
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Número de contenedor" Width="@WIDTH_COLUM_170" Filterable="true" Property="Contenedor" Type="typeof(string)">
+                            <Template Context="contenedor">@contenedor.Contenedor</Template>
+                            <EditTemplate Context="contenedor">
+                                <RadzenTextBox @bind-Value="contenedor.Contenedor" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Tipo de contenedor" Width="@WIDTH_COLUM_170" Filterable="false">
+                            <Template Context="contenedor">
+                                @_tiposContenedor.FirstOrDefault(x => x.IdCatTipoContenedor == contenedor.IdCatTipoContenedor)?.Nomenclatura
+                            </Template>
+                            <EditTemplate Context="contenedor">
+                                <RadzenDropDown @bind-Value="contenedor.IdCatTipoContenedor"
+                                                Data="@_tiposContenedor"
+                                                TextProperty="@nameof(CatTipoContenedor.Nomenclatura)"
+                                                ValueProperty="@nameof(CatTipoContenedor.IdCatTipoContenedor)"
+                                                Style="width:100%; display: block;" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="BL" Width="@WIDTH_COLUM_170" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().NumeroBL</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.NumeroBL" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        @* <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC naviera" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().NavieraRFC</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.NavieraRFC" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn> *@
+
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Razón social naviera" Width="@WIDTH_COLUM_170" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios?.FirstOrDefault()?.NavieraRazonSocial</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.NavieraRazonSocial" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Nombre del buque" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().NombreBuque</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.NombreBuque" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Número del viaje" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().NumeroViaje</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.NumeroViaje" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        @if (!EsUsuarioInterno())
+                        {
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ejecutivo solicitante" Filterable="false">
+                                <Template Context="contenedor">@contenedor.NombreEjecutivoSolicitante</Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenTextBox @bind-Value="contenedor.NombreEjecutivoSolicitante" Style="width:100%" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        }
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Correo transportista" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().TransporteEmailContacto</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.TransporteEmailContacto" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC transportista" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().TransporteRFC</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.TransporteRFC" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        @if (EsClienteNad() || (EsUsuarioInterno()))
+                        {
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Razón social transportista" Filterable="false">
+                                <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().TransporteRazonSocial</Template>
+                                <EditTemplate Context="contenedor">
+                                    @{
+                                        var servicio = contenedor?.Servicios.FirstOrDefault();
+                                    }
+                                    @if (servicio != null)
+                                    {
+                                        <RadzenTextBox @bind-Value="servicio.TransporteRazonSocial" Style="width:100%" />
+                                    }
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        }
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Nombre contacto transportista" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().TransporteNombreContacto</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.TransporteNombreContacto" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC cliente servicio" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor.ClienteRFC</Template>
+                            <EditTemplate Context="contenedor">
+                                <RadzenTextBox @bind-Value="contenedor.ClienteRFC" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC cliente facturar" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().RFCFacturar</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.RFCFacturar" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        @if (EsClienteNad() || (EsUsuarioInterno() && _idCatClienteSolicitanteSeleccionado == 189))
+                        {
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ref. cliente" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">@contenedor?.ReferenciaCliente</Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenTextBox @bind-Value="@contenedor.ReferenciaCliente" Style="width:100%" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ref. cliente facturar" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().ReferenciaClienteFacturar</Template>
+                                <EditTemplate Context="contenedor">
+                                    @{
+                                        var servicio = contenedor?.Servicios.FirstOrDefault();
+                                    }
+                                    @if (servicio != null)
+                                    {
+                                        <RadzenTextBox @bind-Value="@servicio.ReferenciaClienteFacturar" Style="width:100%" />
+                                    }
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ticket" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">@_referencia.Ticket</Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenNumeric @bind-Value="@_referencia.Ticket" Style="width:100%" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        }
+
+                        @if (EsUsuarioInterno())
+                        {
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Patio" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">
+                                    @_patios.FirstOrDefault(x => x.IdCatPatios == contenedor.Servicios.FirstOrDefault().IdCatPatio)?.RazonSocial
+                                </Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenDropDown @bind-Value="@_patioSeleccionado.IdCatPatios"
+                                                    Data="@_patios"
+                                                    TextProperty="@nameof(CatPatios.RazonSocial)"
+                                                    ValueProperty="@nameof(CatPatios.IdCatPatios)"
+                                                    Change="@(() => AsignarPatioSeleccionado(contenedor))"
+                                                    Style="width:100%; display: block;" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        }
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Documento PDF" Width="120px" Filterable="false">
+                            <Template Context="contenedor">
+                                @{
+                                    var base64 = contenedor.Servicios.FirstOrDefault()?.BL?.Base64;
+                                }
+                                @{
+                                    var nombreArchivo = contenedor.Servicios.FirstOrDefault()?.BL?.Nombre;
+                                }
+                                @if (!string.IsNullOrWhiteSpace(base64))
+                                {
+                                    <a href="javascript:void(0);" style="text-decoration: none;" title="Ver documento @nombreArchivo" @onclick="() => AbrirDocumentoEnNuevaPestana(base64)">
+                                        @nombreArchivo
+                                    </a>
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                    </ColumnTemplate>
+
+                </GridPeticionContenedorCmp>
+            }
+
+        </RadzenTabsItem>
+        @*=========================== TAB PARA SOLICITAR EL SERVICIO DE EIR =================================================*@
+        <RadzenTabsItem Text="Gestión de E.I.R.">
+            <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem">
+                <RadzenUpload @ref="_uploadEIR"
+                              ChooseText="Seleccionar plantilla de solicitud de EIR"
+                              Change="@((args) => OnUploadChangedAsync(args, "EIR"))"
+                              Multiple="true"
+                              class="mb-3"
+                              Auto="false" />
+            </RadzenStack>
+
+            @if (_isLoading)
+            {
+                <div class="rz-my-auto rz-mx-auto rz-p-4 rz-p-md-12 centrar" style="max-width: 600px;">
+                    <RadzenProgressBarCircular ShowValue="true" Mode="ProgressBarMode.Indeterminate" Size="ProgressBarCircularSize.Large" ProgressBarStyle="ProgressBarStyle.Primary">
+                        <Template>Cargando</Template>
+                    </RadzenProgressBarCircular>
+                </div>
+            }
+            else
+            {
+                <GridPeticionContenedorCmp @ref="_gridContenedorCmpEIR"
+                                           Contenedores="@_contenedoresEir"
+                                           ContenedorActualizado="GetContenedorActualizado"
+                                           ContenedoresActualizados="ActualizarContenedoresEIR"
+                                           OnSeleccionContenedores="@(contenedores => OnSeleccionadosActualizados(contenedores))"
+                                           MostrarColumnaAcciones="true"
+                                           TabType="EIR"
+                                           TipoServicio="@_indexTab">
+                    <ColumnTemplate>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Width="70px" Filterable="false">
+                            <HeaderTemplate>
+                                <span title="Gestión de recuperación de garantías">GG</span>
+                            </HeaderTemplate>
+                            <Template Context="contenedor">
+                                <RadzenCheckBox TValue="bool"
+                                                Value="@(_servicioGG.ContainsKey(contenedor.Contenedor) && _servicioGG[contenedor.Contenedor])"
+                                                Change="@(isChecked => OnServicioCheckChanged(contenedor, 3, isChecked))" />
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Width="70px" Filterable="false">
+                            <HeaderTemplate>
+                                <span title="Gestión de recuperación de corte demoras ">GD</span>
+                            </HeaderTemplate>
+                            <Template Context="contenedor">
+                                <RadzenCheckBox TValue="bool"
+                                                Value="@(_servicioGD.ContainsKey(contenedor.Contenedor) && _servicioGD[contenedor.Contenedor])"
+                                                Change="@(isChecked => OnServicioCheckChanged(contenedor, 4, isChecked))" />
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Número de contenedor" Width="@WIDTH_COLUM_170" Filterable="true" Property="Contenedor" Type="typeof(string)">
+                            <Template Context="contenedor">@contenedor?.Contenedor</Template>
+                            <EditTemplate Context="contenedor">
+                                <RadzenTextBox @bind-Value="contenedor.Contenedor" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Tipo de contenedor" Width="@WIDTH_COLUM_170" Filterable="false">
+                            <Template Context="contenedor">
+                                @_tiposContenedor.FirstOrDefault(x => x.IdCatTipoContenedor == contenedor.IdCatTipoContenedor)?.Nomenclatura
+                            </Template>
+                            <EditTemplate Context="contenedor">
+                                <RadzenDropDown @bind-Value="contenedor.IdCatTipoContenedor"
+                                                Data="@_tiposContenedor"
+                                                TextProperty="@nameof(CatTipoContenedor.Nomenclatura)"
+                                                ValueProperty="@nameof(CatTipoContenedor.IdCatTipoContenedor)"
+                                                Style="width:100%; display: block;" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        @if (!EsUsuarioInterno())
+                        {
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ejecutivo solicitante" Filterable="false">
+                                <Template Context="contenedor">@contenedor?.NombreEjecutivoSolicitante</Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenTextBox @bind-Value="contenedor.NombreEjecutivoSolicitante" Style="width:100%" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        }
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC Patio" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().PatioRFC</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.PatioRFC" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Folio de maniobra" Width="@WIDTH_COLUM_170" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().FolioManiobra</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.FolioManiobra" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC cliente servicio" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.ClienteRFC</Template>
+                            <EditTemplate Context="contenedor">
+                                <RadzenTextBox @bind-Value="contenedor.ClienteRFC" Style="width:100%" />
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="RFC cliente facturar" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                            <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().RFCFacturar</Template>
+                            <EditTemplate Context="contenedor">
+                                @{
+                                    var servicio = contenedor?.Servicios.FirstOrDefault();
+                                }
+                                @if (servicio != null)
+                                {
+                                    <RadzenTextBox @bind-Value="servicio.RFCFacturar" Style="width:100%" />
+                                }
+                            </EditTemplate>
+                        </RadzenDataGridColumn>
+
+                        @if (EsClienteNad() || (EsUsuarioInterno() && _idCatClienteSolicitanteSeleccionado == 189))
+                        {
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ref. cliente" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">@contenedor?.ReferenciaCliente</Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenTextBox @bind-Value="@contenedor.ReferenciaCliente" Style="width:100%" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ref. cliente facturar" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">@contenedor?.Servicios.FirstOrDefault().ReferenciaClienteFacturar</Template>
+                                <EditTemplate Context="contenedor">
+                                    @{
+                                        var servicio = contenedor?.Servicios.FirstOrDefault();
+                                    }
+                                    @if (servicio != null)
+                                    {
+                                        <RadzenTextBox @bind-Value="@servicio.ReferenciaClienteFacturar" Style="width:100%" />
+                                    }
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+
+                            <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="Ticket" Width="@WIDTH_COLUM_RFC" Filterable="false">
+                                <Template Context="contenedor">@_referencia.Ticket</Template>
+                                <EditTemplate Context="contenedor">
+                                    <RadzenNumeric @bind-Value="@_referencia.Ticket" Style="width:100%" />
+                                </EditTemplate>
+                            </RadzenDataGridColumn>
+                        }
+
+                        <RadzenDataGridColumn TItem="PeticionesContenedoresClienteExternoDTO" Title="EIR lleno" Width="120px" Filterable="false">
+                            <Template Context="contenedor">
+                                @{
+                                    var base64 = contenedor.Servicios.FirstOrDefault()?.EirDeLleno?.Base64;
+                                }
+                                @{
+                                    var nombreArchivo = contenedor.Servicios.FirstOrDefault()?.EirDeLleno?.Nombre;
+                                }
+                                @if (!string.IsNullOrWhiteSpace(base64))
+                                {
+                                    <a href="javascript:void(0);" style="text-decoration: none;" title="Ver documento @nombreArchivo" @onclick="() => AbrirDocumentoEnNuevaPestana(base64)">
+                                        @nombreArchivo
+                                    </a>
+                                }
+                            </Template>
+                        </RadzenDataGridColumn>
+
+                    </ColumnTemplate>
+                </GridPeticionContenedorCmp>
+            }
+        </RadzenTabsItem>
+    </Tabs>
+</RadzenTabs>

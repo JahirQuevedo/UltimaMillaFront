@@ -1,0 +1,211 @@
+﻿@page "/vistaModalBuscarTarja/{FolioReferencia}"
+@page "/vistaModalBuscarTarja/"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services;
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject NavigationManager navigationManager
+@inject Radzen.DialogService dialogService
+@attribute [Authorize]
+@* <style>
+    .rz-column-title {
+
+        background-color: rgb(255, 204, 170);
+        padding: .5em .5em .5em .5em;
+        font-family: Verdana, Geneva, Tahoma, sans-serif;
+    } 
+</style> *@
+
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+    <RadzenStack>
+        <RadzenDataGrid class="rz-p-4"
+                    Count="@totalRegistros" PageSize="@registrosPorPagina" 
+                    ShowPagingSummary="true" PagerHorizontalAlign="HorizontalAlign.Left"
+                    FilterMode="FilterMode.Simple"
+                    @bind-Value=@selectedTarja
+                    AllowFiltering="true" AllowPaging="true" AllowSorting="false" 
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    Data="@(listaMonitorTarja)" LoadData="@ObtenerDatos"  IsLoading=@isLoading ColumnWidth="200px" Density="Density.Compact" AllowAlternatingRows="false">
+            <Columns>
+                <RadzenDataGridColumn Property="@nameof(MonitorTarja.ClaveReferencia)" Width="120px" Title="Folio" />
+                @* <RadzenDataGridColumn Property="@nameof(MonitorTarja.TipoServicio)" Title="Tipo Servicio" FormatString="{0:P}" /> *@
+                <RadzenDataGridColumn Title="Tipo Servicio" Property="@nameof(MonitorTarja.TipoServicio)" Filterable="true" Width="200px">
+                        <Template Context="monitorTarja">
+                            @(obtenerTipoServicio(monitorTarja.TipoServicio))
+                        </Template>
+                    </RadzenDataGridColumn>
+                @* <RadzenDataGridColumn Property="@nameof(MonitorTarja.Estado)" Title="Estado" FormatString="{0:P}" /> *@
+                <RadzenDataGridColumn Title="Estado" Width="100px" Filterable="true" Property="@nameof(MonitorTarja.Estado)">
+                    <Template Context="monitorTarja">
+                        <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleEstadoTarja(monitorTarja.Estado)" Text="@(monitorTarja.Estado.ToString())" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(MonitorTarja.FolioReferencia)" Title="Referencia" />
+                <RadzenDataGridColumn Property="@nameof(MonitorTarja.RazonSocialCliente)" Title="Cliente" />
+                <RadzenDataGridColumn Title="Fecha Captura" Filterable="false">
+                    <Template Context="monitorTarja">
+                        @(monitorTarja.FechaAlta == DateTime.MinValue ? "" : monitorTarja.FechaAlta.ToString())
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Click=@(() => ObtenerTarjaSelected()) Variant="Variant.Flat" Text="Seleccionar" Style="width: 120px" />
+    </RadzenStack>
+</RadzenStack>
+
+@code {
+
+    [Parameter] public string FolioReferencia { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    List<MonitorTarja> listaMonitorTarja;
+
+    IList<MonitorTarja> selectedTarja;
+
+    MonitorTarja monitorTarja;
+
+    ReferenciaDTO referenciaDTO;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    [Inject] private ITarjaService? _tarjaService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        monitorTarja = new MonitorTarja();
+
+    }
+
+    private void ObtenerTarjaSelected() {
+
+        var _tarja = selectedTarja.FirstOrDefault();
+
+        referenciaDTO = new ReferenciaDTO();
+        referenciaDTO.FolioReferencia = _tarja.FolioReferencia;
+        referenciaDTO.IdReferencia = _tarja.IdReferencia;
+        referenciaDTO.IdTarja = _tarja.IdTarja;
+
+        string _referenciaDTO = JsonSerializer.Serialize(referenciaDTO);
+
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_referenciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+        navigationManager.NavigateTo($"/tarja-crear/{base64EncodedData}");
+        dialogService.Close(true);
+
+    }
+
+    private string obtenerTipoServicio(TipoServicioTarja tipoServicioTarja) 
+    {
+
+        string _tipoServicio = String.Empty;
+
+        switch(tipoServicioTarja) {
+            case TipoServicioTarja.EntradaAlmacen :
+                _tipoServicio = "Entrada de Almacén";
+                break;
+            case TipoServicioTarja.EntradaPorTransferencia :
+                _tipoServicio = "Entrada Por Transferencia";
+                break;
+            case TipoServicioTarja.EntradaPatioExterno :
+                _tipoServicio = "Entrada Patio Externo";
+                break;
+            default : 
+                _tipoServicio = tipoServicioTarja.ToString();
+                break;
+
+        }
+
+        return _tipoServicio;
+
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaTarja> _consultaTarja = new ConsultaCatalogoBase<ConsultaTarja>();
+        _consultaTarja.Entidad = new ConsultaTarja();
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+
+            if (!args.Filters.Count().Equals(0)) {
+                var _filterFolio = args.Filters.Where(p => p.Property.Equals("ClaveReferencia")).FirstOrDefault();
+                if (_filterFolio != null) {
+                    _consultaTarja.Entidad.ClaveReferenciaTarja = String.IsNullOrEmpty(_filterFolio.FilterValue.ToString()) ? null : _filterFolio.FilterValue.ToString();
+                }
+
+                var _filterTipoServicio = args.Filters.Where(p => p.Property.Equals("TipoServicio")).FirstOrDefault();
+                if (_filterTipoServicio != null) {
+                    _consultaTarja.Entidad.TipoServicioTarja = (TipoServicioTarja)(Convert.ToInt32(_filterTipoServicio.FilterValue));
+                }
+
+                var _filterEstadoTarja = args.Filters.Where(p => p.Property.Equals("Estado")).FirstOrDefault();
+                if (_filterEstadoTarja != null) {
+                    _consultaTarja.Entidad.EstadoTarja = (EstadoTarja)(Convert.ToInt32(_filterEstadoTarja.FilterValue));
+                }
+
+                var _filterFolioReferencia = args.Filters.Where(p => p.Property.Equals("FolioReferencia")).FirstOrDefault();
+                if (_filterFolioReferencia != null) {
+                    _consultaTarja.Entidad.FolioReferencia = String.IsNullOrEmpty(_filterFolioReferencia.FilterValue.ToString()) ? null : _filterFolioReferencia.FilterValue.ToString();
+                }
+
+                var _filterCliente = args.Filters.Where(p => p.Property.Equals("RazonSocialCliente")).FirstOrDefault();
+                if (_filterCliente != null) {
+                    _consultaTarja.Entidad.RazonSocialCliente = String.IsNullOrEmpty(_filterCliente.FilterValue.ToString()) ? null : _filterCliente.FilterValue.ToString();
+                }
+            }
+        }
+    
+        _consultaTarja.NumeroDePagina = numeroDePagina;
+        _consultaTarja.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorTarjas = await _tarjaService!.ObtenerListaPaginada(_consultaTarja);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorTarjas.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listaMonitorTarja = _listMonitorTarjas.Data;
+
+        selectedTarja = listaMonitorTarja.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+    private BadgeStyle BadgeStyleEstadoTarja(EstadoTarja estadoTarja) {
+
+        switch(estadoTarja) {
+
+            case EstadoTarja.Confirmado : return BadgeStyle.Success;
+            case EstadoTarja.Preliminar: return BadgeStyle.Warning;
+            case EstadoTarja.Cancelado : return BadgeStyle.Danger;
+            case EstadoTarja.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+}

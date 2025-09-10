@@ -1,0 +1,226 @@
+﻿@page "/referenciasvacioscrud"
+
+@using ALOG.Modelos.Modelos.Orden
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Peticiones.IPeticiones;
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Generics
+@using AlogisticsWASM.Pages.Vacios.Contenedores
+@using AlogisticsWASM.Layout.Vacios.Referencias
+@using Microsoft.AspNetCore.Authorization
+@inject NotificationService NotificationService
+@inject SweetAlertService Swal;
+@inject UsuarioTokenDTO UsuarioTokenDTO
+@inject IConfiguration configuration
+@inject Radzen.DialogService DialogService
+
+@if (objOrden == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+
+    <RadzenTemplateForm Data="@objOrden" Submit="@((Ordenes args) => { Submit(args); })">
+        
+
+        <RadzenCard>
+            <RadzenRow Gap="2rem" class="rz-p-0 rz-p-lg-4">
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenStack>
+                        <RadzenStack Gap="1rem">
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Orden Id" Component="CardId" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="CardId" />
+                                </RadzenColumn>
+                                @* <RadzenColumn Size="12" SizeMD="8">
+                            <RadzenDropDown @bind-Value="objOrden.IdOrden" AllowClear="true" Placeholder="Select something" Data="@cards" Style="width: 100%;" TextProperty="CardNr" ValueProperty="CardId" Name="CardId"></RadzenDropDown>
+                            </RadzenColumn> *@
+                            </RadzenRow>
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Referencia:" Component="ReferenciaALO" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="ReferenciaALO" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Aduana" Component="AduanaId" />
+                                </RadzenColumn>
+
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    @* <RadzenDropDown @bind-Value="objOrden.IdCatAduana" AllowClear="true" Placeholder="Select something" Data="@cards" Style="width: 100%;" TextProperty="CardNr" ValueProperty="CardId" Name="CardId"></RadzenDropDown> *@
+                                </RadzenColumn>
+
+                            </RadzenRow>
+
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Fecha Registro" Component="FechaRegistro" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenDatePicker Style="width: 100%;" Name="FechaRegistro"
+                                                      @bind-Value="objOrden.FechaRegistro" />
+                                </RadzenColumn>
+
+                            </RadzenRow>
+                        </RadzenStack>
+                    </RadzenStack>
+                </RadzenColumn>
+
+
+
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenStack>
+
+                        <RadzenStack Gap="1rem">
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Referencia Cliente" Component="RefCliente" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="RefCliente" />
+                                </RadzenColumn>
+
+                            </RadzenRow>
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Cliente:" Component="ClienteId" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="ClienteId" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Usuario Solicitante" Component="IdCatUsuarioSol" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="IdCatUsuarioSol" />
+
+                                </RadzenColumn>
+                            </RadzenRow>
+
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Fecha Registro" Component="FechaRegistro" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenDatePicker Style="width: 100%;" Name="FechaRegistro"
+                                                      @bind-Value="objOrden.FechaRegistro" />
+                                </RadzenColumn>
+
+                            </RadzenRow>
+                        </RadzenStack>
+
+                    </RadzenStack>
+                </RadzenColumn>
+                <RadzenColumn Size="12" SizeMD="4">
+                    <RadzenStack>
+
+                        <RadzenStack Gap="1rem">
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Referencia Cliente" Component="RefCliente" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="RefCliente" />
+                                </RadzenColumn>
+
+                            </RadzenRow>
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Cliente:" Component="ClienteId" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenTextBox Style="width: 100%;" Name="ClienteId" />
+                                </RadzenColumn>
+                            </RadzenRow>
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Usuario Solicitante" Component="IdCatUsuarioSol" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenDatePicker Style="width: 100%;" Name="IdCatUsuarioSol"
+                                                      @bind-Value="objOrden.IdCatAduana" />
+                                </RadzenColumn>
+                            </RadzenRow>
+
+                            <RadzenRow AlignItems="AlignItems.Center">
+                                <RadzenColumn Size="12" SizeMD="4">
+                                    <RadzenLabel Text="Fecha Registro" Component="FechaRegistro" />
+                                </RadzenColumn>
+                                <RadzenColumn Size="12" SizeMD="8">
+                                    <RadzenDatePicker Style="width: 100%;" Name="FechaRegistro"
+                                                      @bind-Value="objOrden.FechaRegistro" />
+                                </RadzenColumn>
+
+                            </RadzenRow>
+                        </RadzenStack>
+
+                    </RadzenStack>
+                </RadzenColumn>
+
+
+
+
+
+
+            </RadzenRow>
+        </RadzenCard>
+
+       
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem" class="rz-mt-8 rz-mb-4">
+
+            <GridContenedoresCmp paramContenedores="lstPeticionesContenedor" OnValueChanged="HandleValueChanged">
+               
+            </GridContenedoresCmp>
+
+        </RadzenStack>
+        <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="1rem"
+                     class="rz-mt-8 rz-mb-4">
+            <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="Save" />
+            <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel"
+                          Text="Cancel" Click="@Cancel" />
+        </RadzenStack>
+    </RadzenTemplateForm>
+}
+@code {
+    #region Variables
+    private List<PeticionesContenedores> lstPeticionesContenedor = new List<PeticionesContenedores>();
+    private List<PeticionesContenedores> lstPeticionesContenedorBack = new List<PeticionesContenedores>();
+    #endregion Variables
+
+
+    private Ordenes objOrden = new Ordenes()
+        {
+            FechaRegistro = DateTime.Parse("10/10/2022"),
+            Activo = true,
+            ReferenciaALO = "Referencia"
+        };
+
+
+    void Submit(Ordenes arg)
+    {
+    //
+    }
+
+    void Cancel()
+    {
+    //
+    }
+
+
+    private void HandleValueChanged(List<PeticionesContenedores> value)
+    {
+        lstPeticionesContenedorBack = value;
+        string result = string.Join(", ", lstPeticionesContenedorBack);
+        //Console.WriteLine(result);
+    }
+}

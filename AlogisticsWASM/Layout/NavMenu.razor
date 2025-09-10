@@ -1,0 +1,236 @@
+﻿@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Login.ILogin
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using Microsoft.AspNetCore.Authorization
+@using Radzen
+@using Radzen.Blazor
+@inject IJSRuntime JS
+@inject UsuarioTokenDTO _UsuarioTokenDTO
+@inject IConfiguration configuration
+@inject ILoginService loginService
+@inject NavigationManager _navigationManager
+@attribute [Authorize]
+
+<RadzenStack AlignItems="AlignItems.Center" class="rz-p-0">
+    @* <RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem">
+    <RadzenCheckBox @bind-Value=@multiple Name="CheckBox1" TValue="bool" />
+    <RadzenLabel Text="Allow multiple expand" Component="CheckBox1" />
+    </RadzenStack> *@
+
+    @* <RadzenPanelMenu Click="OnParentClicked" Style="width:300px" Multiple="@multiple"> *@
+    <RadzenPanelMenu Click="OnParentClicked" Style="width:250px">
+        <RadzenPanelMenuItem Text="Inicio" Path="/" Icon="home" Visible="true"></RadzenPanelMenuItem>
+        <AuthorizeView>
+            <Authorized>
+
+                @*
+                <RadzenPanelMenuItem Text="Logísticos" Icon="Cycle">
+                <RadzenPanelMenuItem Text="Vacíos" Path="/referenciasRZ" Icon="account_circle" Visible="true"></RadzenPanelMenuItem>
+                <RadzenPanelMenuItem Text="Acarreos" Path="/Acarreos" Icon="line_weight"></RadzenPanelMenuItem>
+                <RadzenPanelMenuItem Text="Ultima Milla" Path="/UltimaMillaRZ" Icon="attach_file"></RadzenPanelMenuItem>
+                </RadzenPanelMenuItem> *@
+
+                @if (intUsuarioValido)
+                {
+                    @*  Logisticos *@
+                    @if (intMenuLogistico)
+                    {
+                        <RadzenPanelMenuItem Text="Logísticos" Icon="Cycle">
+                            @if (intOpcionVacios)
+                            {
+                                <RadzenPanelMenuItem Text="Vacíos" Path="/referenciasRZ" Icon="account_circle" Visible="true"></RadzenPanelMenuItem>
+                            }
+
+                            @if (_UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 9) && (_UsuarioTokenDTO.Rol.Equals("ADMIN") || _UsuarioTokenDTO.Rol.Equals("ADMINUSER")))
+                            {
+                                <RadzenPanelMenuItem Text="Control tower" Path="/controltower" Icon="health_metrics" Visible="true"></RadzenPanelMenuItem>
+                            }
+
+
+                            @if (intOpcionAcarreo)
+                            {
+                                <RadzenPanelMenuItem Text="Acarreos" Path="/Acarreos" Icon="line_weight"></RadzenPanelMenuItem>
+                            }
+                            @if (intOpcionUltimaMilla)
+                            {
+                                <RadzenPanelMenuItem Text="Ultima Milla" Path="/UltimaMillaRZ" Icon="attach_file"></RadzenPanelMenuItem>
+                            }
+                            @if (intOpcionSLOReferencias)
+                            {
+                                <RadzenPanelMenuItem Text="Servicio Logistico" Path="/referenciasSLO" Icon="fact_check" Visible="true"></RadzenPanelMenuItem>
+                            }
+
+                            @*  @if (intOpcionSolicitud)
+                    {
+                    <RadzenPanelMenuItem Text="Ticket" Path="/vaciosplantilla" Icon="attach_file"></RadzenPanelMenuItem>
+                    } *@
+                            @* <RadzenPanelMenuItem Text="Dialog" Path="dialog" Icon="perm_media"></RadzenPanelMenuItem>
+                    <RadzenPanelMenuItem Text="Notification" Path="notification" Icon="announcement"></RadzenPanelMenuItem> *@
+                        </RadzenPanelMenuItem>
+                    }
+
+
+                    @* WMS Logistic *@
+
+                    @if (_UsuarioTokenDTO.catUsuarios != null)
+                    {
+
+                        @if (_UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 5))
+                        {
+
+                            <RadzenPanelMenuItem Text="WMS Portal Cliente" Icon="hub">
+                                <RadzenPanelMenuItem Text="Monitor Inventario" Path="/monitorInventarioCliente" Icon="inventory"></RadzenPanelMenuItem>
+
+                            </RadzenPanelMenuItem>
+
+                            <RadzenPanelMenuItem Text="WMS Logistic Móvil" Icon="widgets">
+                                <RadzenPanelMenuItem Text="Recepción" Path="/recepcion" Icon="local_shipping"></RadzenPanelMenuItem>
+                                <RadzenPanelMenuItem Text="Ubicación" Path="/ubicacion" Icon="account_tree"></RadzenPanelMenuItem>
+                                <RadzenPanelMenuItem Text="Embarque" Path="/embarque" Icon="trolley"></RadzenPanelMenuItem>
+                            </RadzenPanelMenuItem>
+
+                            <RadzenPanelMenuItem Text="WMS Logistic" Icon="widgets">
+                                <RadzenPanelMenuItem Text="Catálogos" Icon="view_list" Visible="true">
+                                    <RadzenPanelMenuItem Text="Buque" Path="/barco" Icon="directions_boat"></RadzenPanelMenuItem>
+                                    @* <RadzenPanelMenuItem Text="Embalaje" Path="/embalaje" Icon="orders"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Unidad de Medida" Path="/unidadMedida" Icon="square_foot"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Paquete" Path="/paquete" Icon="package"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Servicio" Path="/servicio" Icon="service_toolbox"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Ubicación" Path="/ubicacion" Icon="shelves"></RadzenPanelMenuItem> *@
+                                </RadzenPanelMenuItem>
+                                <RadzenPanelMenuItem Text="Programación" Icon="pending_actions">
+                                    <RadzenPanelMenuItem Text="Monitor de Viajes" Path="/viaje" Icon="travel_explore"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Referencia" Path="/referencia-crear" Icon="work"></RadzenPanelMenuItem>
+                                </RadzenPanelMenuItem>
+                                <RadzenPanelMenuItem Text="Facturación" Icon="price_change">
+                                    <RadzenPanelMenuItem Text="Consulta Facturacion" Path="/consultaFacturacion" Icon="request_quote"></RadzenPanelMenuItem>
+                                </RadzenPanelMenuItem>
+                                <RadzenPanelMenuItem Text="Operaciones" Icon="rebase_edit">
+                                    <RadzenPanelMenuItem Text="Traslados/Ingresos" Path="/traslados" Icon="swap_driving_apps"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Tarjas" Path="/tarja-crear" Icon="inventory_2"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Liberaciones/Salidas" Path="/liberaciones" Icon="dataset_linked"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Zona Almacenaje" Path="/monitorZonaAlmacenaje" Icon="warehouse"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="Monitor de Inventario" Path="/monitorInventario" Icon="content_paste_search"></RadzenPanelMenuItem>
+                                    <RadzenPanelMenuItem Text="EIR Inventario" Path="/monitorEIR" Icon="taxi_alert"></RadzenPanelMenuItem>
+                                </RadzenPanelMenuItem>
+                                <RadzenPanelMenuItem Text="Reportes" Path="/reportes" Icon="print"></RadzenPanelMenuItem>
+                            </RadzenPanelMenuItem>
+
+                        }
+                    }
+                }
+
+            </Authorized>
+        </AuthorizeView>
+        <RadzenPanelMenuItem Text="LogOut" Path="/salir" Icon="home" Visible="true"></RadzenPanelMenuItem>
+        @*  <RadzenPanelMenuItem Text="Autos" Icon="payment">
+        <RadzenPanelMenuItem Text="CheckBox" Path="checkbox" Icon="check_circle"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="TextBox" Path="textbox" Icon="input"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="TextArea" Path="textarea" Icon="description"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="Password" Path="password" Icon="payment"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="Numeric" Path="numeric" Icon="aspect_ratio"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DatePicker" Path="datepicker" Icon="date_range"></RadzenPanelMenuItem>
+        </RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="3PL" Icon="save">
+        <RadzenPanelMenuItem Text="DataGrid" Path="datagrid" Icon="grid_on"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DataList" Path="datalist" Icon="list"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DropDown" Path="dropdown" Icon="dns"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DropDownDataGrid" Path="dropdown-datagrid" Icon="receipt"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="ListBox" Path="listbox" Icon="view_list"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="TemplateForm" Path="templateform" Icon="line_style"></RadzenPanelMenuItem>
+        </RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="Administrativos" Icon="save">
+        <RadzenPanelMenuItem Text="DataGrid" Path="datagrid" Icon="grid_on"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DataList" Path="datalist" Icon="list"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DropDown" Path="dropdown" Icon="dns"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DropDownDataGrid" Path="dropdown-datagrid" Icon="receipt"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="ListBox" Path="listbox" Icon="view_list"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="TemplateForm" Path="templateform" Icon="line_style"></RadzenPanelMenuItem>
+        </RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="DashBoards" Icon="account_box">
+        <RadzenPanelMenuItem Text="Tabs" Path="tabs" Icon="tab"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="Panel" Path="panel" Icon="content_paste"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="Fieldset" Path="fieldset" Icon="account_balance_wallet"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="Card" Path="card" Icon="line_style"></RadzenPanelMenuItem>
+        </RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="More">
+        <RadzenPanelMenuItem Click="OnChildClicked" Text="Item1"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Click="OnChildClicked" Text="Item2"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Text="More items">
+        <RadzenPanelMenuItem Text="More sub items">
+        <RadzenPanelMenuItem Click="OnChildClicked" Text="Item3"></RadzenPanelMenuItem>
+        <RadzenPanelMenuItem Click="OnChildClicked" Text="Item4"></RadzenPanelMenuItem>
+        </RadzenPanelMenuItem>
+        </RadzenPanelMenuItem>
+        </RadzenPanelMenuItem> *@
+    </RadzenPanelMenu>
+
+</RadzenStack>
+
+@code {
+
+    UsuarioTokenDTO UsuarioTokenDTO;
+    bool multiple = true;
+    private bool intMenuLogistico = false;
+    private bool intMenuWMSAutos = false;
+    private bool intMenuWMSMovilAutos = false;
+    private bool intOpcionVacios = false;
+    private bool intOpcionAcarreo = false;
+    private bool intOpcionUltimaMilla = false;
+    private bool intOpcionSolicitud = false;
+    private bool intOpcionSLOReferencias = false;
+    private bool intUsuarioValido = false;
+    //EventConsole console;
+
+    void OnParentClicked(MenuItemEventArgs args)
+    {
+        // console.Log($"{args.Text} clicked from parent");
+    }
+
+    void OnChildClicked(MenuItemEventArgs args)
+    {
+        //console.Log($"{args.Text} from child clicked");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        UsuarioTokenDTO = new UsuarioTokenDTO();
+
+        #region ValidarAcceso
+        try
+        {
+            //////Console.WriteLine($"INIT APP MENU:" + _UsuarioTokenDTO.IdCatUsuario);
+            if (_UsuarioTokenDTO is null || _UsuarioTokenDTO.IdCatUsuario == 0)
+            {
+                ////Console.WriteLine($"ENTRO APP MENU");
+                _UsuarioTokenDTO = await loginService.ObtenerdatosToken();
+                //await UserService.InitializeAsync();
+                if (_UsuarioTokenDTO is null)
+                {
+                    _navigationManager.NavigateTo("/");
+                }
+                ////Console.WriteLine($"SALIO APP MENU {_UsuarioTokenDTO.Nombre}");
+
+                intMenuLogistico = _UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 2);
+                intOpcionVacios = _UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 10);
+                intOpcionAcarreo = _UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 3);
+                intOpcionUltimaMilla = _UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 4);
+                intOpcionSolicitud = _UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 2);
+                intOpcionSLOReferencias = _UsuarioTokenDTO.catUsuarios.catUsuariosPermisos.Any(cp => cp.IdCatPermisos == 2);
+                intUsuarioValido = true;
+            }
+        }
+
+        catch (Exception ex)
+        {
+            ////Console.WriteLine($"SALIO APP MENU ERROR {ex.Message}");
+            _navigationManager.NavigateTo("/");
+        }
+
+        await InvokeAsync(StateHasChanged);
+
+        #endregion ValidarAcceso
+    }
+
+}

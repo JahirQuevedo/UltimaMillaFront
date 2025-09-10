@@ -1,0 +1,68 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.Vacios
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="0.5rem" class="rz-my-4">
+    <RadzenButton ButtonStyle="ButtonStyle.Primary"
+                  Disabled="ContenedorTieneServiciosTerminados()"
+                  Text="Agregar servicio"
+                  Click="@AgregarServicio"
+                  Icon="add_circle" />
+</RadzenStack>
+
+<RadzenDataGrid @ref="_gridServicios"
+                TItem="PeticionesServicios"
+                Data="@_servicios"
+                RowRender="@OnRowRender"
+                EditMode="DataGridEditMode.Single"
+                AllowPaging="false"
+                AllowFiltering="false"
+                AllowSorting="false"
+                ShowPagingSummary="false"
+                ShowPagination="false"
+                RowUpdate="@OnUpdateRow"
+                RowCancel="@OnCancelRow">
+    
+    <Template Context="servicio">
+        @if (@ChildContent != null)
+            @ChildContent(servicio)
+    </Template>
+
+
+    <Columns>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Servicio">
+            <Template Context="servicio">@servicio?.catServicios?.Nombre</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Fecha solicitud">
+            <Template Context="servicio">@servicio?.FechaRegistro</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Ref. cliente Facturar">
+            <Template Context="servicio">@servicio?.ReferenciaClienteFacturar</Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Estado servicio">
+            <Template Context="servicio">
+                <CambiarEstadoServicioCmp Servicio="servicio"
+                                          Contenedor="Contenedor"
+                                          UsuarioTokenDTO="UsuarioTokenDTO"
+                                          EstadoCambiado="OnEstadoActualizado"
+                                          ServicioEstaTerminado="ServicioEstaTerminadoAsync" />
+            </Template>
+        </RadzenDataGridColumn>
+
+        <RadzenDataGridColumn TItem="PeticionesServicios" Title="Acciones">
+            <Template Context="servicio">
+                <RadzenButton Disabled="@(NoPermiteDocumentos(servicio))"
+                              MouseEnter="@(args => MostrarToolTip(args, servicio))"
+                              Click="@(args => MostrarModalAsiganacionDocumentoAsync(servicio))"
+                              @ref="_btnAgregarDocumentosRef"
+                              Style="margin-right: 10px;"
+                              Text="Agregar documentos"
+                              Icon="add_circle"/>
+            </Template>
+        </RadzenDataGridColumn>
+
+    </Columns>
+</RadzenDataGrid>

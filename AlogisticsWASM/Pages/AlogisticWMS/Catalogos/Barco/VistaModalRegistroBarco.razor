@@ -1,0 +1,226 @@
+﻿@page "/viewModalRegistroBarco/{IdBarco}"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOG.Modelos.Modelos.Catalogos
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using ALOGRepositorios.Services.Catalogos.ICatalogos
+@using ALOG.Modelos.Modelos.DTO.Respuestas
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject DialogService dialogService
+
+<RadzenTemplateForm Data="@monitorBarcoSelected" Submit="@((MonitorBarco args) => { Submit(args); })">
+    <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" 
+        JustifyContent="JustifyContent.SpaceBetween" class="rz-pb-5" Style="width:100%; height: 100%;">
+        <div class="row">
+            <div class="col-sm-12">
+                <RadzenLabel Text="Nombre" Component="REG_BUQUE_NOMBRE" />
+                <RadzenTextBox Name="REG_BUQUE_NOMBRE" 
+                Style="width: 100%;"
+                @bind-Value="monitorBarcoSelected.Nombre" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <RadzenLabel Text="Pais" Component="REG_BUQUE_PAIS" />
+                <RadzenAutoComplete @bind-Value=@monitorBarcoSelected.Pais Data=@listCatPaises
+                        Name="REF_NOMBRE_BARCO" Change=@OnChangePaises class="rz-text-uppercase"
+                        ValueProperty="@nameof(CatPaises.IdCatPaises)"
+                        TextProperty="@nameof(CatPaises.Nombre)" LoadData=@OnLoadDataPaises Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Nombre Barco" }})" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-sm-12">
+                <RadzenLabel Text="Naviera" Component="REG_BUQUE_NAVIERA" />
+                <RadzenAutoComplete @bind-Value=@monitorBarcoSelected.Naviera Data=@listCatNavieras
+                        Name="REG_BUQUE_NAVIERA" Change=@OnChangeNaviera class="rz-text-uppercase"
+                        ValueProperty="@nameof(RespuestaGenericaCatalogosDTO.Id)"
+                        TextProperty="@nameof(RespuestaGenericaCatalogosDTO.Nombre)" LoadData=@OnLoadDataNaviera Style="width: 100%; text-transform: capitalize;" 
+                        InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Nombre Barco" }})" />
+            </div>
+        </div>
+    </RadzenStack>
+    @* <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Icon="save" Variant="Variant.Flat" Text="Guardar" Style="width: 120px" />
+    </RadzenStack> *@
+    <RadzenStack Visible="@ShowClose" Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0.5rem">
+        <RadzenButton ButtonType="ButtonType.Submit" Size="ButtonSize.Large" Icon="save" Text="Guardar" />
+        <RadzenButton ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Large" Icon="cancel" Text="Cerrar" Click="@Cancel" />
+    </RadzenStack>
+</RadzenTemplateForm>
+
+@code {
+
+    [Parameter] public int IdBarco { get; set; }
+
+    [Parameter] public MonitorBarco monitorBarcoSelected { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    List<CatPaises> listCatPaises;
+
+    List<RespuestaGenericaCatalogosDTO> listCatNavieras;
+
+    ICollection<RespuestaGenericaCatalogosDTO> listaCatNavieras;
+
+    ICollection<CatPaises> listaCatPaises;
+
+    [Inject] private IBarcoService? _barcoService { get; set; }
+
+    [Inject] private ICatPaisesServices? _catPaisesServices { get; set; }
+
+    [Inject] private ICatNavieraService? _catNavieraService { get; set; }
+
+    protected override async Task OnInitializedAsync() 
+    {
+        
+        await base.OnInitializedAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+
+    }
+
+    async void Submit(MonitorBarco monitorBarco)
+    {
+        string _mensaje = String.Empty;
+        bool _confirmar = false;
+
+        var _result = ValidarRegistroBuque(monitorBarco);
+
+        if (_result.Success) {
+        
+            monitorBarco.IdEmpresaLogin = 1;
+            if (monitorBarco.IdBarco.Equals(0)) {
+                monitorBarco.CRUDAction = ECRUDAction.Create;
+            } else{
+                monitorBarco.CRUDAction = ECRUDAction.Update;
+            }
+
+            var _resultBase = await _barcoService!.Guardar(monitorBarco);
+
+            //Console.WriteLine("-> Viaje : " + JsonSerializer.Serialize(_resultBase));
+            if (_resultBase.Success) {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Registro de Buque", Detail = "Se Guardo el Buque de forma correcta", Duration = 4000 });
+            } else {
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Registro de Buque", Detail = _resultBase.MensajeRespuesta, Duration = 4000 });
+            }
+
+            dialogService.Close(true);
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
+            Summary = "Registro de Buque", Detail = _result.MensajeRespuesta, Duration = 4000 });
+
+
+        }
+
+    }
+
+    ResultBase ValidarRegistroBuque(MonitorBarco monitorBarco) {
+
+        var _resultBase = new ResultBase();
+
+
+        if (String.IsNullOrEmpty(monitorBarco.Nombre)) {
+
+            _resultBase.MensajeRespuesta = "Favor de registroar el nombre del Buque";
+
+        }
+
+        return _resultBase;
+
+    }
+
+    async Task OnLoadDataPaises(LoadDataArgs args)
+    {
+
+        listaCatPaises = await _catPaisesServices.ObtenerPaisesConincidencia(args.Filter);
+
+        listCatPaises = listaCatPaises.ToList();
+
+    }
+
+    async Task OnLoadDataNaviera(LoadDataArgs args)
+    {
+
+        listaCatNavieras = await _catNavieraService.GetNavierasConincidencia(args.Filter);
+
+        listCatNavieras = listaCatNavieras.ToList();
+
+    }
+
+    void OnChangePaises(object value) {
+
+        monitorBarcoSelected.Pais = null;
+        monitorBarcoSelected.IdPais = 0;
+
+         if (listaCatPaises != null) {
+
+            if (!listaCatPaises.Count().Equals(0)) {
+
+                var selectedPais = listaCatPaises
+                .FirstOrDefault(c => c.Nombre == value?.ToString());
+
+                if (selectedPais != null)
+                {
+                    var selectedId = selectedPais.IdCatPaises;
+                    monitorBarcoSelected.Pais = selectedPais.Nombre;
+                    monitorBarcoSelected.IdPais = selectedPais.IdCatPaises;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    void OnChangeNaviera(object value) {
+
+        monitorBarcoSelected.Naviera = null;
+        monitorBarcoSelected.IdNaviera = 0;
+
+         if (listaCatNavieras != null) {
+
+            if (!listaCatNavieras.Count().Equals(0)) {
+
+                var selectedNaviera = listaCatNavieras
+                .FirstOrDefault(c => c.Nombre == value?.ToString());
+
+                if (selectedNaviera != null)
+                {
+                    var selectedId = selectedNaviera.Id;
+                    monitorBarcoSelected.Naviera = selectedNaviera.Nombre;
+                    monitorBarcoSelected.IdNaviera = selectedNaviera.Id;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    void Cancel()
+    {
+        dialogService.Close(true);
+    }
+
+
+}
+

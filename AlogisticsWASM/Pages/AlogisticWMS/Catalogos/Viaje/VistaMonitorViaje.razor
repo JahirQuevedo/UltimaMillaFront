@@ -1,0 +1,207 @@
+﻿@page "/viaje"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject DialogService DialogService
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+<style>
+    .rz-grid-table {
+        width: unset;
+    }
+    .rz-button {
+        text-transform: none !important;
+    }
+
+</style>
+
+<div class="content mt-7">
+    
+
+    <div id="monitorViajeListaPaginada">
+
+        <div class="row mb-4 gx-6 gy-3 align-items-center">
+              <div class="col-auto">
+                <h2 class="mb-0">Viajes<span class="fw-normal text-700 ms-3">(@totalRegistros)</span></h2>
+              </div>
+              <div class="col-auto">    
+                <RadzenButton Text="Agregar Nuevo Viaje" Icon="add" ButtonStyle="ButtonStyle.Primary"
+                    Click=@(() => abrirRegistroViaje(1, @_monitorViaje))
+                 Size="ButtonSize.Large" />
+            </div>
+        </div>
+        <div class="col-12 col-sm-auto">
+            <div class="d-flex align-items-center">
+                <RadzenDataGrid style="border-radius:7px; height: 550px;" @ref="gridViajes" IsLoading=@isLoading 
+                    Count="@totalRegistros" Data="@listMonitorViajes" LoadData="@ObtenerDatos" 
+                    AllowColumnResize="true"
+                    AllowSorting="false" AllowFiltering="true" AllowPaging="true" 
+                    PageSize="@registrosPorPagina"
+                    SelectionMode="DataGridSelectionMode.Single"
+                    @bind-Value=@selectedViaje
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    ShowPagingSummary="true"
+                    FilterMode="FilterMode.Simple"
+                    FilterCaseSensitivity="@filterCaseSensitivity" LogicalFilterOperator="@logicalFilterOperator"
+                    ColumnWidth="300px">
+                    <Columns>
+                        <RadzenDataGridColumn Property="@nameof(MonitorViaje.ReferenciaBuque)" Filterable="false" Title="Ref. Buque" Width="200px" Frozen="false" TextAlign="TextAlign.Center" />
+                        <RadzenDataGridColumn Property="@nameof(MonitorViaje.FolioViaje)" Filterable="true" Title="Folio Viaje" Width="300px" Frozen="false" TextAlign="TextAlign.Center"/>
+                        <RadzenDataGridColumn Property="@nameof(MonitorViaje.Barco.Nombre)" Filterable="false" Title="Buque" Width="120px">
+                            <Template Context="monitorViaje">
+                                @monitorViaje.Barco?.Nombre
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Property="@nameof(MonitorViaje.LineaNaviera)" Filterable="false"  Title="Línea Naviera" Width="120px" />
+                        <RadzenDataGridColumn Property="@nameof(MonitorViaje.Operacion)" Filterable="false"  Title="Operación" Width="120px" />
+                        <RadzenDataGridColumn Title="Fecha Arribo/Salida" Filterable="false"  Width="120px">
+                            <Template Context="monitorViaje">
+                                @(monitorViaje.FechaArriboSalida == DateTime.MinValue ? "" : monitorViaje.FechaArriboSalida)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Fecha Fondeo" Filterable="false" Width="120px">
+                            <Template Context="monitorViaje">
+                                @(monitorViaje.FechaFondeo == DateTime.MinValue ? "" : monitorViaje.FechaFondeo)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Fecha Atraque" Filterable="false" Width="120px">
+                            <Template Context="monitorViaje">
+                                @(monitorViaje.FechaAtraque == DateTime.MinValue ? "" : monitorViaje.FechaAtraque)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Fecha Desatraque" Filterable="false" Width="120px">
+                            <Template Context="monitorViaje">
+                                @(monitorViaje.FechaDesatraque == DateTime.MinValue ? "" : monitorViaje.FechaDesatraque)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Fecha Inicio Carga/Descarga" Filterable="false" Width="120px">
+                            <Template Context="monitorViaje">
+                                @(monitorViaje.FechaInicioCargaDescarga == DateTime.MinValue ? "" : monitorViaje.FechaInicioCargaDescarga)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Title="Fecha Fin Carga/Descarga" Filterable="false" Width="120px">
+                            <Template Context="monitorViaje">
+                                @(monitorViaje.FechaFinCargaDescarga == DateTime.MinValue ? "" : monitorViaje.FechaFinCargaDescarga)
+                            </Template>
+                        </RadzenDataGridColumn>
+                        <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                            <Template Context="data">
+                                <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                    Click=@(() => abrirRegistroViaje(2, data))
+                                  @onclick:stopPropagation="true">
+                                </RadzenButton>
+                                <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                                </RadzenButton>
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+@code {
+
+    RadzenDataGrid<MonitorViaje> gridViajes;
+
+    LogicalFilterOperator logicalFilterOperator = LogicalFilterOperator.Or;
+    FilterCaseSensitivity filterCaseSensitivity = FilterCaseSensitivity.CaseInsensitive;
+
+    MonitorViaje _monitorViaje;
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    List<MonitorViaje> listMonitorViajes;
+
+    IList<MonitorViaje> selectedViaje;
+    bool isLoading = false;
+
+    private readonly ILogger _logger;
+
+    private LoadDataArgs _args;
+
+    [Inject] private IViajeService? _viajeService { get; set; }
+    protected override async Task OnInitializedAsync() 
+    {
+        try 
+        {
+            _monitorViaje = new MonitorViaje();
+            await ObtenerDatos(_args);
+        } catch (InvalidOperationException ex) {
+            ////Console.WriteLine(ex.Message);
+        }
+
+    }
+
+    async Task abrirRegistroViaje(int opcion, MonitorViaje viaje)
+    {
+        if (opcion.Equals(1)) {
+            viaje = new MonitorViaje();
+            viaje.TipoOperacion = TipoOperacionAduanera.Importacion;
+            viaje.FechaAlta = DateTime.Now;
+            viaje.Operacion = "Importación";
+            viaje.Barco = new MonitorBarco();
+            viaje.CRUDAction = ECRUDAction.Create;
+        }
+        string _tituloDialog = viaje.IdViaje.Equals(0) ? $"Nuevo Viaje" : $"Folio de Viaje: {viaje.FolioViaje}";
+         await DialogService.OpenAsync<VistaModalRegistroViaje>(_tituloDialog,
+               new Dictionary<string, object>() { { "IdViaje", viaje.IdViaje}, { "monitorViajeSelected", viaje } },
+                new DialogOptions() { Width = "800px", Height = "530px", Resizable = false, Draggable = true }
+               );
+
+        await ObtenerDatos(_args);
+    } 
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+        ConsultaCatalogoBase<ConsultaViaje> _consultaViaje = new ConsultaCatalogoBase<ConsultaViaje>();
+        _consultaViaje.Entidad = new ConsultaViaje();
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+            if (!args.Filters.Count().Equals(0)) {
+                var _filter = args.Filters.Where(p => p.Property.Equals("FolioViaje")).FirstOrDefault();
+                if (_filter != null) {
+                    _consultaViaje.Entidad.Folio = String.IsNullOrEmpty(_filter.FilterValue.ToString()) ? null : _filter.FilterValue.ToString();
+                }
+            }
+        }
+
+       
+            _consultaViaje.NumeroDePagina = numeroDePagina;
+            _consultaViaje.RegistrosPorPagina = registrosPorPagina;
+
+        var _listMonitorViajes = await _viajeService!.ObtenerListaPaginada(_consultaViaje);
+
+        ////Console.WriteLine("--> PoC ");
+
+        totalRegistros = (int)_listMonitorViajes.Paginado.TotalRegistros;
+
+        ////Console.WriteLine("--> totalRegistros: " + totalRegistros);
+
+        listMonitorViajes = _listMonitorViajes.Data;
+
+        selectedViaje = listMonitorViajes.Take(1).ToList();
+
+        isLoading = false;
+
+    }
+
+}
+
+

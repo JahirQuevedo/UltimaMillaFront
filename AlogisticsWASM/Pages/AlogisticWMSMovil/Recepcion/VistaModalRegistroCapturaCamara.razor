@@ -1,0 +1,109 @@
+﻿@page "/vistaModalRegistroCapturaCamara"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using ALOGRepositorios.Services.Peticiones.IPeticiones
+@using ALOG.Modelos.Modelos.DTO.Solicitudes
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService dialogService
+@inject NavigationManager navigationManager
+@inject NotificationService NotificationService
+@attribute [Authorize]
+<RadzenStack AlignItems="AlignItems.Normal" class="rz-p-0 rz-mt-5" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.SpaceAround" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            @* <RadzenImage Path="@($"data:image/jpeg;base64,{base64EncodedImageData}")" AlternateText="base64 image" /> *@
+            <RadzenImage Path="@base64EncodedImageData" Style="width: 17rem;" AlternateText="url image" />
+        </RadzenColumn>
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenButton Click=@(args => GuardarFotografia()) Text="Guardar" Icon="save" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+
+@code {
+
+    [Parameter] public string base64EncodedImageData { get; set; }
+
+    [Parameter] public RecepcionMercanciaDTO  recepcionMercanciaDTO { get; set; }
+
+    [Parameter] public TipoFoto tipoFoto { get; set; }
+
+    [Parameter] public MonitorRecepcionMercancia monitorRecepcionMercancia { get; set; }
+
+    [Inject] private IRecepcionService? _recepcionServie { get; set; } 
+
+    [Inject] private IServicioFotograficoService? _servicioFotograficoService { get; set; } 
+
+    [Inject] private IOrdenService? _ordenservice {get; set;}
+
+    async void GuardarFotografia() {
+
+        string _pathOrdenServicio = String.Empty;
+
+        SolPathOrdenDTO solPathOrdenDTO = new SolPathOrdenDTO();
+
+        solPathOrdenDTO.IdOrden = monitorRecepcionMercancia.IdOrdenServicio;
+        solPathOrdenDTO.IdLineaNegocio = 4;
+
+        var _ordenServicio = await _ordenservice.ObtenerPath(solPathOrdenDTO);
+
+        if (_ordenServicio.IsSuccess) {
+
+            _pathOrdenServicio = _ordenServicio.strMensaje;
+
+            if (!_pathOrdenServicio.EndsWith("/")) {
+                _pathOrdenServicio += "/";
+            }
+
+            DirectoryInfo directoryInfo = new DirectoryInfo(_pathOrdenServicio);
+            _pathOrdenServicio = directoryInfo.FullName;
+
+        }
+
+       //Console.WriteLine("-> _ordenServicio : " + System.Text.Json.JsonSerializer.Serialize(_ordenServicio));
+
+        CargaArchivoFotografico cargaArchivoFotografico = new CargaArchivoFotografico();
+        cargaArchivoFotografico.IdEmpresaLogin = 1;
+        cargaArchivoFotografico.IdTarja = monitorRecepcionMercancia.IdTarja;
+        cargaArchivoFotografico.FolioTarja = monitorRecepcionMercancia.FolioTarja;
+        cargaArchivoFotografico.IdFolioServicio = monitorRecepcionMercancia.IdFolioServicio;
+        cargaArchivoFotografico.FolioServicio = monitorRecepcionMercancia.FolioServicio;
+        cargaArchivoFotografico.IdInventario = recepcionMercanciaDTO.IdInventario;
+        cargaArchivoFotografico.IdMercancia = recepcionMercanciaDTO.IdMercancia;
+        cargaArchivoFotografico.TipoFoto = tipoFoto;
+        cargaArchivoFotografico.ArchivoBase = new ArchivoBase();
+        cargaArchivoFotografico.ArchivoBase.RutaBase = _pathOrdenServicio;
+        cargaArchivoFotografico.ArchivoBase.Content = Convert.FromBase64String(base64EncodedImageData.Split(',')[1]);
+        cargaArchivoFotografico.ArchivoBase.Extension = ".jpg";
+
+        var _result = await _servicioFotograficoService.Guardar(cargaArchivoFotografico);
+
+        if (_result.Success) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Evidencia Fotográfica", Detail = "Se Guardo correctamente: " + _result.MensajeRespuesta, Duration = 4000 });
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Evidencia Fotográfica", Detail = "Error: " + _result.MensajeRespuesta, Duration = 4000 });
+
+        }
+
+        dialogService.Close(true);
+
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}

@@ -1,0 +1,383 @@
+﻿
+@using ALOG.Modelos.Modelos.Catalogos
+@using System.Text.Json
+@using ALOG.Modelos.Modelos.DTO.Solicitudes
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOGRepositorios.Services.Peticiones.IPeticiones
+@using AlogisticsWASM.Layout.Utilerias
+@using AlogisticsWASM.Pages.Vacios.Cronologia
+@inject NotificationService NotificationService
+@inject DialogService DialogService
+
+
+<RadzenDataGrid TItem="PeticionesServicios" @ref=grid2 AllowFiltering="true" AllowPaging="true" AllowSorting="true"
+RowUpdate="@OnUpdateRow" Sort="@(args => Reset())" Page="@(args => Reset())" Filter="@(args => Reset())"
+Data="@lstpeticionesServicio" CellClick="@OnCellClick">
+    <Template Context="servicios">
+
+        <RadzenBadge BadgeStyle="BadgeStyle.Base" Text="EXPEDIENTE DIGITAL" />
+        <GridDocumentosPorServicioCMP paramDocumentos="servicios.Documentos"></GridDocumentosPorServicioCMP>
+        @* <RadzenDataGrid AllowFiltering="true" AllowPaging="true" AllowSorting="true"
+        Data="servicios.Documentos">
+
+        <Columns>
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.FechaRegistro)" FormatString="{0:d}" Title="F.Solicitud" Width="80px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.CatDocumento)" Title="Servicio" Width="120px">
+        <Template Context="data">
+        @(data.CatDocumento.NombreDocumento)
+        </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(PeticionesDocumentos.TipoDocumentoNombre)" Title="Estado" Width="80px">
+
+        </RadzenDataGridColumn>
+        </Columns>
+        </RadzenDataGrid> *@
+    </Template>
+    <Columns>
+        <RadzenDataGridColumn Property="@nameof(PeticionesServicios.FechaRegistro)" FormatString="{0:d}" Title="F.Solicitud" Width="80px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesServicios.catServicios)" Title="Servicio" Width="120px">
+            <Template Context="data">
+                @(data.catServicios.Nombre)
+            </Template>
+        </RadzenDataGridColumn>
+        @if (paramMostrarControles && paramUsuarioInterno )
+        {           
+            <RadzenDataGridColumn TItem="PeticionesServicios" Property="PeticionesServicios" Title="Estado" Width="280px" IsInEditMode="@IsEditing">
+                <Template Context="servicio">                    
+                    <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle2(servicio.IdEstadoServicio.ToString()))" Shade="Shade.Darker" IsPill="true" Text="@objUtileriasPage.GetEstado(servicio.IdEstadoServicio)" class="rz-ms-2" />
+                </Template>
+                <EditTemplate Context="servicio">
+
+                    <RadzenDropDown @ref="editor" Change="@(args => Update())" @bind-Value="servicio.IdEstadoServicio" Data="@lstobjTipoEstados" TextProperty="@nameof(CatReferenciaEstado.Nombre)" ValueProperty="@nameof(CatReferenciaEstado.IdCatReferenciaEstado)" Style="width:100%; display: block;"
+                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select customer" }})" />
+
+                </EditTemplate>
+            </RadzenDataGridColumn>
+        }
+
+        else
+        {
+            <RadzenDataGridColumn Property="@nameof(PeticionesServicios.catReferenciaEstado)" Title="Estado" Width="80px">
+                <Template Context="data">
+                    <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle(data.catReferenciaEstado.Descripcion))" Shade="Shade.Darker" IsPill="true" Text="@data.catReferenciaEstado.Nombre" class="rz-ms-2" />
+                </Template>               
+            </RadzenDataGridColumn>
+        }
+        <RadzenDataGridColumn Width="80px" Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right">
+            <Template Context="servicio">
+                <RadzenButton Icon="feedback" ButtonStyle="ButtonStyle.Dark" Variant="Variant.Flat" Size="ButtonSize.Medium" Click="@(() => AbrirReporteIncidencia(servicio))">
+                </RadzenButton>
+            </Template>
+        </RadzenDataGridColumn>
+    </Columns>
+</RadzenDataGrid>
+
+
+@code {
+    [Parameter]
+    public EventCallback<List<string>> paramOnContenedorActualizarGrid { get; set; }
+    [Parameter]
+    public PeticionesContenedores paramContenedores { get; set; }
+    [Parameter]
+    public int paramIdReferencia { get; set; }
+    [Parameter]
+    public bool paramMostrarControles { get; set; }
+    [Parameter]
+    public bool paramUsuarioInterno { get; set; } = false;
+    #region Variables
+    [Inject] IContenedorService iContenedorService { get; set; }
+    [Inject] IOrdenService iOrdenService { get; set; }
+    [Inject] IReferenciaService ireferenciaService { get; set; }
+    [Inject] SweetAlertService sweetAlertService { get; set; }
+    RadzenDataGrid<PeticionesServicios> grid2;
+    string columnEditing;
+    //IEnumerable<PeticionesContenedor> order;
+    List<KeyValuePair<int, string>> editedFields = new List<KeyValuePair<int, string>>();
+    List<PeticionesServicios> ordersToUpdate = new List<PeticionesServicios>();
+    List<CatReferenciaEstado> lstobjTipoEstados = new List<CatReferenciaEstado>();
+    private UtileriasPage objUtileriasPage = new UtileriasPage();
+    CatReferenciaEstado objTipoEstados = new CatReferenciaEstado();
+    IRadzenFormComponent editor;
+    bool editorFocused;
+
+    private SolActualizarFolioManiobraDTO objSolActualizarFolioManiobraDTO = new SolActualizarFolioManiobraDTO();
+    private SolCambioEstadoDTO objSolCambioEstadoDTO = new SolCambioEstadoDTO();
+
+    private IEnumerable<PeticionesServicios> lstpeticionesServicioOrig = new List<PeticionesServicios>();
+    private IEnumerable<PeticionesServicios> lstpeticionesServicio = new List<PeticionesServicios>();
+    IEnumerable<PeticionesContenedores> _IEContenedores = new List<PeticionesContenedores>();
+    IEnumerable<PeticionesServicios> _IEServicio = new List<PeticionesServicios>();
+    IEnumerable<PeticionesDocumentos> _IEDocumentos = new List<PeticionesDocumentos>();
+    private PeticionesReferencias _objReferencia = new PeticionesReferencias();
+    private ICollection<PeticionesReferencias> _lstReferencias = new List<PeticionesReferencias>();
+    private List<PeticionesReferencias> _lstReferenciasPage = new List<PeticionesReferencias>();
+    private IEnumerable<PeticionesReferencias> _IEReferencias = new List<PeticionesReferencias>();
+    #endregion Variables
+    // void OnContenedoresDataGridRender(DataGridRenderEventArgs<PeticionesContenedor> args)
+    // {
+    //     if (args.FirstRender)
+    //     {
+    //         InvokeAsync(() => args.Grid.ExpandRow(args.Grid.View.Where(c => c.Servicios.Any()).FirstOrDefault()));
+    //     }
+    // }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        lstpeticionesServicioOrig = paramContenedores.Servicios;
+        lstpeticionesServicio = paramContenedores.Servicios;
+
+        lstobjTipoEstados = objUtileriasPage.ObtenerEstadosReferencia();
+
+
+
+    }
+
+
+
+    void OnUpdateRow(PeticionesServicios order)
+    {
+        ////Console.WriteLine("OnUpdateRow");
+        Reset(order);
+
+
+    }
+
+    /// <summary>
+    /// Determines if the specified column is in edit mode for the specified order.
+    /// </summary>
+    /// <param name="columnName">The RadzenDataGridColumn.Property currently being rendered by the RadzenDataGrid.</param>
+    /// <param name="order">The Order currently being rendered by the RadzenDataGrid.</param>
+    /// <returns>True if the column should render the EditTemplate for the specified Order, otherwise false.</returns>
+    bool IsEditing(string columnName, PeticionesServicios pCont)
+    {
+        //////Console.WriteLine("IsEditing");
+        // Comparing strings is quicker than checking the contents of a List, so let the property check fail first.
+        return columnEditing == columnName && ordersToUpdate.Contains(pCont);
+    }
+
+    /// <summary>
+    /// Determines if the specified column needs a custom CSS class based on the <typeparamref name="TItem">TItem's</typeparamref> state.
+    /// </summary>
+    /// <param name="column">The RadzenDataGridColumn.Property currently being rendered by the RadzenDataGrid.</param>
+    /// <param name="order">The Order currently being rendered by the RadzenDataGrid.</param>
+    /// <returns>A string containing the CssClass to add, or <see cref="String.Empty">.</returns>
+    string IsEdited(RadzenDataGridColumn<PeticionesServicios> column, PeticionesServicios order)
+    {
+        ////Console.WriteLine("IsEdited");
+        // In a real scenario, you might use IRevertibleChangeTracking to check the current column
+        //  against a list of the object's edited fields.
+        return editedFields.Where(c => c.Key == order.IdServicio && c.Value == column.Property).Any() ?
+            "table-cell-edited" :
+            string.Empty;
+    }
+
+    /// <summary>
+    /// Handles the CellClick event of the RadzenDataGrid.
+    /// </summary>
+    /// <param name="args"></param>
+    async Task OnCellClick(DataGridCellMouseEventArgs<PeticionesServicios> args)
+    {
+        // ////Console.WriteLine("OnCellClick");
+        // ////Console.WriteLine(args);
+        // ////Console.WriteLine(args.Data);
+        // ////Console.WriteLine(args.Column.Property);
+        //////Console.WriteLine(!gridSolicitudesDetalle.IsValid);
+        ////Console.WriteLine(ordersToUpdate.Contains(args.Data));
+        if (!grid2.IsValid ||
+            (ordersToUpdate.Contains(args.Data) && columnEditing == args.Column.Property)) return;
+
+        if (ordersToUpdate.Any())
+        {
+
+            editedFields.Add(new(ordersToUpdate.First().IdServicio, columnEditing));
+            await Update();
+        }
+
+        // This sets which column is currently being edited.
+        columnEditing = args.Column.Property;
+
+        // This sets the Item to be edited.
+        await EditRow(args.Data);
+    }
+
+    void Reset(PeticionesServicios order = null)
+    {
+        ////Console.WriteLine("Reset");
+        editorFocused = false;
+
+        if (order != null)
+        {
+            ordersToUpdate.Remove(order);
+        }
+        else
+        {
+            ordersToUpdate.Clear();
+        }
+    }
+    async Task Update()
+    {
+        ////Console.WriteLine("update");
+        if (paramMostrarControles && paramUsuarioInterno)
+        {
+            editorFocused = false;
+            ////Console.WriteLine(ordersToUpdate);
+            var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true // Para una salida JSON con formato
+                };
+            var servicio = ordersToUpdate.First();
+            objSolCambioEstadoDTO = new SolCambioEstadoDTO();
+            objSolCambioEstadoDTO.IdContenedor = servicio.IdContenedor;
+            objSolCambioEstadoDTO.IdServicio = servicio.IdServicio;
+            objSolCambioEstadoDTO.IdCatReferenciaEstado = servicio.IdEstadoServicio;
+            objSolCambioEstadoDTO.IdReferencia = paramIdReferencia;
+
+            var resultado = await iContenedorService.ActualizaEstadoServicio(objSolCambioEstadoDTO);
+            ////Console.WriteLine($"ActualizarGridPadre0: {objSolCambioEstadoDTO.IdCatReferenciaEstado} {ordersToUpdate.First().EstadoServicio} {objSolCambioEstadoDTO.IdContenedor}");
+            ////Console.WriteLine($"ActualizarGridPadre0 count:{resultado.Count()}:");
+            if (resultado.Count == 0)
+            {
+                ////Console.WriteLine($"ActualizarGridPadre1 ENTRO:");
+                ordersToUpdate.First().EstadoServicio = lstobjTipoEstados.First(x => x.IdCatReferenciaEstado == ordersToUpdate.First().IdEstadoServicio).Nombre;
+
+
+                string jsonString = JsonSerializer.Serialize(ordersToUpdate, options);
+                ////Console.WriteLine(jsonString);
+                if (ordersToUpdate.Any())
+                {
+                    await grid2.UpdateRow(ordersToUpdate.First());
+
+                }
+                ////Console.WriteLine($"ActualizarGridPadre1: {objSolCambioEstadoDTO.IdCatReferenciaEstado}  {objSolCambioEstadoDTO.IdContenedor}");
+
+                await ActualizarGridPadre(objSolCambioEstadoDTO.IdCatReferenciaEstado, objSolCambioEstadoDTO.IdContenedor);
+                NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Success Summary", Detail = $"Actualización correcta. {servicio.DescServicio}", Duration = 4000 });
+            }
+            else
+            {
+                ////Console.WriteLine($"ActualizarGridPadre2 ENTRO:");
+                ////Console.WriteLine($"ActualizarGridPadre2: {objSolCambioEstadoDTO.IdCatReferenciaEstado} {ordersToUpdate.First().EstadoServicio} {objSolCambioEstadoDTO.IdContenedor}");
+                string jsonString = JsonSerializer.Serialize(ordersToUpdate, options);
+                await grid2.UpdateRow(ordersToUpdate.First());
+                await obtenerReferencia();
+                lstpeticionesServicio = new List<PeticionesServicios>();
+                lstpeticionesServicio = _IEServicio.Where(s => s.IdContenedor == paramContenedores.IdContenedor);
+
+                await grid2.RefreshDataAsync();
+                grid2.ResetLoadData();
+                //NotificationService.Notify(new NotificationMessage { Severity = NotificationSeverity.Error, Summary = "Error Summary", Detail = $"Error al actualizar el estado del servicio {servicio.DescServicio}", Duration = 4000 });
+                await sweetAlertService.FireAsync(
+                         "Servicio NO cambió estado.: " + string.Join(",", resultado),
+                         "El proceso ha fallado.",
+                         SweetAlertIcon.Error
+                         );
+
+            }
+        }
+
+    }
+
+    async Task EditRow(PeticionesServicios order)
+    {
+        ////Console.WriteLine("EditRow");
+        Reset();
+        ////Console.WriteLine(order.IdEstadoServicio);
+        ////Console.WriteLine(order.EstadoServicio);
+        ordersToUpdate.Add(order);
+
+        await grid2.EditRow(order);
+    }
+
+    public async Task obtenerReferencia()
+    {
+        _objReferencia = await ireferenciaService!.ObtenerReferencia(paramIdReferencia);
+
+        if (_objReferencia == null)
+        {
+            _objReferencia = new PeticionesReferencias();
+        }
+        else
+        {
+            _lstReferencias = new List<PeticionesReferencias>();
+            //_lstAcarreosWork = _lstAcarreos;
+            _lstReferencias.Add(_objReferencia);
+            var result = _lstReferencias.AsEnumerable();
+            // Update the Data property
+
+            _IEReferencias = _lstReferencias.AsEnumerable();
+
+            //string json = JsonSerializer.Serialize(_objReferencia, new JsonSerializerOptions { WriteIndented = true });
+
+            // Escribir el JSON en la consola
+            //////Console.WriteLine("JSON:" + json);
+
+            var contenedoresList = _IEReferencias
+               .Where(referencia => referencia.Contenedores != null)
+                .SelectMany(referencia => referencia.Contenedores)
+                .ToList();
+
+
+            // Asignar la lista combinada a _ODContenedores
+            _IEContenedores = contenedoresList.AsEnumerable();
+
+
+            //Obtenemos Servicios.
+            var serviciosList = _IEContenedores
+                .Where(contenedor => contenedor.Servicios != null)
+                .SelectMany(contenedor => contenedor.Servicios)
+                .ToList();
+            _IEServicio = serviciosList.AsEnumerable();
+
+
+            var DocumentosList = _IEServicio
+                .Where(serv => serv.Documentos != null)
+                .SelectMany(serv => serv.Documentos)
+                .ToList();
+            _IEDocumentos = DocumentosList.AsEnumerable();
+
+        }
+    }
+
+    private async Task ActualizarGridPadre(int pIdCatReferenciaEstado,  int pIdContenedor)
+    {
+        ////Console.WriteLine("ActualizarGridPadre FUNCION");
+        List<string> lstContenedores = new List<string>();
+        lstContenedores.Add(pIdCatReferenciaEstado.ToString());
+        lstContenedores.Add(pIdContenedor.ToString());
+        await paramOnContenedorActualizarGrid.InvokeAsync(lstContenedores);
+    }
+
+    @code {
+        async Task AbrirReporteIncidencia(PeticionesServicios servicio)
+        {
+            // await DialogService.OpenAsync<AlogisticsWASM.Pages.Vacios.Cronologia.VaciosCronologiaCRUDCMP>("Reporte de Incidencias");
+            if (servicio != null)
+            {
+                var diccionario = new Dictionary<string, object>
+                {
+                    { "Contenedor", paramContenedores?.Contenedor },
+                    { "Servicio", servicio?.catServicios?.Nombre }
+                };
+                // Llama al Dialog con el ID del contenedor como parámetro
+                await DialogService.OpenAsync<VaciosCronologiaCRUDCMP>(
+                    title: "Reporte de Incidencias",
+                    parameters: new Dictionary<string, object>
+                    {
+                        { "DiccionarioInfoContenedor", diccionario },
+                        { "paramIdContenedor", servicio.IdContenedor },
+                        { "paramIdServicio", servicio.IdServicio }
+
+                    },
+                    options: new DialogOptions
+                    {
+                        Width = "1200px",
+                        CloseDialogOnOverlayClick = false,
+                        ShowClose = true
+                    }
+                );
+            }
+        }
+    }
+}

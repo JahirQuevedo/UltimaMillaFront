@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>Disable</Nullable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Compile Remove="Modelos\Catalogos\CatCliente.cs" />
+		<Compile Remove="Modelos\Logisticos\UltimaMillaDetalle.cs" />
+		<Compile Remove="Modelos\Logisticos\UltimaMillaEncabezado.cs" />
+		<Compile Remove="Modelos\Vacios\Peticiones\PeticionesContenedor1.cs" />
+		<Compile Remove="Modelos\Vacios\Peticiones\PeticionesServicios.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Modelos\Dtos\Consultas\" />
+		<Folder Include="Modelos\Genericos\" />
+		<Folder Include="ModelosWEB\" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.AspNetCore.Http.Features" Version="5.0.17" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.12" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.12">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\..\..\Users\rafael.zamudio\source\repos\ApiVacios\ALOG.Enums\ALOG.Enums.csproj" />
+	</ItemGroup>
+
+</Project>

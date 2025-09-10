@@ -1,0 +1,73 @@
+﻿<RadzenFieldset Text="Agregar Nueva Ubicación" Style="border-radius: 12px; padding: 1rem;">
+
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <!-- Columna izquierda -->
+        <div style="flex: 1; min-width: 250px; display:flex; flex-direction:column; gap:12px;">
+            <RadzenDropDown @bind-Value="objClientesUbicaciones.IdCatPaises"
+                            Data="lstPaises"
+                            TextProperty="Nombre"
+                            ValueProperty="IdCatPaises"
+                            Placeholder="País"
+                            Style="width: 100%; border-radius: 12px;" />
+
+            <RadzenDropDown @bind-Value="objClientesUbicaciones.IdCatMunicipios"
+                            Data="lstMunicipios"
+                            TextProperty="Nombre"
+                            ValueProperty="IdCatMunicipios"
+                            Placeholder="Municipio"
+                            Style="width: 100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.Calle" Placeholder="Calle"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.NoExterior" Placeholder="No Exterior"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.CP" Placeholder="Código Postal"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.URLMaps" Placeholder="URL Maps"
+                           Style="width:100%; border-radius: 12px;" />
+        </div>
+
+        <!-- Columna derecha -->
+        <div style="flex: 1; min-width: 250px; display:flex; flex-direction:column; gap:12px;">
+            
+                            
+            <RadzenDropDown @bind-Value="objClientesUbicaciones.IdCatPaisEstados"
+                            Data="lstPaisEstados"
+                            TextProperty="Nombre"
+                            ValueProperty="IdCatPaisEstados"
+                            Placeholder="Estado"
+                            Style="width: 100%; border-radius: 12px;" />
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.Colonia" Placeholder="Colonia"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.NoInterior" Placeholder="No Interior"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.Referencia" Placeholder="Referencia Lugar"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.NombreLugar" Placeholder="Nombre del lugar"
+                           Style="width:100%; border-radius: 12px;" />
+
+            <RadzenTextBox @bind-Value="objClientesUbicaciones.Contacto" Placeholder="Contacto"
+                           Style="width:100%; border-radius: 12px;" />
+        </div>
+    </div>
+
+    <!-- Botones al final -->
+    <div style="display:flex; justify-content:flex-end; gap:12px; margin-top: 1rem;">
+        <RadzenButton ButtonType="ButtonType.Button" ButtonStyle="ButtonStyle.Success" Icon="add_circle"
+                      Click="@(() => AgregarUbicacion())" Style="border-radius: 12px;">
+            Guardar
+        </RadzenButton>
+
+        <RadzenButton ButtonType="ButtonType.Button" ButtonStyle="ButtonStyle.Danger" Icon="cancel"
+                      Click="@(() => DialogService.Close(false))" Style="border-radius: 12px;">
+            Cancelar
+        </RadzenButton>
+    </div>
+
+</RadzenFieldset>

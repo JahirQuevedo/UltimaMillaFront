@@ -1,0 +1,201 @@
+﻿@page "/vistaModalBitacoraAveria"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject DialogService dialogService
+@inject NavigationManager navigationManager
+@inject NotificationService NotificationService
+@attribute [Authorize]
+
+@* <RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+    <RadzenStack>
+        <RadzenDataGrid class="rz-p-4"
+                    @ref="gridBitacoraAveria"
+                    Count="@totalRegistros" 
+                    PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    @bind-Value=@selectedBitacoraAveria
+                    style="border-radius:7px;"
+                    AllowFiltering="false" AllowPaging="true" AllowSorting="false" 
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" 
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    Data="@(listaMonitorBitacoraAveria)" LoadData="@ObtenerDatos"  IsLoading=@isLoading
+                    Density="Density.Compact" AllowAlternatingRows="false">
+            <Columns>
+                 <RadzenDataGridColumn  Title="Códigos">
+                    <Template Context="monitorBitacoraAveria">
+                        @monitorBitacoraAveria.ClaveCodigoDesperfecto.@monitorBitacoraAveria.ClaveTipoDesperfecto.@monitorBitacoraAveria.ClaveTipoSeveridad
+                    </Template>
+                 </RadzenDataGridColumn>
+                 <RadzenDataGridColumn Property="@nameof(MonitorBitacoraAveria.DescripcionAveria)" Width="120px" Title="Observaciones" />
+                 <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="80px">
+                    <Template Context="data">
+                        <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" 
+                            Shade="Shade.Lighter" Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                        </RadzenButton>
+                    </Template>
+                </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+</RadzenStack> *@
+
+<RadzenDataList AllowVirtualization=@permitirVirtualization Style="@(permitirVirtualization ? "height:400px;overflow:auto;" : "")" 
+                    WrapItems="@(!permitirVirtualization)" AllowPaging="@(!permitirVirtualization)"
+                    Data="@listaMonitorBitacoraAveria" TItem="MonitorBitacoraAveria" PagerHorizontalAlign="HorizontalAlign.Left" 
+                    IsLoading=@isLoading LoadData=@ObtenerDatos
+                    Count="@totalRegistros" 
+                    PageSize="@registrosPorPagina" ShowPagingSummary="true">
+        <Template Context="monitorBitacoraAveria">
+            <RadzenCard Variant="Variant.Outlined" class="rz-p-0" Style="width: 100%; overflow: hidden; border-radius:7px;">
+                <RadzenRow Gap="0">
+                    <RadzenColumn Size="12" SizeLG="3" class="rz-pl-4 rz-pr-4 rz-pt-4 product-title">
+                        <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-color-on-secondary-lighter">@(monitorBitacoraAveria.DescripcionAveria)</RadzenText>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeLG="7" class="rz-pl-4 rz-pr-4">
+                        <RadzenRow Gap="0">
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="2">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-mb-0">Pieza Dañada</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(monitorBitacoraAveria.ClaveCodigoDesperfecto) - @(monitorBitacoraAveria.DescripcionCodgioDesperfecto)</RadzenText>
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="2">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-mb-0">Tipo Daño</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(monitorBitacoraAveria.ClaveTipoDesperfecto) - @(monitorBitacoraAveria.DescripcionTipoDesperfecto)</RadzenText>
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="5">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-mb-0">Severidad del Daño</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(monitorBitacoraAveria.ClaveTipoSeveridad) - @(monitorBitacoraAveria.DescripcionTipoSeveridad)</RadzenText>
+                            </RadzenColumn>
+                            <RadzenColumn Size="12" SizeMD="6" SizeLG="5">
+                                <RadzenText TextStyle="TextStyle.H6" TagName="TagName.H5" class="rz-mb-0">Observaciones</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body2">@(monitorBitacoraAveria.DescripcionAveria)</RadzenText>
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenColumn>
+                    <RadzenColumn Size="12" SizeLG="2" class="rz-pl-4 rz-pr-4 rz-pb-4">
+                        <RadzenButton Text="Eliminar" Icon="delete" Click="@(args => EliminarBitacoraAveria(monitorBitacoraAveria))" Style="width: 100%" />
+                    </RadzenColumn>
+                </RadzenRow>
+            </RadzenCard>
+        </Template>
+    </RadzenDataList>
+
+@code {
+
+    RadzenDataGrid<MonitorBitacoraAveria> gridBitacoraAveria;
+
+    [Parameter] public int IdInventario { get; set; }
+
+    [Parameter] public bool ShowClose { get; set; } = true;
+
+    bool permitirVirtualization = true;
+
+    MonitorBitacoraAveria monitorBitacoraAveria;
+
+    List<MonitorBitacoraAveria> listaMonitorBitacoraAveria;
+
+    IList<MonitorBitacoraAveria> selectedBitacoraAveria;
+
+    private LoadDataArgs _args;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 5;
+
+    int numeroDePagina = 1;
+
+    [Inject] private IBitacoraAveriaService?  _bitacoraAveriaService { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        
+
+        monitorBitacoraAveria = new MonitorBitacoraAveria();
+
+        listaMonitorBitacoraAveria = new List<MonitorBitacoraAveria>();
+
+        monitorBitacoraAveria.IdInventario = IdInventario;
+
+        permitirVirtualization = false;
+
+        await ObtenerDatos(_args);
+
+    }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        isLoading = true;
+
+        //await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "DialogSettings", JsonSerializer.Serialize<DialogSettings>(Settings));
+
+        
+
+        ConsultaCatalogoBase<ConsultaBitacoraAveria> _consulta = new ConsultaCatalogoBase<ConsultaBitacoraAveria>();
+        _consulta.Entidad = new ConsultaBitacoraAveria();
+        _consulta.Entidad.IdInventario = IdInventario;
+
+        if (args != null) {
+            numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+        }
+
+        _consulta.NumeroDePagina = numeroDePagina;
+        _consulta.RegistrosPorPagina = registrosPorPagina;
+
+        var _listBitacoraAverias = await _bitacoraAveriaService!.ObtenerListaPaginadaPorIdInventario(_consulta);
+
+        if (!_listBitacoraAverias.Data.Count.Equals(0)) {
+
+            
+
+            totalRegistros = (int)_listBitacoraAverias.Paginado.TotalRegistros;
+
+            
+
+            listaMonitorBitacoraAveria = _listBitacoraAverias.Data;
+
+            //selectedBitacoraAveria = listaMonitorBitacoraAveria.Take(1).ToList();
+
+        } else {
+
+            dialogService.Close(true);
+            
+        }
+
+        isLoading = false;
+
+    }
+
+    private async void EliminarBitacoraAveria(MonitorBitacoraAveria _monitorBitacoraAveria) {
+        var result = await _bitacoraAveriaService?.Eliminar(_monitorBitacoraAveria.IdBitacoraAveria);
+
+        if (result.Success) {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "Bitácora Averia", Detail = "Registro Eliminado:" + result.MensajeRespuesta, Duration = 4000 });
+
+            await ObtenerDatos(_args);
+
+            await InvokeAsync(StateHasChanged);
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Bitácora Averia", Detail = "Error: " + result.MensajeRespuesta, Duration = 4000 });
+
+        }
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}

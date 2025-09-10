@@ -1,0 +1,24 @@
+﻿@using Microsoft.AspNetCore.Components
+@using Radzen
+
+@if (Datos != null && Datos.Any())
+{
+    <RadzenCard Style="padding: 1rem; border-radius: 12px;">
+        <RadzenRow>
+            @foreach (var kvp in Datos)
+            {
+                <RadzenColumn Size="@ColumnSize">
+                    <RadzenText Text="@kvp.Key" Style="font-size: 0.9rem; color: gray;" />
+                    <RadzenText Text="@kvp.Value?.ToString()" Style="font-weight: bold; font-size: 1.1rem;" />
+                </RadzenColumn>
+            }
+        </RadzenRow>
+    </RadzenCard>
+}
+
+@code {
+    
+    [Parameter] public Dictionary<string, object> Datos { get; set; }
+
+    private int ColumnSize => Datos != null && Datos.Any() ? 12 / Datos.Count : 12;
+}

@@ -1,0 +1,23 @@
+﻿@using ALOG.Modelos.Modelos.Logisticos
+@inject DialogService DialogService
+
+<RadzenTemplateForm Data="@this" TItem="object" Submit="() => DialogService.Close((comentarioEncabezado, comentarioPartida))">
+    <div class="p-3">
+        <h3>Enviar a Facturar</h3>
+
+        <RadzenLabel Text="Comentario Encabezado" />
+        <RadzenTextBox @bind-Value="comentarioEncabezado" Style="width: 100%;" />
+
+        <RadzenLabel Text="Comentario Partida" Style="margin-top: 15px;" />
+        <RadzenTextBox @bind-Value="comentarioPartida" Style="width: 100%;" />
+
+        <div class="d-flex justify-content-end mt-4">
+            <RadzenButton Text="Enviar" Icon="send" ButtonStyle="ButtonStyle.Primary" ButtonType="ButtonType.Submit" />
+        </div>
+    </div>
+</RadzenTemplateForm>
+
+@code {
+    [Parameter] public string comentarioEncabezado { get; set; }
+    [Parameter] public string comentarioPartida { get; set; }
+}

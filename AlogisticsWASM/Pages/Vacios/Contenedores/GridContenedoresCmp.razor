@@ -1,0 +1,144 @@
+﻿@using ALOG.Modelos.Modelos.Catalogos
+@using ALOG.Modelos.Modelos.Vacios
+@using ALOGRepositorios.Services.Login
+@using ALOGRepositorios.Services.Login.ILogin
+@using ALOGRepositorios.Services.Peticiones.IPeticiones
+@using ALOGRespositorios.Modelos.Dtos.Control
+@using AlogisticsWASM.Layout.Utilerias
+@using System.Text.Json
+@inject NotificationService NotificationService
+@inject SweetAlertService Swal;
+@inject UsuarioTokenDTO _UsuarioTokenDTO
+@inject IConfiguration configuration
+
+
+
+@* <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Start" JustifyContent="JustifyContent.Left" Wrap="FlexWrap.Wrap" Style="background-color:wheat;"> *@
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" class=".rz-my-0;">
+
+
+    @* <RadzenCard Variant="Variant.Text"> *@
+
+
+    @* <RadzenBadge BadgeStyle="BadgeStyle.Base" Text="CONTENEDORES POR REFERENCIA" class=".rz-pt-1" /> *@
+
+    <RadzenText TextStyle="TextStyle.Subtitle1">CONTENEDORES POR REFERENCIA</RadzenText>
+
+    @*  <RadzenButton Text="Cerrar todos" Click="@(args => CerrarTodosContenedores())" /> *@
+    @if (paramMostarControles && ParamCRUDControles)
+    {
+
+        <RadzenButton Click=@(args => AgregarContenedor()) Text="Agregar Contenedor" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" />
+    }
+     @if (paramMostarControles && blpUsuarioInterno)
+    {
+        @* <RadzenButton Click=@(args => CerrarTodosContenedores()) Text="Cerrar todos" ButtonStyle="ButtonStyle.Secondary" /> *@
+    } 
+</RadzenStack>
+
+@* </RadzenCard>  *@
+<RadzenDataGrid TItem="PeticionesContenedores" @ref=grid AllowFiltering="true" AllowPaging="true" AllowSorting="true" Render="OnContenedoresDataGridRender"
+                Data="@_IEContenedores" RowUpdate="@OnUpdateRow" Sort="@(args => Reset())" Page="@(args => Reset())" Filter="@(args => Reset())"
+                ColumnWidth="200px" CellClick="@OnCellClick">
+
+    <Template Context="contenedor">
+        @if (paramMostraServicios)
+        {
+
+            <RadzenBadge BadgeStyle="BadgeStyle.Base" Text="SERVICIOS POR CONTENEDOR" />
+            <GridServiciosporContenedorCmp paramOnContenedorActualizarGrid="OnContenedorActualizarGridHandler" paramUsuarioInterno=blpUsuarioInterno paramIdReferencia=@paramIdReferencia paramContenedores="@contenedor" paramMostrarControles=@paramMostarControles />
+        }
+    </Template>
+
+    <Columns >
+        @* <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.IdReferencia)" Title="Order ID" Width="120px" /> *@
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Contenedor)" Title="Contenedor" Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.ClaveTipoContenedor)" Title="Tipo Cont." Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.BL)" Title="BL" Width="100px" />
+        @if (paramMostarControles && blpUsuarioInterno)        
+        {
+            <RadzenDataGridColumn TItem="PeticionesContenedores" Property="@nameof(PeticionesContenedores.FolioManiobra)" Title="Folio Maniobra" IsInEditMode="@IsEditing">
+                <Template Context="pCont">
+                    <RadzenText Text="@(pCont.FolioManiobra)" />
+                </Template>
+
+                <EditTemplate Context="pCont">
+                    <RadzenTextBox @ref="editor" Change="@(args => UpdateFolioManiobra())" @bind-Value="pCont.FolioManiobra" Style="width:200px; display: block" Name="FolioManiobra" aria-label="Enter ship country" />
+                    <RadzenRequiredValidator Text="Folio is required" Component="FolioManiobra" Popup="true" />
+                </EditTemplate>
+
+            </RadzenDataGridColumn>
+        }
+        else
+
+        {
+            <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.FolioManiobra)" Title="Folio Maniobra" Width="100px" />
+        }
+        @* <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Aduana)" Title="Aduana" Width="80px" /> *@
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.RefenciaCliente)" Title="Ref.Cliente" Width="100px" />
+        
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.catPatios)" Title="Patio" Width="100px">
+            <Template Context="data">
+                @if(data.IdEstadoContenedor!=7 && data.catPatios != null) {
+                    @(data.catPatios.RazonSocial )
+                }
+
+            </Template>
+        </RadzenDataGridColumn>
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Cliente_RazonSocial)" Title="Cliente" Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Consignado_RazonSocial)" Title="Consignado" Width="100px" />
+        <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.Naviera_RazonSocial)" Title="Naviera" Width="100px" />
+        @if (paramMostarControles && blpUsuarioInterno)
+        {
+            <RadzenDataGridColumn TItem="PeticionesContenedores" Property="EstadoContenedor" Title="Estado" Width="280px" IsInEditMode="@IsEditing">
+                <Template Context="order">
+                    <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle2(order.IdEstadoContenedor.ToString()))" Shade="Shade.Darker" IsPill="true" Text="@objUtileriasPage.GetEstado(order.IdEstadoContenedor)" class="rz-ms-2" />
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenDropDown @ref="editor" Change="@(args => Update())" @bind-Value="order.IdEstadoContenedor" Data="@lstobjTipoEstados" TextProperty="@nameof(CatReferenciaEstado.Nombre)" ValueProperty="@nameof(CatReferenciaEstado.IdCatReferenciaEstado)" Style="width:100%; display: block;"
+                                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "Select customer" }})" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+        }
+        else
+        {
+            <RadzenDataGridColumn Property="@nameof(PeticionesContenedores.EstadoContenedor)" Title="Estado" Width="100px">
+                <Template Context="data">
+                    <RadzenBadge BadgeStyle="@(objUtileriasPage.GetBadgeStyle(data.EstadoContenedor.ToUpper()))" Shade="Shade.Darker" IsPill="true" Text="@objUtileriasPage.GetEstado(data.IdEstadoContenedor)" class="rz-ms-2" />
+                </Template>
+                <HeaderTemplate>
+                    <span class="custom-header">Estado</span>
+                </HeaderTemplate>
+            </RadzenDataGridColumn>
+        }
+    </Columns>
+</RadzenDataGrid>
+@* </RadzenStack> *@
+
+
+@code {
+
+
+
+
+    void OnContenedoresDataGridRender(DataGridRenderEventArgs<PeticionesContenedores> args)
+    {
+        if (paramMostraServicios)
+        {
+            if (args.FirstRender)
+            {
+                InvokeAsync(() => args.Grid.ExpandRow(args.Grid.View.Where(c => c.Servicios.Any()).FirstOrDefault()));
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+}

@@ -1,0 +1,25 @@
+﻿@page "/asigna-doc"
+@using ALOG.Modelos.Modelos.Catalogos
+
+
+<RadzenStack Orientation="Orientation.Horizontal" AlignItems="AlignItems.Center" Gap="1rem" Wrap="FlexWrap.Wrap">
+    
+    <RadzenDropDown @bind-Value=@_idDocumentoSeleccionado
+                    Data=@_tiposDocumento
+                    ValueProperty="@nameof(CatDocumentos.IdCatDocumento)"
+                    TextProperty="@nameof(CatDocumentos.Nombre)"
+                    Style="width: 100%; max-width: 400px;"
+                    Name="DropDownTextValueProperties"/>
+    
+    <RadzenUpload @ref="_radzenUpload"
+                  Change="@((args) => CargarArchivoAsync(args))"
+                  Disabled="@(_idDocumentoSeleccionado <= 0)"
+                  ChooseText="Seleccionar documento"
+                  Accept="application/pdf"
+                  Multiple="false"
+                  Auto="true" />
+    
+    <RadzenButton Click=@GuardarDocumentoAsync IsBusy=@_busy Text="Guardar documento" ButtonStyle="ButtonStyle.Primary" />
+
+</RadzenStack>
+

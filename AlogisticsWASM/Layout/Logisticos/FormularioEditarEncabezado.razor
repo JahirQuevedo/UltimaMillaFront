@@ -1,0 +1,64 @@
+﻿@using ALOGModelos.Modelos.catalogos
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+<EditForm Model="Encabezado" OnValidSubmit="@( () => Actualizar())">
+    <DataAnnotationsValidator></DataAnnotationsValidator>
+    <ValidationSummary></ValidationSummary>
+    <form id="addPropertyWizardForm5" novalidate="novalidate" data-wizard-form="5">
+        @* <h3 class="mb-6"></h3>
+        <h4 class="mb-4"></h4> *@
+        <div class="row g-3">
+            <div class="col-md-4 form-floating">
+                <InputNumber class="form-control" disabled="@(!EsEditable)" name="add-property-wizard-currency" id="add-property-wizardwizard-currency" placeholder="payment currency" @bind-Value="@Encabezado!.Viaje" />
+                <label for="add-property-wizardwizard-currency">Viaje</label>
+            </div>
+            <div class="col-md-4 form-floating">
+                <InputDate class="form-control" name="add-property-wizard-percentage" id="add-property-wizardwizard-percentage" placeholder="Commission Percentage" disabled="disabled" @bind-Value="@Encabezado.FechaSolicitud" />
+                <label for="add-property-wizardwizard-percentage">Fecha de solicitud</label>
+            </div>
+            <div class="col-md-4 col-4 form-floating mt-3">
+                <InputDate class="form-control" disabled="@(!EsEditable)" name="add-property-wizard-card-holder" id="add-property-wizardwizard-card-holder" placeholder="Fecha de salida" @bind-Value="@Encabezado.FechaSalida" />
+                <label for="add-property-wizardwizard-card-holder">Fecha de salida</label>
+            </div>
+            <div class="col-md-12 col-12 form-floating mt-3">
+                <ListadoGenerico Listado="_clientes"
+                                 TItem="CatClientes"
+                                 IdSelector="c => c.IdCatCliente"
+                                 DisplaySelector="c => c.RazonSocial"
+                                 SelectedId="Encabezado.IdCliente"
+                                 OnSelected="ObtenerClienteSeleccionado"
+                                 Etiqueta="Clientes" 
+                                 HabilitarComponente="EsEditable" />
+            </div>
+            <div class="col-md-6 col-6 form-floating mt-3">
+                <InputText class="form-control" disabled="@(!EsEditable)" name="add-property-wizard-invoice-email" id="add-property-wizardwizard-invoice-email" placeholder="Factura"
+                           @bind-Value="Encabezado.FacturaCliente" @oninput="@(e => Encabezado.FacturaCliente = e.Value.ToString().ToUpper())" />
+                <label for="add-property-wizardwizard-invoice-email">Factura</label>
+            </div>
+            <div class="col-md-6 col-6 form-floating mt-3">
+                <InputText class="form-control" disabled="@(!EsEditable)" name="add-property-wizard-card-holder" id="add-property-wizardwizard-card-holder" placeholder="Bodega"
+                           @bind-Value="Encabezado.Bodega" @oninput="@(e => Encabezado.Bodega = e.Value.ToString().ToUpper())" />
+                <label for="add-property-wizardwizard-card-holder">Bodega</label>
+            </div>
+
+            <div class="col-md-12 col-12 form-floating mt-3">
+                <ListadoGenerico Listado="_servicios"
+                                 TItem="CatServicios"
+                                 IdSelector="s => s.IdCatServicio"
+                                 DisplaySelector="s => s.Descripcion"
+                                 SelectedId="Encabezado.IdServicio"
+                                 OnSelected="ObtenerServicioSeleccionado"
+                                 Etiqueta="Servicios"
+                                 HabilitarComponente="EsEditable" />
+            </div>
+        </div>
+    </form>
+     @if (EsEditable) {
+        <div class="mt-3">       
+            <button class="btn btn-primary px-6 px-sm-11" type="submit" @onclick="Actualizar">Guardar</button>        
+        </div>
+     }
+</EditForm>
+
+
+

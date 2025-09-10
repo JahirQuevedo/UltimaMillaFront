@@ -1,0 +1,322 @@
+﻿@page "/recepcion-informecondiciondemo"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Web
+
+@inject IJSRuntime JSRuntime
+@attribute [Authorize]
+@* <PageTitle>Image Marker</PageTitle>
+
+<canvas id="markerCanvas" width="800" height="600" style="border:1px solid #000; cursor: crosshair;" @onclick="AddMarker"></canvas>
+
+<pre>@System.Text.Json.JsonSerializer.Serialize(Markers, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+
+@code {
+    private string ImagePath = "img/automovil-informe/automovil-informe-condicion-front.jpg";
+    private List<Marker> Markers = new();
+    private bool ImageLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCanvas();
+        }
+    }
+
+    private async Task LoadCanvas()
+    {
+
+        await JSRuntime.InvokeVoidAsync("loadImageOnCanvas", ImagePath);
+        ImageLoaded = true;
+    }
+
+    private async Task AddMarker(MouseEventArgs e)
+    {
+        if (!ImageLoaded) return;
+        
+        Markers.Add(new Marker { X = (int)e.OffsetX, Y = (int)e.OffsetY });
+        await JSRuntime.InvokeVoidAsync("drawMarker", e.OffsetX, e.OffsetY);
+    }
+
+    private async Task RemoveMarker(int index)
+    {
+        if (index >= 0 && index < Markers.Count)
+        {
+            Markers.RemoveAt(index);
+            await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+        }
+    }
+
+    private class Marker
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+} *@
+
+@* <PageTitle>Image Marker</PageTitle>
+
+<canvas id="markerCanvas" width="800" height="600" style="border:1px solid #000; cursor: crosshair;" @onclick="AddMarker"></canvas>
+
+<button @onclick="ClearMarkers" style="margin-top: 10px; padding: 5px 10px; background-color: red; color: white; border: none; cursor: pointer;">Eliminar Todos</button>
+
+@if (Markers.Any())
+{
+    <ul>
+        @foreach (var marker in Markers.Select((m, i) => new { Marker = m, Index = i }))
+        {
+            <li>
+                Punto @marker.Index: (@marker.Marker.X, @marker.Marker.Y)
+                <button @onclick="() => RemoveMarker(marker.Index)" style="margin-left: 10px; padding: 3px 6px; background-color: gray; color: white; border: none; cursor: pointer;">Eliminar</button>
+            </li>
+        }
+    </ul>
+}
+
+<pre>@System.Text.Json.JsonSerializer.Serialize(Markers, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+
+@code {
+    private string ImagePath = "img/automovil-informe/automovil-informe-condicion-front.jpg";
+    private List<Marker> Markers = new();
+    private bool ImageLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCanvas();
+        }
+    }
+
+    private async Task LoadCanvas()
+    {
+        await JSRuntime.InvokeVoidAsync("loadImageOnCanvas", ImagePath);
+        ImageLoaded = true;
+    }
+
+    private async Task AddMarker(MouseEventArgs e)
+    {
+        if (!ImageLoaded) return;
+        
+        Markers.Add(new Marker { X = (int)e.OffsetX, Y = (int)e.OffsetY });
+        await JSRuntime.InvokeVoidAsync("drawMarker", e.OffsetX, e.OffsetY);
+    }
+
+    private async Task RemoveMarker(int index)
+    {
+        if (index >= 0 && index < Markers.Count)
+        {
+            Markers.RemoveAt(index);
+            await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+        }
+    }
+
+    private async Task ClearMarkers()
+    {
+        Markers.Clear();
+        await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+    }
+
+    private class Marker
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+} *@
+
+@* <PageTitle>Image Marker</PageTitle>
+
+<canvas id="markerCanvas" width="800" height="600" style="border:1px solid #000; cursor: crosshair;" @onclick="AddMarker"></canvas>
+
+<button @onclick="ClearMarkers" style="margin-top: 10px; padding: 5px 10px; background-color: red; color: white; border: none; cursor: pointer;">Eliminar Todos</button>
+<button @onclick="SaveImage" style="margin-left: 10px; padding: 5px 10px; background-color: green; color: white; border: none; cursor: pointer;">Guardar Imagen</button>
+<button @onclick="SendImageToAPI" style="margin-left: 10px; padding: 5px 10px; background-color: blue; color: white; border: none; cursor: pointer;">Enviar Imagen a API</button>
+
+@if (Markers.Any())
+{
+    <ul>
+        @foreach (var marker in Markers.Select((m, i) => new { Marker = m, Index = i }))
+        {
+            <li>
+                Punto @marker.Index: (@marker.Marker.X, @marker.Marker.Y)
+                <button @onclick="() => RemoveMarker(marker.Index)" style="margin-left: 10px; padding: 3px 6px; background-color: gray; color: white; border: none; cursor: pointer;">Eliminar</button>
+            </li>
+        }
+    </ul>
+}
+
+<pre>@System.Text.Json.JsonSerializer.Serialize(Markers, new System.Text.Json.JsonSerializerOptions { WriteIndented = true })</pre>
+
+@code {
+    private string ImagePath = "img/automovil-informe/automovil-informe-condicion-front.jpg";
+    private List<Marker> Markers = new();
+    private bool ImageLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCanvas();
+        }
+    }
+
+    private async Task LoadCanvas()
+    {
+        await JSRuntime.InvokeVoidAsync("loadImageOnCanvas", ImagePath);
+        ImageLoaded = true;
+    }
+
+    private async Task AddMarker(MouseEventArgs e)
+    {
+        if (!ImageLoaded) return;
+        
+        Markers.Add(new Marker { X = (int)e.OffsetX, Y = (int)e.OffsetY });
+        await JSRuntime.InvokeVoidAsync("drawMarker", e.OffsetX, e.OffsetY);
+    }
+
+    private async Task RemoveMarker(int index)
+    {
+        if (index >= 0 && index < Markers.Count)
+        {
+            Markers.RemoveAt(index);
+            await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+        }
+    }
+
+    private async Task ClearMarkers()
+    {
+        Markers.Clear();
+        await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+    }
+
+    private async Task SaveImage()
+    {
+        await JSRuntime.InvokeVoidAsync("saveCanvasImage");
+    }
+
+    private async Task SendImageToAPI()
+    {
+        var base64Image = await JSRuntime.InvokeAsync<string>("getCanvasBase64");
+        
+        var httpClient = new HttpClient();
+        var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { image = base64Image }), System.Text.Encoding.UTF8, "application/json");
+        
+        var response = await httpClient.PostAsync("https://tu-api.com/upload", content);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            //Console.WriteLine("Imagen enviada correctamente");
+        }
+        else
+        {
+            //Console.WriteLine("Error al enviar la imagen");
+        }
+    }
+
+    private class Marker
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+    }
+} *@
+
+<canvas id="markerCanvas" width="320" height="240" style="border:1px solid #000; cursor: crosshair;" @onclick="AddMarker"></canvas>
+
+<button @onclick="ClearMarkers" style="margin-top: 10px; padding: 5px 10px; background-color: red; color: white; border: none; cursor: pointer;">Eliminar Todos</button>
+<button @onclick="SaveImage" style="margin-left: 10px; padding: 5px 10px; background-color: green; color: white; border: none; cursor: pointer;">Guardar Imagen</button>
+<button @onclick="SendImageToAPI" style="margin-left: 10px; padding: 5px 10px; background-color: blue; color: white; border: none; cursor: pointer;">Enviar Imagen a API</button>
+
+@if (Markers.Any())
+{
+    <ul>
+        @foreach (var marker in Markers.Select((m, i) => new { Marker = m, Index = i }))
+        {
+            <li>
+                Punto @marker.Index: (@marker.Marker.X, @marker.Marker.Y) - @marker.Marker.Label
+                <button @onclick="() => RemoveMarker(marker.Index)" style="margin-left: 10px; padding: 3px 6px; background-color: gray; color: white; border: none; cursor: pointer;">Eliminar</button>
+            </li>
+        }
+    </ul>
+}
+
+<pre>@JsonSerializer.Serialize(Markers, new JsonSerializerOptions { WriteIndented = true })</pre>
+
+@code {
+    private string ImagePath = "img/automovil-informe/automovil-informe-condicion-top.jpg";
+    private List<Marker> Markers = new();
+    private bool ImageLoaded = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadCanvas();
+        }
+    }
+
+    private async Task LoadCanvas()
+    {
+        await JSRuntime.InvokeVoidAsync("loadImageOnCanvas", ImagePath);
+        ImageLoaded = true;
+    }
+
+    private async Task AddMarker(MouseEventArgs e)
+    {
+        if (!ImageLoaded) return;
+        
+        string label = $"Punto {Markers.Count}";
+        Markers.Add(new Marker { X = (int)e.OffsetX, Y = (int)e.OffsetY, Label = label });
+        await JSRuntime.InvokeVoidAsync("drawMarkerWithLabel", e.OffsetX, e.OffsetY, label);
+    }
+
+    private async Task RemoveMarker(int index)
+    {
+        if (index >= 0 && index < Markers.Count)
+        {
+            Markers.RemoveAt(index);
+            await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+        }
+    }
+
+    private async Task ClearMarkers()
+    {
+        Markers.Clear();
+        await JSRuntime.InvokeVoidAsync("redrawCanvas", ImagePath, Markers);
+    }
+
+    private async Task SaveImage()
+    {
+        await JSRuntime.InvokeVoidAsync("saveCanvasImage");
+    }
+
+    private async Task SendImageToAPI()
+    {
+        var base64Image = await JSRuntime.InvokeAsync<string>("getCanvasBase64");
+        
+        var httpClient = new HttpClient();
+        var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { image = base64Image }), System.Text.Encoding.UTF8, "application/json");
+        
+        var response = await httpClient.PostAsync("https://tu-api.com/upload", content);
+        
+        if (response.IsSuccessStatusCode)
+        {
+            ////Console.WriteLine("Imagen enviada correctamente");
+        }
+        else
+        {
+            ////Console.WriteLine("Error al enviar la imagen");
+        }
+    }
+
+    private class Marker
+    {
+        public int X { get; set; }
+        public int Y { get; set; }
+        public string Label { get; set; } = string.Empty;
+    }
+}

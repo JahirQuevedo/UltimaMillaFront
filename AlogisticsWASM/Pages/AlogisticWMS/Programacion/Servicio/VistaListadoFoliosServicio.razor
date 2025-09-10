@@ -1,0 +1,351 @@
+﻿@page "/vistaListadoFoliosServico/{IdReferencia}"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services;
+@using AlogisticsWASM.Pages.AlogisticWMS.Programacion.Servicio;
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject NavigationManager navigationManager
+@inject DialogService DialogServiceConfirm
+@inject DialogService DialogServiceRerencia
+@inject NotificationService NotificationService
+@inject Radzen.DialogService dialogService
+@attribute [Authorize]
+<RadzenStack Gap="1rem" Orientation="Orientation.Vertical" JustifyContent="JustifyContent.SpaceBetween" Style="height: 100%;">
+    <RadzenStack>
+        @* <RadzenRow>
+            <RadzenColumn Size="12" SizeMD="12">
+                <RadzenButton Text="Asignar Servicio" Icon="add_circle" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-danger" />   
+            </RadzenColumn>
+        </RadzenRow> *@
+        <RadzenDataGrid class="rz-p-2"
+                    Count="@totalRegistros" PageSize="@registrosPorPagina" ShowPagingSummary="true" 
+                    PagerHorizontalAlign="HorizontalAlign.Left"
+                    AllowColumnResize="true"
+                    @bind-Value=@selectedFolioServicio
+                    style="border-radius:7px;"
+                    TItem="MonitorFolioServicio"
+                    FilterMode="FilterMode.Simple"
+                    AllowFiltering="true" AllowPaging="true" AllowSorting="false" 
+                    FilterPopupRenderMode="PopupRenderMode.OnDemand" FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    Data="@(listaMonitorFolioServicios)" LoadData="@ObtenerDatos"  IsLoading=@isLoading ColumnWidth="200px" 
+                    Density="Density.Compact" AllowAlternatingRows="false">
+            <Columns>
+            <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.FechaProgramada)" Title="F.Programada" Filterable="false" />
+                <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.Folio)" Title="Folio" Filterable="false" />
+                <RadzenDataGridColumn Title="Servicio Aplicado">
+                    <Template Context="monitorFolioServicio">
+                        @ObtenerDescripcionServicioPara(monitorFolioServicio.ServicioPara)
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn  Title="Tarja/Partida">
+                    <Template Context="monitorFolioServicio">
+                        @ObtenerFolioServicioPara(monitorFolioServicio)
+                    </Template>
+                </RadzenDataGridColumn>
+                @* <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.EstadoFolioServicio)" Title="Edo. Servicio" /> *@
+                <RadzenDataGridColumn Title="Estatus" Width="100px" Property="@nameof(MonitorSolicitudTraslado.EstadoFolioServicio)" >
+                    <Template Context="monitorServicio">
+                        <RadzenBadge Shade="Shade.Lighter" BadgeStyle="@BadgeStyleEstadoServicio(monitorServicio.EstadoFolioServicio)" Text="@(monitorServicio.EstadoFolioServicio.ToString())" />
+                    </Template>
+                </RadzenDataGridColumn>
+                <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.DescripcionPaquete)" Title="Servicio" />
+                <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.EstadoFacturacion)" Title="Facturación" Filterable="false" />
+                <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.SerieFactura)" Title="Serie Factura" />
+                <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.Factura)" Title="Factura" />
+                <RadzenDataGridColumn Property="@nameof(MonitorFolioServicio.EstadoFactura)" Title="Edo. Factura" Filterable="false" />
+                <RadzenDataGridColumn Title="Fecha Captura" Filterable="false">
+                    <Template Context="monitorFolioServicio">
+                        @(monitorFolioServicio.FechaAlta == DateTime.MinValue ? "" : monitorFolioServicio.FechaAlta.ToString())
+                    </Template>
+                </RadzenDataGridColumn>
+                 <RadzenDataGridColumn Filterable="false" Sortable="false" TextAlign="TextAlign.Right" Frozen="true" FrozenPosition="FrozenColumnPosition.Right" Width="120px">
+                        <Template Context="data">
+                            <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Variant="Variant.Flat" Size="ButtonSize.Medium"
+                                Click=@(() => OpenAsignarServicioInventario(data)) title="Editar Servicio"
+                                @onclick:stopPropagation="true">
+                            </RadzenButton>
+                            <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Variant="Variant.Flat" Shade="Shade.Lighter" 
+                                Click=@(args => EliminarFolioServicio(data)) title="Cancelar Servicio"
+                                Size="ButtonSize.Medium" class="rz-my-1 rz-ms-1" @onclick:stopPropagation="true">
+                            </RadzenButton>
+                        </Template>
+                    </RadzenDataGridColumn>
+            </Columns>
+        </RadzenDataGrid>
+    </RadzenStack>
+    @* <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Center" Gap="0.5rem">
+        <RadzenButton Click=@(() => ObtenerReferenciaSelected()) Variant="Variant.Flat" Text="Seleccionar" Style="width: 120px" />
+    </RadzenStack> *@
+</RadzenStack>
+
+@code {
+
+    [Parameter] public MonitorReferencia MonitorReferenciaSelected { get; set; }
+
+    List<MonitorFolioServicio> listaMonitorFolioServicios;
+
+    IList<MonitorFolioServicio> selectedFolioServicio;
+
+    bool isLoading = false;
+
+    int totalRegistros;
+
+    int registrosPorPagina = 10;
+
+    int numeroDePagina = 1;
+
+    private LoadDataArgs _args;
+
+    [Inject] private IReferenciaWMSService? _referenciaService { get; set; }
+
+    [Inject] private IFolioServicioService? _folioServicioService { get; set; }
+
+    private async Task ObtenerDatos(LoadDataArgs args) {
+
+        if (!MonitorReferenciaSelected.IdReferencia.Equals(0)) {
+
+            isLoading = true;
+
+            ////Console.WriteLine("-> Obtener Datos args : " + JsonSerializer.Serialize(args));
+
+            ConsultaCatalogoBase<ConsultaFolioServicio> _consultaFolioServicio = new ConsultaCatalogoBase<ConsultaFolioServicio>();
+            _consultaFolioServicio.Entidad = new ConsultaFolioServicio();
+
+            _consultaFolioServicio.Entidad.IdReferencia = MonitorReferenciaSelected.IdReferencia;
+
+            if (args != null) {
+                numeroDePagina = ((int)args.Skip/registrosPorPagina) + 1;
+
+                @* var _filterFolioTarja = args.Filters.Where(p => p.Property.Equals("ClaveReferenciaTarja")).FirstOrDefault();
+                if (_filterFolioTarja != null) {
+                    _consultaFolioServicio.Entidad.FolioReferenciaTarja = String.IsNullOrEmpty(_filterFolioTarja.FilterValue.ToString()) ? null : _filterFolioTarja.FilterValue.ToString();
+                } *@
+
+                var _filterEstadoServicio = args.Filters.Where(p => p.Property.Equals("EstadoFolioServicio")).FirstOrDefault();
+                if (_filterEstadoServicio != null) {
+                    _consultaFolioServicio.Entidad.EstadoFolioServicio = (EstadoFolioServicio)_filterEstadoServicio.FilterValue;
+                }
+
+                var _filterDescripServicio = args.Filters.Where(p => p.Property.Equals("DescripcionPaquete")).FirstOrDefault();
+                if (_filterDescripServicio != null) {
+                    _consultaFolioServicio.Entidad.DescripcionServicio = String.IsNullOrEmpty(_filterDescripServicio.FilterValue.ToString()) ? null : _filterDescripServicio.FilterValue.ToString();
+                }
+
+            
+            }
+        
+            _consultaFolioServicio.NumeroDePagina = numeroDePagina;
+            _consultaFolioServicio.RegistrosPorPagina = registrosPorPagina;
+
+            ////Console.WriteLine("-> Obtener Datos _consultaFolioServicio : " + JsonSerializer.Serialize(_consultaFolioServicio));
+
+            var _result = await _folioServicioService!.ObtenerListaPaginada(_consultaFolioServicio);
+
+            if (_result.Success) {
+
+                listaMonitorFolioServicios = _result.Data;
+
+                totalRegistros = (int)_result.Paginado.TotalRegistros;
+
+                listaMonitorFolioServicios = _result.Data;
+
+                selectedFolioServicio = listaMonitorFolioServicios.Take(1).ToList();
+
+            }
+
+            isLoading = false;
+
+        }
+
+    }
+
+    public async Task OpenAsignarServicioInventario(MonitorFolioServicio _monitorFolioServicio)
+    {
+
+        ServicioAplicado _servicioPara = (ServicioAplicado)_monitorFolioServicio.ServicioPara;
+
+        List<MonitorTarja> listaMonitorTarjaSelected = new List<MonitorTarja>();
+        
+        List<MonitorPartida> listaMonitorPartidaSelected = new List<MonitorPartida>();
+
+        List<RelacionInventarioServicio> _relacionInvetarioServicioList = new List<RelacionInventarioServicio>();
+
+        MonitorFolioServicio monitorFolioServicioSelected = _monitorFolioServicio;
+
+        ResultBase resultBase = new ResultBase();
+
+        //resultBase = ValidarMonitorTarjaSelected();
+
+        if (resultBase.Success) {
+
+            if (_monitorFolioServicio.ServicioPara.Equals(2)) {
+
+                    var _relacionInventarioServicio = new RelacionInventarioServicio();
+                    
+                    _relacionInventarioServicio.TipoServicioAplicado = ServicioAplicado.Tarja;
+                    _relacionInventarioServicio.IdReferencia = MonitorReferenciaSelected.IdReferencia;
+                    _relacionInventarioServicio.IdTarja = _monitorFolioServicio.IdTarja;
+                    _relacionInventarioServicio.Folio = _monitorFolioServicio.FolioTarja;
+                    _relacionInventarioServicio.IdFolioServicio = _monitorFolioServicio.IdFolioServicio;
+                    /* FolioTarjaInventario se utiliza como identificador genérico, tanto para Tarja como para Inventario
+                     p.ejem
+                    Tarja : 25001-0001
+                    Partida : 25001-0001/1 
+                    */
+                    _relacionInventarioServicio.FolioTarjaInventario = _monitorFolioServicio.FolioReferenciaTarja;
+
+                    _relacionInvetarioServicioList.Add(_relacionInventarioServicio);
+                
+            } else if (_monitorFolioServicio.ServicioPara.Equals(3)) {
+
+                    var _relacionInventarioServicio = new RelacionInventarioServicio();
+                    
+                    _relacionInventarioServicio.TipoServicioAplicado = ServicioAplicado.Inventario;
+                    _relacionInventarioServicio.IdReferencia = MonitorReferenciaSelected.IdReferencia;
+                    _relacionInventarioServicio.IdTarja = _monitorFolioServicio.IdTarja;
+                    _relacionInventarioServicio.IdPartidaInventario = _monitorFolioServicio.IdInventario;
+                    _relacionInventarioServicio.Folio = _monitorFolioServicio.FolioTarja;
+                    _relacionInventarioServicio.IdFolioServicio = _monitorFolioServicio.IdFolioServicio;
+                    /* FolioTarjaInventario se utiliza como identificador genérico, tanto para Tarja como para Inventario
+                     p.ejem
+                    Tarja : 25001-0001
+                    Partida : 25001-0001/1 
+                    */
+                    _relacionInventarioServicio.FolioTarjaInventario = _monitorFolioServicio.FolioTarjaPartida;
+
+                    _relacionInvetarioServicioList.Add(_relacionInventarioServicio);
+                
+            }
+
+        listaMonitorTarjaSelected = new List<MonitorTarja>();
+
+        //Console.WriteLine("-> listaMonitorTarjaSelected : " + JsonSerializer.Serialize(listaMonitorTarjaSelected));
+
+        await DialogServiceRerencia.OpenAsync<VistaModalAsignarFolioServicio>($"Servicios Solicitados",
+               new Dictionary<string, object>() { 
+                    { "IdReferencia", MonitorReferenciaSelected.IdReferencia },
+                    { "IdClienteReferencia", MonitorReferenciaSelected.IdCliente },
+                    { "RazonSocialClienteReferencia", MonitorReferenciaSelected.Cliente },
+                    { "IdFacturarAReferencia", MonitorReferenciaSelected.IdFacturarA },
+                    { "NombreFacturarAReferencia", MonitorReferenciaSelected.FacturarA },
+                    { "ServicioPara", _servicioPara },
+                    { "listaMonitorTarjaSelected" , listaMonitorTarjaSelected },
+                    { "listaMonitorPartidaSelected", listaMonitorPartidaSelected},
+                    { "listaRelacionInventarioServicioSelected", _relacionInvetarioServicioList},
+                    { "monitorFolioServicioSelected", monitorFolioServicioSelected}
+                },
+               new DialogOptions() 
+               {
+                   Resizable = false, 
+                   Draggable = true,
+                   Width = "830px", 
+                   Height = "535px"
+                });
+
+        await ObtenerDatos(_args);
+
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Agregar Servicio", Detail = resultBase.MensajeRespuesta, Duration = 4000 });
+
+        }
+    }
+
+    async Task EliminarFolioServicio(MonitorFolioServicio _monitorFolioServicio) {
+
+        string _mensaje = String.Empty;
+        bool _accionEliminar = false;
+
+        if (_monitorFolioServicio != null) {
+
+            if (!_monitorFolioServicio.IdFolioServicio.Equals(0) && _monitorFolioServicio.EstadoFolioServicio.Equals(EstadoFolioServicio.Pendiente)) 
+            {
+
+                _accionEliminar = true;
+
+                var result = await DialogServiceConfirm.Confirm("Desea Cancelar el Folio de Servicio " + _monitorFolioServicio.Folio + " ?", "Servicio", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+
+                bool _confirmar = result.HasValue ? (bool)result : false;
+
+                if (_confirmar) {
+
+                    var _result = await _folioServicioService.Eliminar(_monitorFolioServicio.IdFolioServicio);
+
+                    if (_result.Success) {
+
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, Summary = "El Folio de Servicio, se canceló correctamente", Detail = _mensaje, Duration = 4000 });
+                        
+
+                    } else {
+
+                        _mensaje = _result.MensajeRespuesta;
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cancelar Servicio", Detail = _mensaje, Duration = 4000 });
+
+                    }
+
+                    await ObtenerDatos(_args);
+
+                }
+
+            } else {
+
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Cancelar Servicio", Detail = "El Servicio ya se encuentra Terminado", Duration = 4000 });
+
+            }
+
+        }
+
+
+    }
+
+    private string ObtenerFolioServicioPara(MonitorFolioServicio monitorFolioServicio) {
+
+        switch (monitorFolioServicio.ServicioPara) {
+
+            case 1: return monitorFolioServicio.FolioReferencia;
+            case 2: return monitorFolioServicio.FolioReferenciaTarja;
+            case 3: return monitorFolioServicio.FolioTarjaPartida;
+            default: return String.Empty;
+
+        }
+
+        return string.Empty;
+        
+    }
+
+    private string ObtenerDescripcionServicioPara(int servicioPara) {
+
+        switch(servicioPara) {
+            case 1: return "Referencia";
+            case 2: return "Tarja";
+            case 3: return "Partida";
+            default : return String.Empty;
+        }
+
+    }
+
+    private BadgeStyle BadgeStyleEstadoServicio(EstadoFolioServicio estadoFolioServicio) {
+
+        switch(estadoFolioServicio) {
+
+            case EstadoFolioServicio.Iniciado : return BadgeStyle.Primary;
+            case EstadoFolioServicio.Cancelado: return BadgeStyle.Danger;
+            case EstadoFolioServicio.Pendiente : return BadgeStyle.Warning;
+            case EstadoFolioServicio.Terminado : return BadgeStyle.Success;
+            case EstadoFolioServicio.None : return BadgeStyle.Light;
+            default : return BadgeStyle.Light;
+        }
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}
+

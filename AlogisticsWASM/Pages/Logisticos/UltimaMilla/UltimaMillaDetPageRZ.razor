@@ -1,0 +1,639 @@
+﻿@using ALOG.Modelos.Modelos.Logisticos;
+@using ALOG.Modelos.Modelos.Catalogos;
+@using System.Globalization;
+
+@inject Radzen.DialogService DialogService;
+
+
+<style>
+	:root {
+	--rz-grid-header-color: white;
+	--rz-grid-header-background-color: darkred;
+	}
+
+	.rz-datepicker-custom .rz-inputtext,
+	.rz-datepicker-custom .rz-datepicker {
+	border-radius: 8px !important;
+	}
+
+	/* Letras negras en pestañas inactivas */
+	.rz-tabview-nav li a {
+	color: black !important;
+	border-radius: 8px; /* Bordes redondeados */
+	padding: 8px 16px;
+	}
+
+	/* Fondo amarillo opaco en pestaña activa */
+	.rz-tabview-nav li.rz-state-active a {
+	background-color: rgba(255, 204, 0, 0.3); /* Amarillo opaco */
+	color: black !important;
+	}
+
+	/* Opcional: quita el borde inferior que separa las pestañas del contenido */
+	.rz-tabview-nav {
+	border-bottom: none;
+	}
+
+    /* ------------- “Chips” de Estado ------------- */
+    .status-chip {
+        display: inline-block;
+        padding: 4px 8px;
+        padding-top: 2rem;
+        margin-top: -2rem;
+        border-radius: 4px;
+        font-size: 1.5rem;
+        text-align: center;
+        min-width: 100px;
+    }
+
+    /* ABIERTO */
+    .status-1 {
+        background-color: #000000; /* negro */
+        color: white;
+    }
+
+    /* EN PROCESO */
+    .status-2 {
+        background-color: #ffb425; /* naranja */
+        color: black;
+    }
+
+    /* TERMINADO */
+    .status-3 {
+        background-color: #4caf50; /* verde */
+        color: white;
+    }
+
+    /* CANCELADO */
+    .status-4 {
+        background-color: #f44336; /* rojo */
+        color: white;
+    }
+
+    /* PENDIENTE */
+    .status-5 {
+        background-color: #9e9e9e; /* gris medio */
+        color: white;
+    }
+
+
+    .chips-container {
+        display: flex;
+        gap: 0.25rem; /* Reducido para que estén casi pegadas */
+        justify-content: flex-end;
+        /* min-height: 50px; */
+        /* margin-bottom: 0.5rem;
+            padding-right: 1rem; */
+    }
+
+    .estado-chip {
+        background-color: gray;
+        padding: 0 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: white;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* separa texto y número */
+        min-width: 120px;
+        height: 40px;
+        border-radius: 4px;
+        gap: 8px;
+    }
+
+</style>
+
+<div class="modal-wrapper" style="position: relative; padding: -1rem;">
+
+	<div class="modal-wrapper" style="position: relative; padding-top: -1rem;">
+
+
+
+		
+
+		<!-- Encabezado -->
+			  		<div class="modal-header" style="background-color: darkred; padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        @* <h4 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: white;">
+                            SOLICITUD DE SERVICIOS
+                        </h4> *@
+                        
+			@* <span style="color: white; font-weight: 400;">
+				@(char.ToUpper(DateTime.Now.ToString("dddd dd 'de' MMMM", new CultureInfo("es-MX"))[0]) + DateTime.Now.ToString("dddd dd 'de' MMMM", new CultureInfo("es-MX")).Substring(1))
+			</span> *@
+		</div>
+	</div>
+<RadzenFieldset Style="border-bottom-left-radius: 12px;border-bottom-right-radius:12px;">
+<div style="margin-left: 2.5rem;">
+
+    <!-- Cuerpo del modal: dos columnas -->
+    <RadzenRow class="mt-4" Gutter="16">
+        <!-- Columna izquierda (50%) -->
+        <RadzenColumn Size="6">
+            <!-- Cliente -->
+            <div style="align-content: start; width: 100%;">
+                
+                        @if(Modo == "C")
+                        {
+                            <RadzenLabel Style="display:flex;margin:0.5rem">Cliente</RadzenLabel>
+                            <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatCliente"
+                                            Placeholder="Cliente"
+                                            Data="@lstClientes"
+                                            TextProperty="RazonSocial"
+                                            ValueProperty="IdCatCliente"
+                                            Style="width: 80%; border-radius: 8px;"
+                                            AllowFiltering="true"
+                                            FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                                            FilterOperator="StringFilterOperator.Contains"
+                                            FilterAutoCompleteType="AutoCompleteType.On"
+                                            Disabled="@(Modo == "E")" />
+                        } else if(Modo == "E")
+                        {
+                            @* <RadzenLabel Text="@(objSLOSolicitudes?.Cliente.RazonSocial)" /> *@
+                            <h6>Cliente</h6>
+                            <h5>@(objSLOSolicitudes?.Cliente.RazonSocial)</h5>
+                        }                                        
+            </div>
+
+            @* <RadzenLabel Visible="@(Modo == "E")" Style="display:flex; margin:0.5rem;">Referencia ALO</RadzenLabel> *@
+            @if (Modo == "E")
+            {
+                @* <RadzenTextBox Disabled="true" Visible="@(Modo == "E")" Style="width: 80%; border-radius: 8px;" Value="@($"{objSLOSolicitudes.Orden.ReferenciaALO}")" /> *@
+                @* <RadzenLabel Text="@(objSLOSolicitudes?.Orden.ReferenciaALO)"/> *@
+                        <h6>Referencia ALO</h6>
+                        <h5>@(objSLOSolicitudes?.Orden.ReferenciaALO)</h5>
+            }
+
+
+            @* <RadzenLabel Style="display:flex;margin:0.5rem">Ubicación de origen</RadzenLabel>
+					<RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatUbicacionOrigen"
+					Placeholder="Origen"
+					Data="@lstCatClientesUbicaciones"
+					TextProperty="NombreLugar"
+					ValueProperty="IdClienteUbicacion"
+                    Style="width: 70%; border-radius: 8px;" /> <RadzenButton ButtonType="ButtonType.Button" Icon="add_circle" Style="border-radius: 12px; padding:0rem;"/> *@
+            
+
+                    @if(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
+                    {
+                        <h6>Ubicación de origen</h6>
+                        <h5>@(objSLOSolicitudes?.catClienteUbicacionOrigen.NombreLugar)</h5>
+                        @* <RadzenLabel Text="@objSLOSolicitudes?.catClienteUbicacionOrigen.NombreLugar"/> *@
+                    }
+                    @if(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)
+                    {
+                        <RadzenLabel Style="display:flex;margin:0.5rem">Ubicación de origen</RadzenLabel>
+                        <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatUbicacionOrigen"
+                                        Placeholder="Origen"
+                                        Data="@lstCatClientesUbicaciones"
+                                        TextProperty="NombreLugar"
+                                        ValueProperty="IdClienteUbicacion"
+                                        Style="width: 72%; border-radius: 8px 0 0 8px; margin-right:0;"
+                                        Change="CambioUbicacion"
+                                        Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
+                        <RadzenButton ButtonType="ButtonType.Button"
+                                      Icon="add_circle"
+                                      Click="@(() => AgregarUbicacion())"
+                                      Style="border-radius: 0 8px 8px 0; padding:0.25rem 0.5rem; margin-left:-2px;"
+                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                    }                
+           
+                
+            @if (objSLOSolicitudes.IdCatUbicacionOrigen != 0)
+            {
+                <RadzenAccordion>
+                    <Items>
+                        <RadzenAccordionItem Text="Lugar de Posicionamiento (Origen)" Selected="true">
+                            <RadzenFieldset Style="width:80%; padding:0.5rem;">
+                                <RadzenRow>
+                                    <!-- Bloque de información compacta -->
+                                    <RadzenColumn Size="6">
+                                        <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                            <div><strong>País:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.catPaises?.Nombre</div>
+                                            <div><strong>Estado:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.catPaisEstados?.Nombre</div>
+                                            <div><strong>Municipio:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.catPaisMunicipios?.Nombre</div>
+                                            <div><strong>Colonia:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Colonia</div>
+                                            <div><strong>Calle:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Calle</div>
+                                            <div><strong>No. Exterior:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.NoExterior</div>
+                                            <div><strong>No. Interior:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.NoInterior</div>
+                                            <div><strong>Nombre Lugar:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.NombreLugar</div>
+                                            <div><strong>CP:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.CP</div>
+                                            <div><strong>Contacto:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Contacto</div>
+                                            <div><strong>Referencia:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Referencia</div>
+                                        </RadzenStack>
+                                    </RadzenColumn>
+
+                                    <!-- Opcional: Fecha de Posicionamiento -->
+                                    @* <RadzenColumn Size="6">
+                        <div style="text-align:center;">
+                            <div><strong>Fecha Posicionamiento:</strong></div>
+                            <div>@objSLOSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                    </RadzenColumn> *@
+                                </RadzenRow>
+                            </RadzenFieldset>
+                        </RadzenAccordionItem>
+                    </Items>
+                </RadzenAccordion>
+            }
+
+
+            <!--Fecha Posicionamiento-->
+            <RadzenLabel Style="display:flex; margin:0.5rem;">Fecha de Posicionamiento</RadzenLabel>
+            <RadzenDatePicker 
+                @bind-Value="FechaSalida"
+                Style="width: 80%;border-radius:12px;"
+                ShowTime="true"
+                DateFormat="dd/MM/yyyy HH:mm"
+                HourFormat="24"
+                TimeOnly="false"
+                Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
+
+            @* <RadzenLabel Style="display:flex; margin:0.5rem;">Hora solicitada de Salida</RadzenLabel>
+            <RadzenDatePicker @bind-Value=@HoraSalida ShowTime="true" TimeOnly="true" DateFormat="HH:mm" Name="DatePickerTimeOnly"/> *@
+
+            <!--Tipo de operacion comercial-->
+            
+                    @if(Modo == "C")
+                    {
+                        <RadzenLabel Style="display:flex;margin:0.5rem">Tipo de Operación Comercial</RadzenLabel>
+                        <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoOperacion"
+                                        Placeholder="Tipo Operacion Comercial"
+                                        Data="lstCatTipoOperacion"
+                                        TextProperty="Nombre"
+                                        ValueProperty="IdCatTipoOperacion"
+                                        Style="width: 80%; border-radius: 8px;"
+                        Disabled="@(Modo == "E")" />
+                    }else if(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
+                    {
+                        @* <RadzenLabel Text="@(objSLOSolicitudes?.catTipoOperacion.Nombre)"/> *@
+                        <h6>Tipo de Operación Comercial</h6>
+                        <h5>@(objSLOSolicitudes?.catTipoOperacion.Nombre)</h5>
+                    }
+
+
+            <!--Tipo de cargamento-->
+            @if(Modo == "C")
+                    {
+                        <RadzenLabel Style="display:flex; margin:0.5rem;">Tipo de Carga</RadzenLabel>
+                        <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoCarga"
+                                        Placeholder="Tipo Carga"
+                                        Data="@lstCatTipoCarga"
+                                        TextProperty="Nombre"
+                                        ValueProperty="IdCatTipoCarga"
+                                        Style="width: 80%; border-radius: 8px;"
+                                        Change="@(args => CambiarTabPorTipoCarga())"
+                    Disabled="@(Modo == "E")" />
+                    }else if(Modo == "E")
+                    {
+                        <h6>Tipo de Carga</h6>
+                       <h5>@(objSLOSolicitudes?.TipoCarga.Nombre)</h5>    
+                    }
+
+        </RadzenColumn>
+        <RadzenColumn Size="6">
+
+
+            <div style="align-content: start; width: 100%;">
+                        @if(Modo == "E")
+                        {
+                            @* <RadzenLabel Style="display:flow;margin:0.5rem; margin-top: 1.1rem;" Visible="@(Modo == "E")">Estado</RadzenLabel> *@
+                            <h6>Estado</h6>
+                            <span class=@($"status-chip status-{objSLOSolicitudes.catTipoEstado?.IdCatTipoEstados}")>
+                                @objSLOSolicitudes.catTipoEstado?.Nombre
+                            </span>
+                        }                       
+                @* <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoEstado"
+                                Data="@lstCatEstados"
+                                TextProperty="Nombre"
+                                ValueProperty="IdCatTipoEstados"
+                                Visible="@(Modo == "E")"
+                                Style="width: 80%; border-radius: 8px;"  
+                                />*@
+            </div>
+            
+            @if (Modo == "C")
+            {
+                <RadzenLabel Style="display:flex; margin:0.5rem;">Referencia Cliente</RadzenLabel>
+                <RadzenTextBox @bind-Value="objSLOSolicitudes.ReferenciaCliente"
+                               Style="width: 80%; border-radius: 12px;"
+                               Placeholder="Referencia"
+                               />
+            } else if (Modo == "E")
+            {
+                @* <RadzenLabel Style="display:flex; margin:0.5rem;">Referencia Cliente</RadzenLabel>
+                <RadzenTextBox @bind-Value="objSLOSolicitudes.ReferenciaCliente"
+                               Style="width: 80%; border-radius: 12px;"
+                               Placeholder="Referencia"
+                               Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" /> *@
+                               <h6>Referencia Cliente</h6>
+                        @if(objSLOSolicitudes.ReferenciaCliente == null || objSLOSolicitudes.ReferenciaCliente == "")
+                            {
+                            <h5>SIN REFERENCIA</h5>
+                        }
+                        else
+                        {
+                            <h5>@objSLOSolicitudes.ReferenciaCliente</h5>
+                        }
+                        
+            }            
+
+            <!--Destino campo-->
+                    @if (objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
+                    {
+                        <h6>Ubicación Destino</h6>
+                        <h5>@(objSLOSolicitudes?.catClienteUbicacionDestino.NombreLugar)</h5>
+                        @* <RadzenLabel Text="@objSLOSolicitudes?.catClienteUbicacionOrigen.NombreLugar"/> *@
+                    }
+                    @if (Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)
+                    {
+
+                        <RadzenLabel Style="display:flex; margin:0.5rem;">Ubicación Destino</RadzenLabel>
+
+                        <RadzenDropDown
+                        @bind-Value="objSLOSolicitudes.IdCatUbicacionDestino"
+                Placeholder="Destino"
+                Data="@lstCatClientesUbicaciones"
+                TextProperty="NombreLugar"
+                ValueProperty="IdClienteUbicacion"
+                Style="width: 72%; border-radius: 8px 0 0 8px; margin-right:0;"
+                Change=" CambioUbicacionDestino"
+                Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
+
+            <RadzenButton
+                ButtonType="ButtonType.Button"
+                Icon="add_circle"
+                Click="@(() => AgregarUbicacion())"
+                Style="border-radius: 0 8px 8px 0; padding:0.25rem 0.5rem; margin-left:-2px;"
+                Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)"/>
+                }
+                    @if (objSLOSolicitudes.IdCatUbicacionDestino != 0)
+                    {
+                        <RadzenAccordion>
+                            <Items>
+                                <RadzenAccordionItem Text="Lugar Destino" Selected="true">
+                                    <RadzenFieldset Style="width:80%; padding:0.5rem;">
+                                        <RadzenRow>
+                                            <!-- Bloque de información compacta -->
+                                            <RadzenColumn Size="6">
+                                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
+                                                    <div><strong>País:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.catPaises?.Nombre</div>
+                                                    <div><strong>Estado:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.catPaisEstados?.Nombre</div>
+                                                    <div><strong>Municipio:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.catPaisMunicipios?.Nombre</div>
+                                                    <div><strong>Colonia:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Colonia</div>
+                                                    <div><strong>Calle:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Calle</div>
+                                                    <div><strong>No. Exterior:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.NoExterior</div>
+                                                    <div><strong>No. Interior:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.NoInterior</div>
+                                                    <div><strong>Nombre Lugar:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.NombreLugar</div>
+                                                    <div><strong>CP:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.CP</div>
+                                                    <div><strong>Contacto:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Contacto</div>
+                                                    <div><strong>Referencia:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Referencia</div>
+                                                </RadzenStack>
+                                            </RadzenColumn>
+
+                                            <!-- Opcional: Fecha de Posicionamiento -->
+                                            @* <RadzenColumn Size="6">
+                        <div style="text-align:center;">
+                            <div><strong>Fecha Posicionamiento:</strong></div>
+                            <div>@objSLOSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                    </RadzenColumn> *@
+                                        </RadzenRow>
+                                    </RadzenFieldset>
+                                </RadzenAccordionItem>
+                            </Items>
+                        </RadzenAccordion>
+                    }
+
+            <!--Fecha Entrega-->
+            <RadzenLabel Style="display:flex; margin:0.5rem;">Fecha esperada de Entrega</RadzenLabel>
+            <RadzenDatePicker @bind-Value="FechaEntrega"
+                              Style="width: 80%;border-radius:12px;"
+                              ShowTime="true"
+                              DateFormat="dd/MM/yyyy HH:mm"
+                              HourFormat="24"
+                              TimeOnly="false"
+                                      Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
+
+            @* <RadzenLabel Style="display:flex; margin:0.5rem;">Hora solicitada de Entrega</RadzenLabel>
+                <RadzenDatePicker @bind-Value=@HoraEntrega ShowTime="true" TimeOnly="true" DateFormat="HH:mm" /> *@
+            <!--Notas-->
+            <RadzenLabel Style="display:flex; margin:0.5rem;">Notas</RadzenLabel>
+            <RadzenTextArea @bind-Value="objSLOSolicitudes.Notas"
+                            Style="border-radius: 12px; width: 80%; resize: none;"
+                            Rows="4"
+                            Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
+        </RadzenColumn>
+    </RadzenRow>
+</div>
+		<RadzenTabs Style="margin: 2rem;border-radius:12px;" @bind-SelectedIndex="selectedTabIndex">
+			<Tabs>
+				<RadzenTabsItem Text="Contenerizada" Disabled="@(acronimoTipoCargaSeleccionado != "CONT")">
+					<div @key="selectedTabIndex">
+					
+						<div>Contenido CONT</div>
+					</div>
+				</RadzenTabsItem>
+				<RadzenTabsItem Text="General" Disabled="@(acronimoTipoCargaSeleccionado != "GEN")">
+					<div @key="selectedTabIndex">
+					
+						<div>Contenido SUELTA</div>
+					</div>
+				</RadzenTabsItem>
+				<RadzenTabsItem Text="Paletizada" Disabled="@(acronimoTipoCargaSeleccionado != "PAL")">
+                    <div @key="selectedTabIndex">
+			
+                        <RadzenButton Icon="add_circle_outline"
+                                      Text="Agregar mercancia"
+                                      Click="@InsertarDetalle"
+                                      Style="margin-bottom:10px;border-radius:12px;"
+                                      ButtonType="ButtonType.Button" 
+                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)"/>
+
+                        @* Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" *@
+
+                        <RadzenDataGrid @ref="gridSolicitudesDetalle"
+                                        Data="@Items"
+                                        TItem="SLOSolicitudesDetalle"
+                                        Editable="true"
+                                        EditMode="DataGridEditMode.Single"
+                                        AllowFiltering="false"
+                                        AllowPaging="false"
+                                        AllowSorting="false"
+                                        AllowColumnResize="true"
+                                        Style="border-radius:12px;">
+
+                            <Columns>
+                                @* <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="N°" Width="30px">
+                                    <Template Context="item">
+                                        @(Items.IndexOf(item) >= 0 ? Items.IndexOf(item) + 1 : "-")
+                                    </Template>
+                                </RadzenDataGridColumn> *@
+
+                                <!-- Columna Mercancía Peligrosa -->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="MciaPeligrosa" Width="40px">
+                                    <HeaderTemplate>
+                                        <span title="Mercancía Peligrosa">M.P.</span>
+                                    </HeaderTemplate>
+                                    <Template Context="item">
+                                        <RadzenCheckBox Value="item.MciaPeligrosa" Disabled />
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        <RadzenCheckBox @bind-Value="item.MciaPeligrosa" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="Manejo Carga Peligrosa">
+                                    <!-- Modo solo lectura -->
+                                    <Template Context="item">
+                                        @if (item.MciaPeligrosa && item.IdCatTipoImo != null)
+                                        {
+                                            var tipoIMO = lstCatTipoIMO.FirstOrDefault(x => x.IdCatTipoIMO == item.IdCatTipoImo);
+                                            <span>@(tipoIMO?.Nombre ?? "No definido")</span>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: #999;">No aplica</span>
+                                        }
+                                    </Template>
+
+                                    <!-- Modo edición -->
+                                    <EditTemplate Context="item">
+                                        @if (item.MciaPeligrosa)
+                                        {
+                                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                                <RadzenDropDown Data="@lstCatTipoIMO"
+                                                                @bind-Value="item.IdCatTipoImo"
+                                                                TextProperty="Nombre"
+                                                                ValueProperty="IdCatTipoIMO"
+                                                                Placeholder="Selecciona tipo IMO"
+                                                                Style="width:100%; border-radius: 12px;" />
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span style="color: #999;">No aplica</span>
+                                        }
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="NoParte" Title="NoParte">
+                                    <EditTemplate Context="item">
+                                        <RadzenTextBox @bind-Value="item.NoParte"
+                                                       Style="width:100%; border-radius:12px;"
+                                        />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+
+                                <!-- Columna Cantidad -->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Cantidad" Title="Cantidad Pallets">
+                                    <EditTemplate Context="item">
+                                        <RadzenNumeric TValue="int?" @bind-Value="item.Cantidad"
+                                                       Style="width:100%; border-radius:12px;"
+                                                       Min="0" ShowUpDown="false" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            
+                                <!-- Columna Piezas -->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Piezas" Title="Cantidad de Piezas">
+                                    <EditTemplate Context="item">
+                                        <RadzenNumeric TValue="int?" @bind-Value="item.Piezas"
+                                                       Style="width:100%; border-radius:12px;"
+                                                       Min="0" ShowUpDown="false" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+
+                                <!-- Columna Peso -->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Peso" Title="Peso">
+                                    <EditTemplate Context="item">
+                                        <RadzenNumeric TValue="decimal?" @bind-Value="item.Peso"
+                                                       Style="width:100%;border-radius:12px;"
+                                                       Min="0" ShowUpDown="false"/>
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            
+                                <!--Columna Tipo Embalaje-->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Volumen" Title="Volumen">
+                                    <EditTemplate Context="item">
+                                        <RadzenNumeric TValue="decimal?" @bind-Value="item.Volumen"
+                                                       Style="width:100%;border-radius:12px;"
+                                                       Min="0" ShowUpDown="false"/>
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                                <!-- Columna Tipo de Mercancía -->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="IdCatMercancia" Title="Tipo de mercancia">
+                                    <!-- Modo lectura -->
+                                    <Template Context="item">
+                                        @lstCatMercancias.FirstOrDefault(m => m.IdCatMercancia == item.IdCatMercancia)?.Nombre
+                                    </Template>
+
+                                    <!-- Modo edición -->
+                                    <EditTemplate Context="item">
+                                        <RadzenDropDown Placeholder="Mercancia"
+                                                        Data="@lstCatMercancias"
+                                                        @bind-Value="item.IdCatMercancia"
+                                                        TextProperty="Nombre"
+                                                        ValueProperty="IdCatMercancia"
+                                                        Style="border-radius:12px;" 
+                                                        Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+
+
+                                <!-- Columna Acciones -->
+                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Context="item" Width="80px" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)">
+                                    <Template Context="item">
+                                        <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditarDetalle(item))" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                        <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
+                                                      Click="@(() => EliminarDetalle(item))" 
+                                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                    </Template>
+                                    <EditTemplate Context="item">
+                                        <RadzenButton Icon="save" Size="ButtonSize.Small" ButtonType="ButtonType.Submit"
+                                                      Click="@(async () => { await AgregarDetalle(item); await gridSolicitudesDetalle.UpdateRow(item); })"
+                                                      Disabled="@(!gridSolicitudesDetalle.IsValid)" />
+                                        <RadzenButton Icon="cancel" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                                                      Click="@(() => CancelarEdicion(item))" 
+                                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                    </EditTemplate>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+
+
+                        <!-- Botón para guardar todos los detalles -->
+                        @* <div style="margin-top: 20px; text-align: right;">
+						<RadzenButton Text="Guardar Todo" Click="@GuardarTodosDetalles" ButtonStyle="ButtonStyle.Success" />
+					</div> *@
+                    </div>
+
+				</RadzenTabsItem>
+			</Tabs>
+		</RadzenTabs>
+        
+
+<!-- Botones arriba a la derecha -->
+<div style="display:flex; gap:0.5rem; justify-content:flex-end; margin:0.5rem 2.5rem 1rem 0;">
+    <RadzenButton Icon="add_circle"
+                  Text="@(Modo == "C" ? "Crear" : "Actualizar")"
+                  ButtonStyle="ButtonStyle.Secondary"
+                  ButtonType="ButtonType.Button"
+                  Style="border-radius: 8px;"
+                  Click="@(async () =>
+                         {
+                             if (Modo == "C")
+                                 await GenerarSolicitud();
+                             else if(Modo == "E")
+                                 await ActualizarSolicitud(objSLOSolicitudes);
+                         })"
+                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+
+    <RadzenButton Icon="cancel"
+                  Text="Cerrar"
+                  ButtonStyle="ButtonStyle.Primary"
+                  Style="border-radius: 8px;"
+                  Click="@CerrarModal"/>
+</div>
+
+</RadzenFieldset>
+</div>

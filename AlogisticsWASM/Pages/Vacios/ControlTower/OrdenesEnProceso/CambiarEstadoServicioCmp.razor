@@ -1,0 +1,36 @@
+﻿@using AlogisticsWASM.Layout.Utilerias
+
+
+@if (!_estaEditando) {
+    <RadzenBadge BadgeStyle="@_utileriasPage.GetBadgeStyle2(Servicio.IdEstadoServicio.ToString())" style="cursor: pointer;"
+                 Text="@_utileriasPage.GetEstado(Servicio.IdEstadoServicio)"
+                 @onclick="IniciarEdicion"
+                 Shade="Shade.Darker"
+                 class="rz-ms-2"
+                 IsPill="true"/>
+} else {
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+        <RadzenDropDown @bind-Value="Servicio.IdEstadoServicio"
+                        ValueProperty="IdCatReferenciaEstado"
+                        Change="OnCambioEstado"
+                        TextProperty="Nombre"
+                        Style="width:50%;"
+                        Data="@_estadosReferencias"/>
+        
+        <RadzenButton Icon="close"
+                      ButtonStyle="ButtonStyle.Light"
+                      Size="ButtonSize.Small"
+                      Click="CancelarEdicion"
+                      Disabled="@_cargando"
+                      class="rz-ml-1"
+                      Tooltip="Cancelar" />
+        
+        @if (_cargando) {
+            <RadzenProgressBarCircular ProgressBarStyle="ProgressBarStyle.Primary"
+                                       Mode="ProgressBarMode.Indeterminate"
+                                       Style="width: 30px; height: 30px;"
+                                       ShowValue="false"
+                                       Value="100"/>
+        }
+    </div>
+}

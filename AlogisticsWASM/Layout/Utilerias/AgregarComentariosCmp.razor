@@ -1,0 +1,17 @@
+﻿<div>
+    <RadzenRow JustifyContent="JustifyContent.Center" AlignItems="AlignItems.Center" Gap="2rem" class="layout-estable">
+
+        <RadzenColumn Size="12">
+            <RadzenFormField Text="Comentarios" Variant="Variant.Outlined" Style="width: 100%;">
+                <RadzenTextArea Change=@(args => OnChange(args, "TextArea with placeholder"))
+                                aria-label="TextArea with placeholder"
+                                Placeholder="Agregar comentarios"
+                                @bind-Value=_comentarios
+                                Style="width: 100%; height: 200px;" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="12" class="rz-text-align-center rz-p-2">
+            <RadzenButton Click=@(args => Aceptar()) Text="Aceptar" ButtonStyle="ButtonStyle.Primary" />
+        </RadzenColumn>
+    </RadzenRow>
+</div>

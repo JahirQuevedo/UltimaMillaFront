@@ -1,0 +1,308 @@
+﻿@page "/embarque-consultaLiberacion/{DataEmbarque}"
+@page "/embarque-consultaLiberacion"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using System.Text.Json
+@using Newtonsoft.Json
+
+
+@inject IJSRuntime JSRuntime
+@inject NotificationService NotificationService
+@inject NavigationManager navigationManager
+@attribute [Authorize]
+<RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="6" class="text-start">
+        <RadzenButton Icon="arrow_back_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("embarque")) />
+    </RadzenColumn>
+</RadzenRow>
+<RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+            <RadzenText TextStyle="TextStyle.H5">Consulta Liberación</RadzenText>
+        </RadzenColumn>
+</RadzenRow>
+<RadzenDataList PageSize="4" WrapItems="false" AllowPaging="true" 
+    Data="@listaMonitorLiberacionInventario" TItem="MonitorLiberacionInventario" class="rz-p0">
+    <Template Context="monitorLiberacionInventario">
+
+            <RadzenStack>
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Liberación</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        @monitorLiberacionInventario.FolioLiberacion
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Viaje</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Tarja Salida</b>
+                    </RadzenColumn>
+                </RadzenRow>
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                       @monitorLiberacionInventario.ClaveViaje
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                       @monitorLiberacionInventario.ClaveReferenciaTarja
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <hr style="border: none; background-color: var(--rz-base-600); height: 1px; margin: 0;" />
+
+                <RadzenRow>
+                    <RadzenColumn Size="12" class="rz-text-truncate">
+                        <b>Cliente</b>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="12" class="rz-text-truncate">
+                       @monitorLiberacionInventario.Cliente
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Buque</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        &nbsp;
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Transportista</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6">
+                        @monitorLiberacionInventario.LineaTransportista
+                    </RadzenColumn>
+                </RadzenRow>
+
+                 <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Operador</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        @monitorLiberacionInventario.OperadorTransporte
+                    </RadzenColumn>
+                </RadzenRow>
+
+                 <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Placas</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Tipo Unidad</b>
+                    </RadzenColumn>
+                </RadzenRow>
+
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        @monitorLiberacionInventario.Placas
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        @monitorLiberacionInventario.TipoUnidadTransporte
+                    </RadzenColumn>
+                </RadzenRow>
+                <hr style="border: none; background-color: var(--rz-base-600); height: 1px; margin: 0;" />
+                <RadzenRow>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        <b>Total Embarque:</b>
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" class="rz-text-truncate">
+                        @monitorLiberacionInventario.TotalInventarioEmbarcado de @monitorLiberacionInventario.TotalInventarioLiberacion
+                    </RadzenColumn>
+                </RadzenRow>
+
+                 <RadzenRow class="rz-pt-5 rz-text-align-center">
+                    <RadzenColumn Size="6" SizeMD="6" SizeLG="6" class="text-center">
+                        <RadzenButton Click=@(args => OnMostrarLiberacionInventario(monitorLiberacionInventario)) Text="Mercancia" Icon="fact_check" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                    </RadzenColumn>
+                    <RadzenColumn Size="6" SizeMD="6" SizeLG="6" class="text-center">
+                        <RadzenButton Click=@(args => OnClickNavigationManager("embarque-escanear")) Text="Escanear" Icon="barcode_reader" ButtonStyle="ButtonStyle.Primary" class="rz-background-color-base-400" />
+                    </RadzenColumn>
+                 </RadzenRow>
+
+
+                @* <RadzenStack Orientation="Orientation.Horizontal">
+                    <RadzenImage Path="@order.Employee?.Photo" Style="width: 80px; height: 80px; border-radius: 50%;" AlternateText="@(order.Employee?.FirstName + " " + order.Employee?.LastName)" />
+                    <RadzenStack Gap="0.25rem">
+                        <h4 class="rz-mb-0">@(order.Employee?.FirstName + " " + order.Employee?.LastName)</h4>
+                        <div>@order.ShipAddress</div>
+                        <div style="font-size: .8em">@(order.ShipCity), @(order.ShipCountry)</div>
+                    </RadzenStack>
+                </RadzenStack> *@
+
+            </RadzenStack>
+    </Template>
+</RadzenDataList>
+
+@code {
+
+    [Parameter] public string DataEmbarque { get; set; }
+
+    MonitorPartida monitorPartida = new MonitorPartida();
+
+    List<MonitorPartida> listaMonitorPartida = new List<MonitorPartida>();
+
+    List<MonitorLiberacionInventario> listaMonitorLiberacionInventario = new List<MonitorLiberacionInventario>();
+
+    List<MonitorRecepcionMercancia> _listaMonitorRecepcionMercancia = new List<MonitorRecepcionMercancia>();
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia = new MonitorRecepcionMercancia();
+
+    MonitorLiberacionInventario _monitorLiberacionInventario = new MonitorLiberacionInventario();
+
+    ControlEmbarqueDTO _controlEmbarqueDTO = new ControlEmbarqueDTO();
+
+    [Inject] private ILiberacionService? _liberacionService  { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        await LoadStateEmbarqueAsync();
+
+@* 
+        listaMonitorPartida = new List<MonitorPartida>();
+        monitorPartida = new MonitorPartida();
+
+        monitorPartida.Numeros = "VNLTA36E95XZ129850";
+
+        listaMonitorPartida.Add(monitorPartida); *@
+
+        //Console.WriteLine("-> OnSubmit _monitorLiberacionInventario : " + System.Text.Json.JsonSerializer.Serialize(_monitorLiberacionInventario));
+
+        OnBuscarTarjaViaje(_monitorLiberacionInventario.ClaveReferenciaTarja, TipoBusquedaEmbarque.TarjaSalida);
+
+        //Console.WriteLine("OnInitializedAsync");
+
+    }
+
+    protected override async void OnParametersSet()
+    {
+
+        //Console.WriteLine("OnParametersSet");
+
+        if (DataEmbarque != null) {
+
+            byte[] binaryData = Convert.FromBase64String(DataEmbarque);
+            string decodedString = System.Text.Encoding.UTF8.GetString(binaryData);
+
+            //Console.WriteLine("Decoded: " + decodedString);
+
+            _controlEmbarqueDTO =  new ControlEmbarqueDTO();
+
+            _controlEmbarqueDTO = JsonConvert.DeserializeObject<ControlEmbarqueDTO>(decodedString);
+
+        }
+
+    }
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    private async void OnBuscarTarjaViaje(string valTextoBusqueda, TipoBusquedaEmbarque valTipoBusqueda) {
+
+        bool _datosValidos = false;
+
+        if (!String.IsNullOrEmpty(valTextoBusqueda)) {
+
+            ConsultaCatalogoBase<ConsultaControlEmbarque> _consultaEmbarque = new ConsultaCatalogoBase<ConsultaControlEmbarque>();
+            _consultaEmbarque.Entidad = new ConsultaControlEmbarque();
+            _consultaEmbarque.Entidad.TipoBusquedaEmbarque = (TipoBusquedaEmbarque)valTipoBusqueda;
+            _consultaEmbarque.Entidad.ValorBusqueda = valTextoBusqueda;
+            _consultaEmbarque.NumeroDePagina = 1;
+            _consultaEmbarque.RegistrosPorPagina = 50;
+
+            var _resultBase = await _liberacionService.ObtenerLiberacionControlEmbarqueListaPaginada(_consultaEmbarque);
+            if (_resultBase.Success) {
+
+                List<MonitorLiberacionInventario> _listaMonitorRecepcionMercancia = new List<MonitorLiberacionInventario>();
+
+                if (!_resultBase.Data.Count.Equals(0)) {
+
+                    _listaMonitorRecepcionMercancia = _resultBase.Data;
+
+                    _monitorLiberacionInventario = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+                    listaMonitorLiberacionInventario.Add(_monitorLiberacionInventario);
+
+                    await InvokeAsync(StateHasChanged);
+
+                } else {
+
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Embarque", Detail = "No se encontró información de salida para la consulta solicitada.", Duration = 4000 });
+
+                }
+
+            }
+            
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Embarque", Detail = "Favor de introducir los datos solicitados", Duration = 4000 });
+
+        }
+
+    }
+
+    private async void OnMostrarLiberacionInventario(MonitorLiberacionInventario monitorRecepcionMercancia) {
+
+        ControlEmbarqueDTO _controlEmbarqueDTO = new ControlEmbarqueDTO();
+        _controlEmbarqueDTO.IdLiberacion = monitorRecepcionMercancia.IdLiberacion;
+        _controlEmbarqueDTO.IdTarjaSalida = monitorRecepcionMercancia.IdTarja;
+        _controlEmbarqueDTO.IdControlTransporte = monitorRecepcionMercancia.IdControlTransporte;
+        
+        string _monitorRecepcionMercanciaDTO = System.Text.Json.JsonSerializer.Serialize(_controlEmbarqueDTO);
+        byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+        string base64EncodedData = Convert.ToBase64String(binaryData);
+
+            navigationManager.NavigateTo($"/embarque-detalleLiberacion/{base64EncodedData}");
+
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    private async Task LoadStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultList = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorLiberacionInventario");
+        if (!string.IsNullOrEmpty(resultList))
+        {
+            _monitorLiberacionInventario = System.Text.Json.JsonSerializer.Deserialize<MonitorLiberacionInventario>(resultList);
+        }
+    }
+
+    private async Task SaveStateEmbarqueAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorLiberacionInventario", System.Text.Json.JsonSerializer.Serialize<MonitorLiberacionInventario>(_monitorLiberacionInventario));
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+}

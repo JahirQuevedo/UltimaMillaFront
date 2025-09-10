@@ -1,0 +1,294 @@
+﻿@page "/recepcion"
+@using ALOG.Modelos
+@using ALOG.Enums
+@using ALOGRepositorios.Services
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+
+@inject IJSRuntime JSRuntime
+@inject NavigationManager navigationManager
+@inject DialogService BusyDialogService
+@inject NotificationService NotificationService
+@attribute [Authorize]
+@* <RadzenRow AlignItems="AlignItems.Center">
+    <RadzenColumn Size="12" class="text-end">
+        <RadzenButton Icon="arrow_forward_ios" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnClickNavigationManager("recepcion-consulta")) />
+    </RadzenColumn>
+</RadzenRow> *@
+<RadzenStack AlignItems="AlignItems.Normal" class="rz-p-0 rz-mt-10" Gap="5px" Wrap=FlexWrap.NoWrap Orientation="Orientation.Vertical" 
+    JustifyContent="JustifyContent.SpaceAround" Style="width:100%;">
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+         <RadzenColumn Size="12" SizeMD="12" SizeLG="12" class="text-center">
+                <RadzenText TextStyle="TextStyle.H5">Recepción</RadzenText>
+         </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Start" Gap="1.5rem" class="rz-p-sm-5 rz-mt-5">
+        <RadzenColumn Size="10" SizeMD="10" SizeLG="10">
+            <RadzenFormField Text="Folio Tarja" Variant="Variant.Text" Style="width: 100%;" Component="RECEPCION_FOLIO_TARJA">
+                @* <RadzenNumeric ShowUpDown="false" TValue="int?" Style="width: 100%;" @bind-Value="@FolioTarjaSelected" Name="RECEPCION_FOLIO_TARJA" 
+                    @onkeypress=@(args => OnInputKeyPressedTarja(args))
+                    InputAttributes="@(new Dictionary<string,object>(){ { "aria-label", "" }})" /> *@
+                <RadzenTextBox Style="width: 100%;" Name="RECEPCION_FOLIO_TARJA" 
+                    @onkeypress=@(args => BuscarTarjaPartidaKeyPressed(args, TipoBusquedaRecepcion.Tarja))
+                    @bind-Value="ClaveReferenciaTarjaSelected" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="2" SizeMD="2" SizeLG="2" class="text-center">
+            <RadzenButton Icon="qr_code_scanner" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnBuscarTarjaPartida(TipoBusquedaRecepcion.Tarja)) />
+        </RadzenColumn>
+    </RadzenRow>
+    <RadzenRow AlignItems="AlignItems.Center" Gap="1.5rem" class="rz-p-sm-5">
+        <RadzenColumn Size="10" SizeMD="10" SizeLG="10">
+            <RadzenFormField Text="ID Mercancía" Variant="Variant.Text" Style="width: 100%;" Component="RECEPCION_ID_MERCANCIA">
+                 <RadzenTextBox Style="width: 100%;" Name="RECEPCION_ID_MERCANCIA" 
+                    @onkeypress=@(args => BuscarTarjaPartidaKeyPressed(args, TipoBusquedaRecepcion.Partida))
+                    @bind-Value="IdMercanciaSelected" />
+            </RadzenFormField>
+        </RadzenColumn>
+        <RadzenColumn Size="2" SizeMD="2" SizeLG="2" class="text-center">
+            <RadzenButton Icon="qr_code_scanner" ButtonStyle="ButtonStyle.Primary" Click=@(args => OnBuscarTarjaPartida(TipoBusquedaRecepcion.Partida)) />
+        </RadzenColumn>
+    </RadzenRow>
+</RadzenStack>
+
+@code {
+
+    public ConsultaRecepcion _consultaRecepcionSelected { get; set; }
+
+    MonitorRecepcionMercancia _monitorRecepcionMercancia;
+
+    RecepcionMercanciaDTO _recepcionMercanciaDTO;
+
+    List<MonitorRecepcionMercancia> _listaMonitorRecepcionMercancia { get; set; }
+
+    private int? FolioTarjaSelected;
+
+    private string ClaveReferenciaTarjaSelected;
+
+    private  string  IdMercanciaSelected = String.Empty;
+
+    [Inject] private IRecepcionService? _recepcionService { get; set; } 
+
+    private void OnClick(string text)
+    {
+        NotificationService.Notify(new NotificationMessage 
+        { 
+            Style = "position: absolute; inset-inline-end: -.5em;",
+            Severity = NotificationSeverity.Info, 
+            Summary = "Button Clicked", 
+            Detail = text }
+        );
+    }
+
+    protected async Task BuscarTarjaPartidaKeyPressed(KeyboardEventArgs args, TipoBusquedaRecepcion tipoBusquedaRecepcion)
+        {
+            if (args.Key == "Enter")
+            {
+                var val = String.Empty;
+                if (tipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) {
+                    val = await JSRuntime.InvokeAsync<string>("eval", $@"document.getElementById(""RECEPCION_FOLIO_TARJA"").value");
+                    ClaveReferenciaTarjaSelected = val;
+                } else {
+                    val = await JSRuntime.InvokeAsync<string>("eval", $@"document.getElementById(""RECEPCION_ID_MERCANCIA"").value");
+                    IdMercanciaSelected = val;
+                }
+                OnBuscarTarjaPartida(tipoBusquedaRecepcion);
+            }
+        }
+
+    private async void OnBuscarTarjaPartida(TipoBusquedaRecepcion tipoBusquedaRecepcion) {
+
+        bool _datosValidos = false;
+
+         ConsultaCatalogoBase<ConsultaRecepcion> _consultaRecepcion = new ConsultaCatalogoBase<ConsultaRecepcion>();
+        _consultaRecepcion.Entidad = new ConsultaRecepcion();
+        _consultaRecepcion.Entidad.TipoClasificacionRecepcion = TipoClasificacionRecepcion.Todos;
+        _consultaRecepcion.NumeroDePagina = 1;
+        _consultaRecepcion.RegistrosPorPagina = 50;
+        
+        if (tipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) {
+            //Console.WriteLine($"Valida ClaveReferenciaTarjaSelected: {ClaveReferenciaTarjaSelected}");
+
+            if (!String.IsNullOrEmpty(ClaveReferenciaTarjaSelected)) {
+                //Console.WriteLine($"ClaveReferenciaTarjaSelected: {ClaveReferenciaTarjaSelected}");
+                _consultaRecepcion.Entidad.ClaveReferenciaTarja = ClaveReferenciaTarjaSelected;
+                _datosValidos = true;
+            }
+
+        } else if (tipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Partida)) {
+
+            if (!String.IsNullOrEmpty(IdMercanciaSelected)) {
+                _consultaRecepcion.Entidad.IdMercancia = IdMercanciaSelected;
+                _datosValidos = true;
+            }
+
+        }
+        
+        if (_datosValidos) {
+
+            InvokeAsync(async () =>
+            {
+                
+                try {
+
+                    var _result = await _recepcionService.ObtenerListaPaginada(_consultaRecepcion);
+
+                    if (_result.Success) {
+
+                        if (!_result.Data.Count.Equals(0)) {
+
+                            _listaMonitorRecepcionMercancia = _result.Data;
+
+                            var totalRegistros = _result.Paginado.TotalRegistros;
+
+                            await SaveStateRecepcionAsync();
+
+                            var _monitorRecepcion = new MonitorRecepcionMercancia();
+
+                            _monitorRecepcion = _listaMonitorRecepcionMercancia.Take(1).SingleOrDefault();
+
+                            _recepcionMercanciaDTO = new RecepcionMercanciaDTO();
+
+                            if (tipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Tarja)) {
+
+                                _recepcionMercanciaDTO.FolioTarja = _monitorRecepcion.FolioTarja;
+
+                                _recepcionMercanciaDTO.ClaveReferenciaTarja = _monitorRecepcion.ClaveReferenciaTarja;
+
+                                _recepcionMercanciaDTO.IdTarja = _monitorRecepcion.IdTarja;
+
+                            } else if (tipoBusquedaRecepcion.Equals(TipoBusquedaRecepcion.Partida)) {
+
+                                _recepcionMercanciaDTO.IdMercancia = _monitorRecepcion.IdMercancia;
+
+                                _recepcionMercanciaDTO.IdInventario = _monitorRecepcion.IdInventario;
+
+                            }
+
+                            _recepcionMercanciaDTO.TipoBusquedaRecepcion = tipoBusquedaRecepcion;
+
+                            string _monitorRecepcionMercanciaDTO = JsonSerializer.Serialize(_recepcionMercanciaDTO);
+
+                            byte[] binaryData = System.Text.Encoding.UTF8.GetBytes(_monitorRecepcionMercanciaDTO);
+                            string base64EncodedData = Convert.ToBase64String(binaryData);
+
+                            navigationManager.NavigateTo($"/recepcion-consulta/{base64EncodedData}");
+
+                        } else {
+
+                            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "No se encontró el dato solicitado.", Duration = 4000 });
+
+                        }
+
+                    } else {
+
+                        ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "No se encontró el dato solicitado.", Duration = 4000 });
+
+                    } 
+
+                } catch(Exception ex) {
+
+                    ////Console.WriteLine($"Error: {ex.Message}");
+
+                    BusyDialogService.Close();
+
+                } finally {
+
+                }
+
+                BusyDialogService.Close();
+
+                await InvokeAsync(StateHasChanged);
+
+            });
+
+            await BusyDialog("Buscando Información...");
+        
+        } else {
+
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Recepción", Detail = "Favor de introducir los datos solicitados", Duration = 4000 });
+        }  
+
+    }
+
+    private void OnClickNavigationManager(string route) {
+
+        navigationManager.NavigateTo($"/{route}");
+
+    }
+
+    void ShowNotification(NotificationMessage message)
+    {
+        NotificationService.Notify(message);
+        
+    }
+
+    private async Task LoadStateAsync()
+    {
+        await Task.CompletedTask;
+
+        var result = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "MonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(result))
+        {
+            _monitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<MonitorRecepcionMercancia>(result);
+        }
+
+    }
+
+    private async Task LoadStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        var resultListRecepcion = await JSRuntime.InvokeAsync<string>("window.localStorage.getItem", "ListaMonitorRecepcionMercancia");
+        if (!string.IsNullOrEmpty(resultListRecepcion))
+        {
+            _listaMonitorRecepcionMercancia = System.Text.Json.JsonSerializer.Deserialize<List<MonitorRecepcionMercancia>>(resultListRecepcion);
+        }
+    }
+
+    private async Task SaveStateAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "MonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<MonitorRecepcionMercancia>(_monitorRecepcionMercancia));
+    }
+
+    private async Task SaveStateRecepcionAsync()
+    {
+        await Task.CompletedTask;
+
+        await JSRuntime.InvokeVoidAsync("window.localStorage.setItem", "ListaMonitorRecepcionMercancia", System.Text.Json.JsonSerializer.Serialize<List<MonitorRecepcionMercancia>>(_listaMonitorRecepcionMercancia));
+    }
+
+    protected async Task OnInputKeyPressedTarja(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter")
+        {
+            ////Console.WriteLine("-> OnInputKeyPressedTarja args : " + System.Text.Json.JsonSerializer.Serialize(args));
+            OnBuscarTarjaPartida(TipoBusquedaRecepcion.Tarja);
+        }
+    }
+
+    async Task BusyDialog(string message)
+    {
+        await BusyDialogService.OpenAsync("", ds =>
+        {
+            RenderFragment content = b =>
+            {
+                b.OpenElement(0, "RadzenRow");
+
+                b.OpenElement(1, "RadzenColumn");
+                b.AddAttribute(2, "Size", "12");
+
+                b.AddContent(3, message);
+
+                b.CloseElement();
+                b.CloseElement();
+            };
+            return content;
+        }, new DialogOptions() { ShowTitle = false, Style = "min-height:auto;min-width:auto;width:auto", CloseDialogOnEsc = false });
+    }
+
+
+}

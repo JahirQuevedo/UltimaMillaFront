@@ -1,0 +1,68 @@
+﻿@using Radzen
+@using Radzen.Blazor
+@using Microsoft.AspNetCore.Components.Web
+
+<style>
+    .documento-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: #fafafa;
+    }
+
+    .documento-info {
+        flex: 1;
+        min-width: 200px;
+        font-size: 13px;
+        color: #555;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
+
+<div style="padding:15px">
+    @foreach (var item in Documentos)
+    {
+        <div class="documento-item">
+            <!-- Dropdown para seleccionar tipo de documento -->
+            <RadzenDropDown Data="_listDocumentosFiltrado"
+                            TextProperty="Nombre"
+                            ValueProperty="Acronimo"
+                            @bind-Value="item.AcronimoDocumento"
+                            Placeholder="Seleccione tipo de documento"
+                            Style="flex:1; min-width:200px" />
+
+            <!-- Mostrar nombre del archivo cargado -->
+            <RadzenText class="documento-info">
+                @item.FileInfo?.Name (@(item.SizeFile / 1024) KB)
+            </RadzenText>
+
+            <!-- Botón eliminar documento -->
+            <RadzenButton Icon="close"
+                          ButtonStyle="ButtonStyle.Danger"
+                          Size="ButtonSize.Small"
+                          Style="border-radius:12px"
+                          Click="@(() => EliminarDocumento(item))" />
+        </div>
+    }
+
+    <!-- Botones de acción -->
+    <div style="margin-top:15px;">
+        <RadzenButton Icon="save"
+                      ButtonStyle="ButtonStyle.Success"
+                      Style="border-radius:12px; margin-right:10px"
+                      Click="@Guardar">
+            Confirmar
+        </RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Danger"
+                      Text="Cerrar"
+                      Style="border-radius:12px"
+                      Click="Cerrar" />
+    </div>
+</div>
