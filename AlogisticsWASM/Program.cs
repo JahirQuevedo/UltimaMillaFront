@@ -70,6 +70,7 @@ builder.Services.AddScoped<ICatPaisesService, CatPaisesService>();
 builder.Services.AddScoped<ICatPaisEstadosService, CatPaisEstadosService>();
 builder.Services.AddScoped<ICatPaisMunicipiosService, CatPaisMunicipiosService>();
 builder.Services.AddScoped<ISLODocumentosService, SLODocumentosService>();
+builder.Services.AddScoped<ISLOSolicitudesDetalleService, SLOSolicitudesDetalleService>();
 
 
 // WMS Alogistic

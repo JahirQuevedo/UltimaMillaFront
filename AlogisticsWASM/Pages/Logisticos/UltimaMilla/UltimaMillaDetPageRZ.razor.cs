@@ -20,8 +20,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] ICatTipoTransporteService TipoTransporteService { get; set; }
         [Inject] ICatMercanciasService MercanciasService { get; set; }
         [Inject] ICatClientesService ClientesService { get; set; }
-        [Inject] IUltimaMillaEncabezadoService UltimaMillaEncabezadoService { get; set; }
+        //[Inject] IUltimaMillaEncabezadoService UltimaMillaEncabezadoService { get; set; }
         [Inject] ISLOSolicitudesService SLOSolicitudesService { get; set; }
+        [Inject] ISLOSolicitudesDetalleService SLOSolicitudesDetalleService { get; set; }
         [Inject] ICatPatiosServices PatiosService { get; set; }
         [Inject] ICatTipoOperacionService TipoOperacionService { get; set; }
         [Inject] ICatClientesUbicacionesService CatClientesUbicacionesService { get; set; }
@@ -55,61 +56,51 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private ICollection<CatTipoEstados> lstCatEstados;
         private List<CatPaises> lstPaises;
         private List<CatPaisEstados> lstPaisEstados;
-        private List<CatPaisMunicipios> lstMunicipios;
+        private List<CatPaisMunicipios> lstMunicipios;        
 
         protected override async Task OnInitializedAsync()
         {
             if (Modo == "E")
             {
                 objSLOSolicitudes = Solicitud;
-                Items = new List<SLOSolicitudesDetalle>(objSLOSolicitudes.sloSOlicitudesDetalle);
+                //Items = new List<SLOSolicitudesDetalle>(objSLOSolicitudes.sloSOlicitudesDetalle);
+                Items = await SLOSolicitudesDetalleService.SLOSolicitudesDetalleObtener(objSLOSolicitudes.IdSLOSolicitud);
                 FechaSalida = (DateTime)objSLOSolicitudes.FechaPosicionamiento;
                 FechaEntrega = (DateTime)objSLOSolicitudes.FechaFin;
+
+                lstCatClientesUbicaciones = await CatClientesUbicacionesService.CatClientesUbicacionesListar();
+                lstCatEstados = await CatTipoEstadoService.GetTiposEstado();
+                lstPaises = await CatPaisesService.CatPaisesListar();
+                lstPaisEstados = await CatPaisEstadosService.CatPaisEstadosListar();
+                lstMunicipios = await catPaisMunicipiosService.CatPaisMunicipiosListar();
+                lstCatTipoCarga = await CatTipoCargaService.CatTipoCargaListar();                
+                lstCatTipoIMO = await CatTipoIMOService.GetCatTipoIMO();
+                //lstTipoTransporte = await TipoTransporteService.GetTipoTransporte();
+                lstCatTipoCarga = await CatTipoCargaService.CatTipoCargaListar();
+                lstCatMercancias = await MercanciasService.GetCatMercancias();                
+            }
+            if (Modo == "C")
+            {
+                
+                lstTipoTransporte = await TipoTransporteService.GetTipoTransporte();
+                lstCatMercancias =  await MercanciasService.GetCatMercancias();
+                lstClientes =  await ClientesService.GetClientes();
+                lstCatPatios =  await PatiosService.GetPatios();
+                lstCatTipoOperacion =  await TipoOperacionService.CatTipoOperacionListar();
+                lstCatClientesUbicaciones =  await CatClientesUbicacionesService.CatClientesUbicacionesListar();
+                lstCatTipoCarga = await CatTipoCargaService.CatTipoCargaListar();
+                lstCatTipoOperacionesComercio =  await CatOperacionesComercioService.GetCatTipoOperacionesComercio();
+                lstCatTipoIMO = await CatTipoIMOService.GetCatTipoIMO();
+                lstCatEstados =  await CatTipoEstadoService.GetTiposEstado();
+                lstPaises =  await CatPaisesService.CatPaisesListar();
+                lstPaisEstados =  await CatPaisEstadosService.CatPaisEstadosListar();
+                lstMunicipios =  await catPaisMunicipiosService.CatPaisMunicipiosListar();
+
             }
 
-            var tipoTransporteTask = TipoTransporteService.GetTipoTransporte();
-            var mercanciasTask = MercanciasService.GetCatMercancias();
-            var clientesTask = ClientesService.GetClientes();
-            var patiosTask = PatiosService.GetPatios();
-            var tipoOperacionTask = TipoOperacionService.CatTipoOperacionListar();
-            var clientesUbicacionesTask = CatClientesUbicacionesService.CatClientesUbicacionesListar();
-            var tipoCargaTask = CatTipoCargaService.CatTipoCargaListar();
-            var tipoOperacionComercioTask = CatOperacionesComercioService.GetCatTipoOperacionesComercio();
-            var tipoIMOTask = CatTipoIMOService.GetCatTipoIMO();
-            var tipoEstadosTask = CatTipoEstadoService.GetTiposEstado();
-            var tipoPaisesTask = CatPaisesService.CatPaisesListar();
-            var tipoPaisEstadoTask = CatPaisEstadosService.CatPaisEstadosListar();
-            var tipoMunicipiosTask = catPaisMunicipiosService.CatPaisMunicipiosListar();
 
 
-            await Task.WhenAll(
-           tipoTransporteTask,
-           mercanciasTask,
-           clientesTask,
-           patiosTask,
-           tipoOperacionTask,
-           clientesUbicacionesTask,
-           tipoCargaTask,
-           tipoOperacionComercioTask,
-           tipoEstadosTask,
-           tipoPaisesTask,
-           tipoPaisEstadoTask,
-           tipoMunicipiosTask
-       );
 
-            lstTipoTransporte = await tipoTransporteTask;
-            lstCatMercancias = await mercanciasTask;
-            lstClientes = await clientesTask;
-            lstCatPatios = await patiosTask;
-            lstCatTipoOperacion = await tipoOperacionTask;
-            lstCatClientesUbicaciones = await clientesUbicacionesTask;
-            lstCatTipoCarga = await tipoCargaTask;
-            lstCatTipoOperacionesComercio = await tipoOperacionComercioTask;
-            lstCatTipoIMO = await tipoIMOTask;
-            lstCatEstados = await tipoEstadosTask;
-            lstPaises = await tipoPaisesTask;
-            lstPaisEstados = await tipoPaisEstadoTask;
-            lstMunicipios = await tipoMunicipiosTask;
         }
 
 
@@ -131,7 +122,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 "PAL" => 2,
                 _ => 0
             };
-            
+            var seleccionado = selectedTabIndex;
         }
 
         //Grid SLOSolicitudesDetalle

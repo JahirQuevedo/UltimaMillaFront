@@ -181,9 +181,9 @@ namespace ALOGRepositorios.Services.Logisticos
                 });
 
                 using var content = new StringContent(jsonObject, Encoding.UTF8, "application/json");
-                var url = $"{Inicializar.UrlApiLogistico}SLOTorreControl/SolicitudesActualizar/{solicitud.IdSLOSolicitud}";
+                
 
-                var response = await _httpClient.PutAsync(url, content);
+                var response = await _httpClient.PutAsync($"{Inicializar.UrlApiLogistico}SLOTorreControl/SolicitudesActualizarSolicitud/{solicitud.IdSLOSolicitud}", content);
 
                 // Leer respuesta cruda siempre
                 var responseContent = await response.Content.ReadAsStringAsync();

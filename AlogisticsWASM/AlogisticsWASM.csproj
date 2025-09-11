@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
 	<PropertyGroup>
 		<TargetFramework>net8.0</TargetFramework>
@@ -96,10 +96,10 @@
 
 	<ItemGroup>
 	  <Reference Include="ALOG.Enums">
-	    <HintPath>..\..\ApiVacios\Dlls\ALOG.Enums.dll</HintPath>
+	    <HintPath>..\..\UltimaMillaBack\Dlls\ALOG.Enums.dll</HintPath>
 	  </Reference>
 	  <Reference Include="ALOG.Modelos">
-	    <HintPath>..\..\ApiVacios\Dlls\ALOG.Modelos.dll</HintPath>
+	    <HintPath>..\..\UltimaMillaBack\Dlls\ALOG.Modelos.dll</HintPath>
 	  </Reference>
 	</ItemGroup>
 

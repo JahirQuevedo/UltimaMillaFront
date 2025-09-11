@@ -29,10 +29,10 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <Reference Include="ALOG.Enums">
-	    <HintPath>..\..\ApiVacios\Dlls\ALOG.Enums.dll</HintPath>
+	    <HintPath>..\..\UltimaMillaBack\Dlls\ALOG.Enums.dll</HintPath>
 	  </Reference>
 	  <Reference Include="ALOG.Modelos">
-	    <HintPath>..\..\ApiVacios\Dlls\ALOG.Modelos.dll</HintPath>
+	    <HintPath>..\..\UltimaMillaBack\Dlls\ALOG.Modelos.dll</HintPath>
 	  </Reference>
 	</ItemGroup>
 
