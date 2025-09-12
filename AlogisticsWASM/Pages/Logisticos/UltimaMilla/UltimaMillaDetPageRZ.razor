@@ -426,191 +426,223 @@
         </RadzenColumn>
     </RadzenRow>
 </div>
-		<RadzenTabs Style="margin: 2rem;border-radius:12px;" @bind-SelectedIndex="selectedTabIndex">
-			<Tabs>
-				<RadzenTabsItem Text="Contenerizada" Disabled="@(acronimoTipoCargaSeleccionado != "CONT")">
-					<div @key="selectedTabIndex">
-					
-						<div>Contenido CONT</div>
-					</div>
-				</RadzenTabsItem>
-				<RadzenTabsItem Text="General" Disabled="@(acronimoTipoCargaSeleccionado != "GEN")">
-					<div @key="selectedTabIndex">
-					
-						<div>Contenido SUELTA</div>
-					</div>
-				</RadzenTabsItem>
-				<RadzenTabsItem Text="Paletizada" Disabled="@(acronimoTipoCargaSeleccionado != "PAL")">
-                    <div @key="selectedTabIndex">
-			
-                        <RadzenButton Icon="add_circle_outline"
-                                      Text="Agregar mercancia"
-                                      Click="@InsertarDetalle"
-                                      Style="margin-bottom:10px;border-radius:12px;"
-                                      ButtonType="ButtonType.Button" 
-                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)"/>
+        <RadzenTabs Style="margin: 2rem;border-radius:12px;" @bind-SelectedIndex="selectedTabIndex">
+            <Tabs>
+                @if (objSLOSolicitudes.IdCatTipoCarga == 0 || objSLOSolicitudes.IdCatTipoCarga == null)
+                {
+                    <RadzenTabsItem Text="Tipo de carga no seleccionado">
+                        <div style="padding: 20px; text-align: center;">
+                            <RadzenIcon Icon="info" Style="font-size: 40px; color: #007ACC;" />
+                            <h3>Seleccione un tipo de carga para continuar</h3>
+                            <p>Por favor, elija el tipo de mercancía que desea transportar. Esta información es necesaria para mostrar el proceso logístico correspondiente.</p>
+                        </div>
+                    </RadzenTabsItem>
+                }
+                else
+                {
+                    <RadzenTabsItem Text="Paletizada" Disabled="@(acronimoTipoCargaSeleccionado != "PAL")">
+                        <div @key="selectedTabIndex">
 
-                        @* Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" *@
+                            <RadzenButton Icon="add_circle_outline"
+                                          Text="Agregar mercancia"
+                                          Click="@InsertarDetalle"
+                                          Style="margin-bottom:10px;border-radius:12px;"
+                                          ButtonType="ButtonType.Button"
+                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
 
-                        <RadzenDataGrid @ref="gridSolicitudesDetalle"
-                                        Data="@Items"
-                                        TItem="SLOSolicitudesDetalle"
-                                        Editable="true"
-                                        EditMode="DataGridEditMode.Single"
-                                        AllowFiltering="false"
-                                        AllowPaging="false"
-                                        AllowSorting="false"
-                                        AllowColumnResize="true"
-                                        Style="border-radius:12px;">
+                            @* Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" *@
 
-                            <Columns>
-                                @* <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="N°" Width="30px">
-                                    <Template Context="item">
-                                        @(Items.IndexOf(item) >= 0 ? Items.IndexOf(item) + 1 : "-")
-                                    </Template>
-                                </RadzenDataGridColumn> *@
+                            <RadzenDataGrid @ref="gridSolicitudesDetalle"
+                                            Data="@Items"
+                                            TItem="SLOSolicitudesDetalle"
+                                            Editable="true"
+                                            EditMode="DataGridEditMode.Single"
+                                            AllowFiltering="false"
+                                            AllowPaging="false"
+                                            AllowSorting="false"
+                                            AllowColumnResize="true"
+                                            Style="border-radius:12px;">
 
-                                <!-- Columna Mercancía Peligrosa -->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="MciaPeligrosa" Width="40px">
-                                    <HeaderTemplate>
-                                        <span title="Mercancía Peligrosa">M.P.</span>
-                                    </HeaderTemplate>
-                                    <Template Context="item">
-                                        <RadzenCheckBox Value="item.MciaPeligrosa" Disabled />
-                                    </Template>
-                                    <EditTemplate Context="item">
-                                        <RadzenCheckBox @bind-Value="item.MciaPeligrosa" />
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
+                                <Columns>
+                                    @* <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="N°" Width="30px">
+                            <Template Context="item">
+                                @(Items.IndexOf(item) >= 0 ? Items.IndexOf(item) + 1 : "-")
+                            </Template>
+                        </RadzenDataGridColumn> *@
 
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="Manejo Carga Peligrosa">
-                                    <!-- Modo solo lectura -->
-                                    <Template Context="item">
-                                        @if (item.MciaPeligrosa && item.IdCatTipoImo != null)
-                                        {
-                                            var tipoIMO = lstCatTipoIMO.FirstOrDefault(x => x.IdCatTipoIMO == item.IdCatTipoImo);
-                                            <span>@(tipoIMO?.Nombre ?? "No definido")</span>
-                                        }
-                                        else
-                                        {
-                                            <span style="color: #999;">No aplica</span>
-                                        }
-                                    </Template>
+                                    <!-- Columna Mercancía Peligrosa -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="MciaPeligrosa" Width="40px">
+                                        <HeaderTemplate>
+                                            <span title="Mercancía Peligrosa">M.P.</span>
+                                        </HeaderTemplate>
+                                        <Template Context="item">
+                                            <RadzenCheckBox Value="item.MciaPeligrosa" Disabled />
+                                        </Template>
+                                        <EditTemplate Context="item">
+                                            <RadzenCheckBox @bind-Value="item.MciaPeligrosa" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
-                                    <!-- Modo edición -->
-                                    <EditTemplate Context="item">
-                                        @if (item.MciaPeligrosa)
-                                        {
-                                            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                                                <RadzenDropDown Data="@lstCatTipoIMO"
-                                                                @bind-Value="item.IdCatTipoImo"
-                                                                TextProperty="Nombre"
-                                                                ValueProperty="IdCatTipoIMO"
-                                                                Placeholder="Selecciona tipo IMO"
-                                                                Style="width:100%; border-radius: 12px;" />
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            <span style="color: #999;">No aplica</span>
-                                        }
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="Manejo Carga Peligrosa">
+                                        <!-- Modo solo lectura -->
+                                        <Template Context="item">
+                                            @if (item.MciaPeligrosa && item.IdCatTipoImo != null)
+                                            {
+                                                var tipoIMO = lstCatTipoIMO.FirstOrDefault(x => x.IdCatTipoIMO == item.IdCatTipoImo);
+                                                <span>@(tipoIMO?.Nombre ?? "No definido")</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="color: #999;">No aplica</span>
+                                            }
+                                        </Template>
 
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="NoParte" Title="NoParte">
-                                    <EditTemplate Context="item">
-                                        <RadzenTextBox @bind-Value="item.NoParte"
-                                                       Style="width:100%; border-radius:12px;"
-                                        />
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
+                                        <!-- Modo edición -->
+                                        <EditTemplate Context="item">
+                                            @if (item.MciaPeligrosa)
+                                            {
+                                                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                                    <RadzenDropDown Data="@lstCatTipoIMO"
+                                                                    @bind-Value="item.IdCatTipoImo"
+                                                                    TextProperty="Nombre"
+                                                                    ValueProperty="IdCatTipoIMO"
+                                                                    Placeholder="Selecciona tipo IMO"
+                                                                    Style="width:100%; border-radius: 12px;" />
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span style="color: #999;">No aplica</span>
+                                            }
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
-                                <!-- Columna Cantidad -->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Cantidad" Title="Cantidad Pallets">
-                                    <EditTemplate Context="item">
-                                        <RadzenNumeric TValue="int?" @bind-Value="item.Cantidad"
-                                                       Style="width:100%; border-radius:12px;"
-                                                       Min="0" ShowUpDown="false" />
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
-                            
-                                <!-- Columna Piezas -->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Piezas" Title="Cantidad de Piezas">
-                                    <EditTemplate Context="item">
-                                        <RadzenNumeric TValue="int?" @bind-Value="item.Piezas"
-                                                       Style="width:100%; border-radius:12px;"
-                                                       Min="0" ShowUpDown="false" />
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="NoParte" Title="NoParte">
+                                        <EditTemplate Context="item">
+                                            <RadzenTextBox @bind-Value="item.NoParte"
+                                                           Style="width:100%; border-radius:12px;" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
-                                <!-- Columna Peso -->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Peso" Title="Peso">
-                                    <EditTemplate Context="item">
-                                        <RadzenNumeric TValue="decimal?" @bind-Value="item.Peso"
-                                                       Style="width:100%;border-radius:12px;"
-                                                       Min="0" ShowUpDown="false"/>
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
-                            
-                                <!--Columna Tipo Embalaje-->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Volumen" Title="Volumen">
-                                    <EditTemplate Context="item">
-                                        <RadzenNumeric TValue="decimal?" @bind-Value="item.Volumen"
-                                                       Style="width:100%;border-radius:12px;"
-                                                       Min="0" ShowUpDown="false"/>
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
-                                <!-- Columna Tipo de Mercancía -->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="IdCatMercancia" Title="Tipo de mercancia">
-                                    <!-- Modo lectura -->
-                                    <Template Context="item">
-                                        @lstCatMercancias.FirstOrDefault(m => m.IdCatMercancia == item.IdCatMercancia)?.Nombre
-                                    </Template>
+                                    <!-- Columna Cantidad -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Cantidad" Title="Cantidad Pallets">
+                                        <EditTemplate Context="item">
+                                            <RadzenNumeric TValue="int?" @bind-Value="item.Cantidad"
+                                                           Style="width:100%; border-radius:12px;"
+                                                           Min="0" ShowUpDown="false" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
-                                    <!-- Modo edición -->
-                                    <EditTemplate Context="item">
-                                        <RadzenDropDown Placeholder="Mercancia"
-                                                        Data="@lstCatMercancias"
-                                                        @bind-Value="item.IdCatMercancia"
-                                                        TextProperty="Nombre"
-                                                        ValueProperty="IdCatMercancia"
-                                                        Style="border-radius:12px;" 
-                                                        Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
+                                    <!-- Columna Piezas -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Piezas" Title="Cantidad de Piezas">
+                                        <EditTemplate Context="item">
+                                            <RadzenNumeric TValue="int?" @bind-Value="item.Piezas"
+                                                           Style="width:100%; border-radius:12px;"
+                                                           Min="0" ShowUpDown="false" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
+                                    <!-- Columna Peso -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Peso" Title="Peso">
+                                        <EditTemplate Context="item">
+                                            <RadzenNumeric TValue="decimal?" @bind-Value="item.Peso"
+                                                           Style="width:100%;border-radius:12px;"
+                                                           Min="0" ShowUpDown="false" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
-                                <!-- Columna Acciones -->
-                                <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Context="item" Width="80px" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)">
-                                    <Template Context="item">
-                                        <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditarDetalle(item))" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
-                                        <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
-                                                      Click="@(() => EliminarDetalle(item))" 
-                                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
-                                    </Template>
-                                    <EditTemplate Context="item">
-                                        <RadzenButton Icon="save" Size="ButtonSize.Small" ButtonType="ButtonType.Submit"
-                                                      Click="@(async () => { await AgregarDetalle(item); await gridSolicitudesDetalle.UpdateRow(item); })"
-                                                      Disabled="@(!gridSolicitudesDetalle.IsValid)" />
-                                        <RadzenButton Icon="cancel" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
-                                                      Click="@(() => CancelarEdicion(item))" 
-                                                      Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
-                                    </EditTemplate>
-                                </RadzenDataGridColumn>
-                            </Columns>
-                        </RadzenDataGrid>
+                                    <!--Columna Tipo Embalaje-->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Volumen" Title="Volumen">
+                                        <EditTemplate Context="item">
+                                            <RadzenNumeric TValue="decimal?" @bind-Value="item.Volumen"
+                                                           Style="width:100%;border-radius:12px;"
+                                                           Min="0" ShowUpDown="false" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
+                                    <!-- Columna Tipo de Mercancía -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="IdCatMercancia" Title="Tipo de mercancia">
+                                        <!-- Modo lectura -->
+                                        <Template Context="item">
+                                            @lstCatMercancias.FirstOrDefault(m => m.IdCatMercancia == item.IdCatMercancia)?.Nombre
+                                        </Template>
+
+                                        <!-- Modo edición -->
+                                        <EditTemplate Context="item">
+                                            <RadzenDropDown Placeholder="Mercancia"
+                                                            Data="@lstCatMercancias"
+                                                            @bind-Value="item.IdCatMercancia"
+                                                            TextProperty="Nombre"
+                                                            ValueProperty="IdCatMercancia"
+                                                            Style="border-radius:12px;"
+                                                            Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
 
 
-                        <!-- Botón para guardar todos los detalles -->
-                        @* <div style="margin-top: 20px; text-align: right;">
-						<RadzenButton Text="Guardar Todo" Click="@GuardarTodosDetalles" ButtonStyle="ButtonStyle.Success" />
-					</div> *@
-                    </div>
+                                    <!-- Columna Acciones -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Context="item" Width="80px" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)">
+                                        <Template Context="item">
+                                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditarDetalle(item))" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                            <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
+                                                          Click="@(() => EliminarDetalle(item))"
+                                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                        </Template>
+                                        <EditTemplate Context="item">
+                                            <RadzenButton Icon="save" Size="ButtonSize.Small" ButtonType="ButtonType.Submit"
+                                                          Click="@(async () => { await AgregarDetalle(item); await gridSolicitudesDetalle.UpdateRow(item); })"
+                                                          Disabled="@(!gridSolicitudesDetalle.IsValid)" />
+                                            <RadzenButton Icon="cancel" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
+                                                          Click="@(() => CancelarEdicion(item))"
+                                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
+                                </Columns>
+                            </RadzenDataGrid>
 
-				</RadzenTabsItem>
-			</Tabs>
-		</RadzenTabs>
-        
+
+                            <!-- Botón para guardar todos los detalles -->
+                            @* <div style="margin-top: 20px; text-align: right;">
+				<RadzenButton Text="Guardar Todo" Click="@GuardarTodosDetalles" ButtonStyle="ButtonStyle.Success" />
+			</div> *@
+                        </div>
+
+                    </RadzenTabsItem>
+
+                    <RadzenTabsItem Text="Contenerizada" Disabled="@(acronimoTipoCargaSeleccionado != "CONT")">
+                        <div @key="selectedTabIndex">
+
+                            <div style="padding: 20px; text-align: center;">
+                                <RadzenIcon Icon="build" Style="font-size: 40px; color: #007ACC;" />
+                                <h3>Estamos trabajando en esta sección 🚧</h3>
+                                <p>La funcionalidad para este tipo de carga está en desarrollo y será integrada próximamente.</p>
+                                <p>Gracias por tu paciencia mientras seguimos mejorando el servicio logístico.</p>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="General" Disabled="@(acronimoTipoCargaSeleccionado != "GEN")">
+                        <div @key="selectedTabIndex">
+
+                            <div style="padding: 20px; text-align: center;">
+                                <RadzenIcon Icon="build" Style="font-size: 40px; color: #007ACC;" />
+                                <h3>Estamos trabajando en esta sección 🚧</h3>
+                                <p>La funcionalidad para este tipo de carga está en desarrollo y será integrada próximamente.</p>
+                                <p>Gracias por tu paciencia mientras seguimos mejorando el servicio logístico.</p>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+
+                    <RadzenTabsItem Text="En desarrollo" Disabled="@(!(acronimoTipoCargaSeleccionado != "GEN") || !(acronimoTipoCargaSeleccionado != "CONT") || !(acronimoTipoCargaSeleccionado != "PAL"))">
+                        <div style="padding: 20px; text-align: center;">
+                            <RadzenIcon Icon="build" Style="font-size: 40px; color: #007ACC;" />
+                            <h3>Estamos trabajando en esta sección 🚧</h3>
+                            <p>La funcionalidad para este tipo de carga está en desarrollo y será integrada próximamente.</p>
+                            <p>Gracias por tu paciencia mientras seguimos mejorando el servicio logístico.</p>
+                        </div>
+                    </RadzenTabsItem>
+                }
+                
+            </Tabs>
+        </RadzenTabs>
 
 <!-- Botones arriba a la derecha -->
 <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin:0.5rem 2.5rem 1rem 0;">

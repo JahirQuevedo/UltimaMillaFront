@@ -117,10 +117,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             // Asigna el índice según el acrónimo
             selectedTabIndex = acronimo switch
             {
-                "CONT" => 0,
-                "GEN" => 1,
-                "PAL" => 2,
-                _ => 0
+                "PAL" => 0,
+                "CONT" => 1,
+                "GEN" => 2,
+                _ => 3
             };
             var seleccionado = selectedTabIndex;
         }
