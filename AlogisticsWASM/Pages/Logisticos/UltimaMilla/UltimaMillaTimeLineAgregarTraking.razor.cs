@@ -144,7 +144,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                         lstCargarArchivos.Add(new SLOCargarArchivo()
                         {
                             TipoDocumento = doc.AcronimoDocumento,
-                            Identificador = objTControlTerrestre.sloTransporteAsignado.Placas,
+                            //Identificador = objTControlTerrestre.sloTransporteAsignado.IdSLOTransporteAsignado.ToString(),
+                            Identificador = objTControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud.ToString(),
                             NombreArchivo = doc.FileInfo?.Name,
                             SizeFile = doc.FileInfo?.Size ?? 0,
                             ContentType = doc.FileInfo?.ContentType,

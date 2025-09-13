@@ -419,10 +419,12 @@ else if(cargando == false)
                     <RadzenDataGridColumn TItem="SLOSolicitudes" Property="Booking" Title="Booking" />
                     <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Mercancías">
                         <Template Context="data">
-                            @string.Join(", ", data.sloSOlicitudesDetalle?
+                            @* @string.Join(", ", data.sloSOlicitudesDetalle?
                                      .Where(d => d.Activo && d.catTipoMercancia != null)
                                      .Select(d => d.catTipoMercancia.Nombre)
-                                     ?? Enumerable.Empty<string>())
+                                     ?? Enumerable.Empty<string>()) *@
+                            @GetTiposMercancia(data.IdSLOSolicitud)
+                                      
                         </Template>
                     </RadzenDataGridColumn>
                     @* <RadzenDataGridColumn TItem="DtUltimaMillaEnc" Property="Cargamento" Title="Cargamento" /> *@

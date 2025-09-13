@@ -27,6 +27,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] ICatAduanaService CatAduanaService { get; set; }
         [Inject] ICatClientesService ClientesService { get; set; }
         [Inject] ISLOTControlTerrestreService SLOTControlTerrestreService { get; set; }
+        [Inject] ISLOSolicitudesDetalleService solicitudesDetalleService { get; set; }
         //[Inject] private IJSRuntime JSRuntime { get; set; }
 
         private int pageSize = 10; // Valor inicial
@@ -85,6 +86,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         public RadzenDataGrid<SLOSolicitudes> gridSolicitudes;
         private ICollection<CatClientes> lstCatClientes;
         private bool cargando = true;
+        private Dictionary<int, string> tiposMercanciaPorSolicitud = new();
         #endregion Variables
 
         #region Init
@@ -106,7 +108,19 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 //lstSLOSolicitudes = await _solicitudesService.GetSolicitudesListar();
                 //listadas = await _solicitudesService.GetSolicitudesListar();
 
-                //encabezados = await _encabezadoService.GetEncabezados(filtro);                        
+                //encabezados = await _encabezadoService.GetEncabezados(filtro);
+                
+                //Obtener Mercancía por Solicitud
+                foreach(var solicitud in lstSLOSolicitudes)
+                {
+                    List<SLOSolicitudesDetalle> mercancia = await solicitudesDetalleService.SLOSolicitudesDetalleObtener(solicitud.IdSLOSolicitud);
+
+                    var tipos = mercancia.Where(m => m.Activo && m.catTipoMercancia != null)
+                        .Select(m => m.catTipoMercancia.Nombre)
+                        .Distinct();
+
+                    tiposMercanciaPorSolicitud[solicitud.IdSLOSolicitud] = string.Join(", ", tipos);
+                }
             }
             finally
             {
@@ -121,6 +135,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         #region Modal
         async Task OpenModal(string modo, SLOSolicitudes? solicitud = null)
         {
+
             var parameters = new Dictionary<string, object>
     {
         { "Modo", modo },
@@ -333,5 +348,15 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             objFiltroSolicitudes = new FiltroSLOSolicitudes();
             await FiltrarDTO();
         }
+
+        private string GetTiposMercancia(int solicitudId)
+        {
+            if (tiposMercanciaPorSolicitud.TryGetValue(solicitudId, out var tipos))
+            {
+                return tipos;
+            }
+            return string.Empty;
+        }
+
     }
 }

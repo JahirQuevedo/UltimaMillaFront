@@ -6,6 +6,28 @@
 
 
 <style>
+
+    .ubicacion-grid-min {
+        display: grid;
+        grid-template-columns: 1fr 1fr; /* dos columnas */
+        gap: 0.5rem 1rem; /* espacio entre bloques */
+        font-size: 0.85rem; /* fuente más pequeña */
+    }
+
+        .ubicacion-grid-min div {
+            display: grid;
+            grid-template-columns: max-content 1fr; /* etiqueta + valor dentro del bloque */
+            column-gap: 0.5rem;
+            align-items: start;
+        }
+
+        .ubicacion-grid-min dt,
+        .ubicacion-grid-min dd {
+            margin: 0;
+            padding: 0;
+        }
+
+
 	:root {
 	--rz-grid-header-color: white;
 	--rz-grid-header-background-color: darkred;
@@ -199,7 +221,7 @@
                     }                
            
                 
-            @if (objSLOSolicitudes.IdCatUbicacionOrigen != 0)
+            @* @if (objSLOSolicitudes.IdCatUbicacionOrigen != 0)
             {
                 <RadzenAccordion>
                     <Items>
@@ -229,16 +251,86 @@
                             <div><strong>Fecha Posicionamiento:</strong></div>
                             <div>@objSLOSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy HH:mm")</div>
                         </div>
-                    </RadzenColumn> *@
+                    </RadzenColumn> 
                                 </RadzenRow>
                             </RadzenFieldset>
                         </RadzenAccordionItem>
                     </Items>
                 </RadzenAccordion>
-            }
+            } *@
+
+                    @if (objSLOSolicitudes.IdCatUbicacionOrigen != 0)
+                    {
+                        <RadzenAccordion Style="padding:0; margin-left:-3rem;">
+                            <Items>
+                                <RadzenAccordionItem Text="Lugar de Posicionamiento (Origen)"
+                                                     Selected="true"
+                                                     Style="padding:0;">
+                                    <div class="ubicacion-min">
+                                        <dl class="ubicacion-grid-min">
+                                            <div>
+                                                <dt>País:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.catPaises?.Nombre</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Estado:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.catPaisEstados?.Nombre</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Municipio:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.catPaisMunicipios?.Nombre</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Colonia:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.Colonia</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Calle:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.Calle</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>CP:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.CP</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>No. Exterior:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.NoExterior</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>No. Interior:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.NoInterior</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Contacto:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.Contacto</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Referencia:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.Referencia</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Nombre Lugar:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionOrigen?.NombreLugar</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                </RadzenAccordionItem>
+                            </Items>
+                        </RadzenAccordion>
+                    }
 
 
-            <!--Fecha Posicionamiento-->
+             <!--Fecha Posicionamiento-->
             <RadzenLabel Style="display:flex; margin:0.5rem;">Fecha de Posicionamiento</RadzenLabel>
             <RadzenDatePicker 
                 @bind-Value="FechaSalida"
@@ -369,41 +461,74 @@
                 }
                     @if (objSLOSolicitudes.IdCatUbicacionDestino != 0)
                     {
-                        <RadzenAccordion>
+                        <RadzenAccordion Style="padding:0; margin-left:-3rem;">
                             <Items>
-                                <RadzenAccordionItem Text="Lugar Destino" Selected="true">
-                                    <RadzenFieldset Style="width:80%; padding:0.5rem;">
-                                        <RadzenRow>
-                                            <!-- Bloque de información compacta -->
-                                            <RadzenColumn Size="6">
-                                                <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                                    <div><strong>País:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.catPaises?.Nombre</div>
-                                                    <div><strong>Estado:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.catPaisEstados?.Nombre</div>
-                                                    <div><strong>Municipio:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.catPaisMunicipios?.Nombre</div>
-                                                    <div><strong>Colonia:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Colonia</div>
-                                                    <div><strong>Calle:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Calle</div>
-                                                    <div><strong>No. Exterior:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.NoExterior</div>
-                                                    <div><strong>No. Interior:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.NoInterior</div>
-                                                    <div><strong>Nombre Lugar:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.NombreLugar</div>
-                                                    <div><strong>CP:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.CP</div>
-                                                    <div><strong>Contacto:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Contacto</div>
-                                                    <div><strong>Referencia:</strong> @objSLOSolicitudes.catClienteUbicacionDestino?.Referencia</div>
-                                                </RadzenStack>
-                                            </RadzenColumn>
+                                <RadzenAccordionItem Text="Lugar Destino"
+                                                     Selected="true"
+                                                     Style="padding:0;">
+                                    <div class="ubicacion-min">
+                                        <dl class="ubicacion-grid-min">
+                                            <div>
+                                                <dt>País:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.catPaises?.Nombre</dd>
+                                            </div>
 
-                                            <!-- Opcional: Fecha de Posicionamiento -->
-                                            @* <RadzenColumn Size="6">
-                        <div style="text-align:center;">
-                            <div><strong>Fecha Posicionamiento:</strong></div>
-                            <div>@objSLOSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy HH:mm")</div>
-                        </div>
-                    </RadzenColumn> *@
-                                        </RadzenRow>
-                                    </RadzenFieldset>
+                                            <div>
+                                                <dt>Estado:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.catPaisEstados?.Nombre</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Municipio:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.catPaisMunicipios?.Nombre</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Colonia:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.Colonia</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Calle:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.Calle</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>CP:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.CP</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>No. Exterior:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.NoExterior</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>No. Interior:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.NoInterior</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Contacto:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.Contacto</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Referencia:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.Referencia</dd>
+                                            </div>
+
+                                            <div>
+                                                <dt>Nombre Lugar:</dt>
+                                                <dd>@objSLOSolicitudes.catClienteUbicacionDestino?.NombreLugar</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
                                 </RadzenAccordionItem>
                             </Items>
                         </RadzenAccordion>
                     }
+
 
             <!--Fecha Entrega-->
             <RadzenLabel Style="display:flex; margin:0.5rem;">Fecha esperada de Entrega</RadzenLabel>
@@ -426,7 +551,7 @@
         </RadzenColumn>
     </RadzenRow>
 </div>
-        <RadzenTabs Style="margin: 2rem;border-radius:12px;" @bind-SelectedIndex="selectedTabIndex">
+        <RadzenTabs Style="margin: 2rem;border-radius:12px;margin-left: -1rem;margin-right: -1rem;" @bind-SelectedIndex="selectedTabIndex">
             <Tabs>
                 @if (objSLOSolicitudes.IdCatTipoCarga == 0 || objSLOSolicitudes.IdCatTipoCarga == null)
                 {
@@ -435,6 +560,41 @@
                             <RadzenIcon Icon="info" Style="font-size: 40px; color: #007ACC;" />
                             <h3>Seleccione un tipo de carga para continuar</h3>
                             <p>Por favor, elija el tipo de mercancía que desea transportar. Esta información es necesaria para mostrar el proceso logístico correspondiente.</p>
+                        </div>
+                    </RadzenTabsItem>
+                      <RadzenTabsItem Text="Paletizada" Disabled="true">
+                          
+                      </RadzenTabsItem>
+
+                    <RadzenTabsItem Text="Contenerizada" Disabled="true">
+                        <div @key="selectedTabIndex">
+
+                            <div style="padding: 20px; text-align: center;">
+                                <RadzenIcon Icon="build" Style="font-size: 40px; color: #007ACC;" />
+                                <h3>Estamos trabajando en esta sección 🚧</h3>
+                                <p>La funcionalidad para este tipo de carga está en desarrollo y será integrada próximamente.</p>
+                                <p>Gracias por tu paciencia mientras seguimos mejorando el servicio logístico.</p>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+                    <RadzenTabsItem Text="General" Disabled="true">
+                        <div @key="selectedTabIndex">
+
+                            <div style="padding: 20px; text-align: center;">
+                                <RadzenIcon Icon="build" Style="font-size: 40px; color: #007ACC;" />
+                                <h3>Estamos trabajando en esta sección 🚧</h3>
+                                <p>La funcionalidad para este tipo de carga está en desarrollo y será integrada próximamente.</p>
+                                <p>Gracias por tu paciencia mientras seguimos mejorando el servicio logístico.</p>
+                            </div>
+                        </div>
+                    </RadzenTabsItem>
+
+                    <RadzenTabsItem Text="En desarrollo" Disabled="true">
+                        <div style="padding: 20px; text-align: center;">
+                            <RadzenIcon Icon="build" Style="font-size: 40px; color: #007ACC;" />
+                            <h3>Estamos trabajando en esta sección 🚧</h3>
+                            <p>La funcionalidad para este tipo de carga está en desarrollo y será integrada próximamente.</p>
+                            <p>Gracias por tu paciencia mientras seguimos mejorando el servicio logístico.</p>
                         </div>
                     </RadzenTabsItem>
                 }
@@ -461,7 +621,7 @@
                                             AllowPaging="false"
                                             AllowSorting="false"
                                             AllowColumnResize="true"
-                                            Style="border-radius:12px;">
+                                            Style="border-radius:12px; margin-left: -1rem; margin-right: -1rem;">
 
                                 <Columns>
                                     @* <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="N°" Width="30px">
@@ -470,6 +630,24 @@
                             </Template>
                         </RadzenDataGridColumn> *@
 
+                                    <!-- Columna Tipo de Mercancía -->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="IdCatMercancia" Title="Tipo de mercancia">
+                                        <!-- Modo lectura -->
+                                        <Template Context="item">
+                                            @lstCatMercancias.FirstOrDefault(m => m.IdCatMercancia == item.IdCatMercancia)?.Nombre
+                                        </Template>
+
+                                        <!-- Modo edición -->
+                                        <EditTemplate Context="item">
+                                            <RadzenDropDown Placeholder="Mercancia"
+                                                            Data="@lstCatMercancias"
+                                                            @bind-Value="item.IdCatMercancia"
+                                                            TextProperty="Nombre"
+                                                            ValueProperty="IdCatMercancia"
+                                                            Style="border-radius:12px;width:120px; height:30px; font-size:15px; padding:2px 6px;"
+                                                            Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                        </EditTemplate>
+                                    </RadzenDataGridColumn>
                                     <!-- Columna Mercancía Peligrosa -->
                                     <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="MciaPeligrosa" Width="40px">
                                         <HeaderTemplate>
@@ -483,7 +661,7 @@
                                         </EditTemplate>
                                     </RadzenDataGridColumn>
 
-                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="Manejo Carga Peligrosa">
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Title="T. IMO">
                                         <!-- Modo solo lectura -->
                                         <Template Context="item">
                                             @if (item.MciaPeligrosa && item.IdCatTipoImo != null)
@@ -551,49 +729,30 @@
                                         </EditTemplate>
                                     </RadzenDataGridColumn>
 
-                                    <!--Columna Tipo Embalaje-->
-                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Volumen" Title="Volumen">
+                                    <!--Columna Tipo Volumen-->
+                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="Volumen" Title="Volumen m^3">
                                         <EditTemplate Context="item">
                                             <RadzenNumeric TValue="decimal?" @bind-Value="item.Volumen"
                                                            Style="width:100%;border-radius:12px;"
                                                            Min="0" ShowUpDown="false" />
                                         </EditTemplate>
-                                    </RadzenDataGridColumn>
-                                    <!-- Columna Tipo de Mercancía -->
-                                    <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Property="IdCatMercancia" Title="Tipo de mercancia">
-                                        <!-- Modo lectura -->
-                                        <Template Context="item">
-                                            @lstCatMercancias.FirstOrDefault(m => m.IdCatMercancia == item.IdCatMercancia)?.Nombre
-                                        </Template>
-
-                                        <!-- Modo edición -->
-                                        <EditTemplate Context="item">
-                                            <RadzenDropDown Placeholder="Mercancia"
-                                                            Data="@lstCatMercancias"
-                                                            @bind-Value="item.IdCatMercancia"
-                                                            TextProperty="Nombre"
-                                                            ValueProperty="IdCatMercancia"
-                                                            Style="border-radius:12px;"
-                                                            Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
-                                        </EditTemplate>
-                                    </RadzenDataGridColumn>
-
+                                    </RadzenDataGridColumn>                                    
 
                                     <!-- Columna Acciones -->
                                     <RadzenDataGridColumn TItem="SLOSolicitudesDetalle" Context="item" Width="80px" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)">
                                         <Template Context="item">
-                                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditarDetalle(item))" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                            <RadzenButton Icon="edit" Size="ButtonSize.Small" Click="@(() => EditarDetalle(item))" Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" Style="border-radius: 5px;"/>
                                             <RadzenButton Icon="delete" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Danger"
                                                           Click="@(() => EliminarDetalle(item))"
-                                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" Style="border-radius: 5px;" />
                                         </Template>
                                         <EditTemplate Context="item">
                                             <RadzenButton Icon="save" Size="ButtonSize.Small" ButtonType="ButtonType.Submit"
                                                           Click="@(async () => { await AgregarDetalle(item); await gridSolicitudesDetalle.UpdateRow(item); })"
-                                                          Disabled="@(!gridSolicitudesDetalle.IsValid)" />
+                                                          Disabled="@(!gridSolicitudesDetalle.IsValid)" Style="border-radius: 5px;" />
                                             <RadzenButton Icon="cancel" Size="ButtonSize.Small" ButtonStyle="ButtonStyle.Secondary"
                                                           Click="@(() => CancelarEdicion(item))"
-                                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
+                                                          Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" Style="border-radius: 5px;" />
                                         </EditTemplate>
                                     </RadzenDataGridColumn>
                                 </Columns>
