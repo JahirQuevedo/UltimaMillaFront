@@ -1,8 +1,9 @@
-﻿    @using ALOG.Modelos.Modelos.Logisticos
+﻿@using ALOG.Modelos.Modelos.Logisticos
 @using ALOGRepositorios.Services.Logisticos.ILogisticos
 @using System.Linq
 @using Radzen.Blazor 
 @using ALOG.Modelos.Modelos.Catalogos
+@using ALOGRepositorios.Services.Logisticos;
 
 @inject Radzen.DialogService DialogService
 @inject ISLOTControlTerrestreService servicioControl
@@ -463,12 +464,53 @@
                 <RadzenUpload @ref="uploadFiles"
                               ChooseText="Agregar documentos"
                               Multiple="true"
-                              Accept="application/pdf"
+                              
                               Auto="true"
                               Change="@OnUploadChange"
                               Style="width:40%;"
                               InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
-                              Disabled="true"/>   <!-- <‑‑ aquí -->
+                              Disabled="false"/>   <!-- <‑‑ aquí -->
+
+                @if (lstCargarArchivos != null && lstCargarArchivos.Any())
+                {
+                    <div class="card p-3 mb-4 shadow-sm" style="border-radius:12px;">
+                        <h6 style="font-weight:600; font-size:0.9rem; margin-bottom:0.75rem;">
+                            Archivos a cargar
+                        </h6>
+
+                        <RadzenDataGrid @ref="documentosGrid"
+                                        TItem="SLOCargarArchivo"
+                                        Data="@lstCargarArchivos"
+                                        ShowPagingSummary="false"
+                                        AllowSorting="false"
+                                        AllowFiltering="false"
+                                        Responsive="true"
+                                        AllowPaging="false"
+                                        Style="max-height:200px; overflow-y:auto; font-size:0.85rem; border-radius:8px;">
+                            <Columns>
+                                <RadzenDataGridColumn TItem="SLOCargarArchivo" Property="TipoDocumento" Title="Tipo" />
+                                <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Archivo">
+                                    <Template Context="doc">
+                                        @doc.NombreArchivo (@(doc.SizeFile / 1024) KB)
+                                    </Template>
+                                </RadzenDataGridColumn>
+                                <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Acciones" Width="80px">
+                                    <Template Context="doc">
+                                        <RadzenButton Icon="close"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      Size="ButtonSize.Small"
+                                                      Click="@(() => EliminarDocumento(doc))" />
+                                    </Template>
+                                </RadzenDataGridColumn>
+                            </Columns>
+                        </RadzenDataGrid>
+                        <RadzenStack Style="max-width: 100px; margin-top: 0.5rem;">
+                            <RadzenButton ButtonType="ButtonType.Button" ButtonStyle="ButtonStyle.Primary" Click="@(() => ProcesarDocumentosAsync())"
+                            Style="border-radius: 12px;"
+                            >Guardar</RadzenButton>
+                        </RadzenStack>                        
+                    </div>
+                }
 
                 @if (lstDocumentos == null)   @* lista aún no cargada → spinner *@
                 {

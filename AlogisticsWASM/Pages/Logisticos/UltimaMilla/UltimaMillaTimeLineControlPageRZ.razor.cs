@@ -530,48 +530,6 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         }
 
-        #endregion
-
-        #region CARD DERECHA
-
-        private void MostrarEventualidad(Evento evento)
-        {
-            if (evento.EsEventual)
-            {
-                eventualidadSeleccionada = evento;
-            }
-        }
-        private async Task AgregarTracking()
-        {
-            var response = await DialogService.OpenAsync<UltimaMillaTimeLineAgregarTraking>(
-                $"Registrar evento de tracking: {objTControlTerrestre.sloTransporteAsignado.Placas}",
-                new Dictionary<string, object>
-                {
-                    { "TControlTerrestre", objCotControlTerrestre },
-                    {"UsuarioDTO", UsuarioDTO},
-                    {"Booking", objTControlTerrestre.FConfirmaBooking}
-                },
-                new DialogOptions
-                {
-                    Width = "900px",
-                    Height = "600px",
-                    Draggable = true,
-                    Resizable = true,
-                    CloseDialogOnOverlayClick = false
-                }
-            );
-            if (response == true)
-            {
-                await ConstruirEventos();
-                lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
-                await gridArchivos.Reload();
-                StateHasChanged();
-            }
-        }
-        #endregion
-
-        #endregion
-
         private async Task AbrirDocumentoCont(SLOSolicitudesDocumentos doc)
         {
             var response = await Http.GetAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/obtenerArchivo/{doc.DocumentoUUID}");
@@ -653,7 +611,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 "Clasificar Documentos",
                 new Dictionary<string, object>() { { "Archivos", files }, { "Modo", "TIMELINE" } },
                 new DialogOptions()
-                    { Width = "40%", Height = "30%", Resizable = true, Draggable = true, ShowClose = false }
+                { Width = "40%", Height = "30%", Resizable = true, Draggable = true, ShowClose = false }
             );
 
             // Procesar resultados del modal
@@ -696,5 +654,139 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 await uploadFiles.ClearFiles();
             }
         }
+
+        private async Task EliminarDocumento(SLOCargarArchivo doc)
+        {
+            lstCargarArchivos.Remove(doc);
+            await documentosGrid.Reload();
+        }
+
+        //Guardar Documentos
+        private async Task ProcesarDocumentosAsync()
+        {
+            if (lstCargarArchivos == null || !lstCargarArchivos.Any())
+            {
+                await sweetAlertService.FireAsync("Validación", "No hay documentos para procesar.", SweetAlertIcon.Warning);
+                return;
+            }
+
+            int total = lstCargarArchivos.Count;
+            int procesados = 0;
+            bool todosCorrectos = true;
+
+            // 🔹 Mostrar modal inicial sin bloquear
+            //_ = SweetAlertService.FireAsync(new SweetAlertOptions
+            //{
+            //    Title = "Subiendo documentos...",
+            //    Text = $"0 de {total}",
+            //    Icon = SweetAlertIcon.Info,
+            //    AllowOutsideClick = false,
+            //    ShowConfirmButton = false
+            //});
+
+            //await Task.Yield(); // asegura que el modal se monte
+            //await SweetAlertService.ShowLoadingAsync();
+
+            foreach (var archiCarga in lstCargarArchivos)
+            {
+                try
+                {
+                    //archiCarga.IdOrden = objSolicitudes.IdOrden;
+                    //archiCarga.IdUsuario = UsuarioToken.IdCatUsuario;
+                    //archiCarga.Identificador = objSLOTransporteSolicitud.IdSLOTransporteSolicitud.ToString();
+                    archiCarga.IdOrden = objCotControlTerrestre.sloSolicitudes.IdOrden;
+                    archiCarga.IdUsuario = UsuarioDTO.IdCatUsuario;
+                    archiCarga.Identificador = objCotControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud.ToString();
+
+                    // 🔹 Actualizar progreso en el mismo modal
+                    //await SweetAlertService.UpdateAsync(new SweetAlertOptions
+                    //{
+                    //    Title = "Subiendo documentos...",
+                    //    Text = $"{procesados + 1} de {total}"
+                    //});
+
+                    bool respon = await sloDocumentosService.SLOUploadFile(archiCarga);
+
+                    if (!respon)
+                    {
+                        todosCorrectos = false;
+                        await sweetAlertService.CloseAsync();
+                        await sweetAlertService.FireAsync("Error", $"No se pudo cargar el archivo {archiCarga.NombreArchivo}.", SweetAlertIcon.Error);
+                        break; // detener en el primer error
+                    }
+                    else
+                    {
+                        todosCorrectos = true;
+                        await sweetAlertService.FireAsync("Exito", "Documentos agregados con exito.", SweetAlertIcon.Success);
+                        lstCargarArchivos = new List<SLOCargarArchivo>();
+                        lstDocumentos = await sloDocumentosService.sloGetFilesTask(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                        await gridArchivos.Reload();
+                        StateHasChanged();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    todosCorrectos = false;
+                    await sweetAlertService.CloseAsync();
+                    await sweetAlertService.FireAsync("Error", ex.Message, SweetAlertIcon.Error);
+                    break;
+                }
+
+                procesados++;
+            }
+
+            // 🔹 Al finalizar
+            await sweetAlertService.CloseAsync();
+
+            if (todosCorrectos)
+            {
+                //await SweetAlertService.FireAsync("Éxito", "Todos los documentos se cargaron correctamente.", SweetAlertIcon.Success);
+            }
+            else
+            {
+                await sweetAlertService.FireAsync("Proceso incompleto", "Algunos documentos no se pudieron cargar.", SweetAlertIcon.Warning);
+            }
+        }
+        #endregion
+
+        #region CARD DERECHA
+
+        private void MostrarEventualidad(Evento evento)
+        {
+            if (evento.EsEventual)
+            {
+                eventualidadSeleccionada = evento;
+            }
+        }
+        private async Task AgregarTracking()
+        {
+            var response = await DialogService.OpenAsync<UltimaMillaTimeLineAgregarTraking>(
+                $"Registrar evento de tracking: {objTControlTerrestre.sloTransporteAsignado.Placas}",
+                new Dictionary<string, object>
+                {
+                    { "TControlTerrestre", objCotControlTerrestre },
+                    {"UsuarioDTO", UsuarioDTO},
+                    {"Booking", objTControlTerrestre.FConfirmaBooking}
+                },
+                new DialogOptions
+                {
+                    Width = "900px",
+                    Height = "600px",
+                    Draggable = true,
+                    Resizable = true,
+                    CloseDialogOnOverlayClick = false
+                }
+            );
+            if (response == true)
+            {
+                await ConstruirEventos();
+                lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                await gridArchivos.Reload();
+                StateHasChanged();
+            }
+        }
+        #endregion
+
+        #endregion        
     }
 }
