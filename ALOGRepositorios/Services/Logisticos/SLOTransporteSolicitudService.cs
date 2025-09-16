@@ -45,6 +45,42 @@ namespace ALOGRepositorios.Services.Logisticos
             }
         }
 
+        public async Task<RespuestaGenericaDTO> SLOTransporteSolicitudFinalizar(int id)
+        {
+            RespuestaGenericaDTO respuestaGenericaDTO = new RespuestaGenericaDTO();
+
+            try
+            {
+                var emptyContent = new StringContent("", Encoding.UTF8, "application/json");
+                var response = await _httpClient.PatchAsync($"{ Inicializar.UrlApiLogistico}SLOTorreControl/FinalizarTransporteSolicitud/{id}",emptyContent);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    respuestaGenericaDTO.IsSuccess = true;
+                    respuestaGenericaDTO.strMensaje = $"Solicitud de Transporte {id} finalizada correctamente";
+                    return respuestaGenericaDTO;
+                }
+                else
+                {
+                    respuestaGenericaDTO.IsSuccess = false;
+                    respuestaGenericaDTO.lstrErrorMessages = new List<string>
+                    {
+                        $"Error al finalizar solicitud de transporte. {response.ReasonPhrase}"
+                    };
+                    return respuestaGenericaDTO;
+                }
+            } catch(Exception ex)
+            {
+                respuestaGenericaDTO.IsSuccess = false;
+                respuestaGenericaDTO.lstrErrorMessages = new List<string>
+                {
+                    $"Error al Finalizar Solicitud de Transporte {ex.Message}"
+                };
+
+                return respuestaGenericaDTO;
+            }
+        }
+
         public Task<RespuestaGenericaDTO> SLOTransporteSolicitudListar()
         {
             throw new NotImplementedException();

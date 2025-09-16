@@ -284,6 +284,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     Draggable = true,
                     Resizable = true
                 });
+
+               
+                    await CargaDatos(); // Recarga el grid
+                    await gridSolicitudes.Reload();
+                
             }
             else
             {

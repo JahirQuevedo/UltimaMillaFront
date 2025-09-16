@@ -7,5 +7,6 @@ namespace ALOGRepositorios.Services.Logisticos.ILogisticos
     {
         Task<RespuestaGenericaDTO> SLOTransporteSolicitudListar();
         Task<RespuestaGenericaDTO> SLOTransporteSolicitudCrear(SLOTransporteSolicitud transporteSolicitud);
+        Task<RespuestaGenericaDTO> SLOTransporteSolicitudFinalizar(int id);
     }
 }

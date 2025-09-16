@@ -1,6 +1,8 @@
-﻿using ALOG.Modelos.Modelos.DTO.Respuestas;
+﻿using ALOG.Modelos.Modelos.Catalogos;
+using ALOG.Modelos.Modelos.DTO.Respuestas;
 using ALOG.Modelos.Modelos.Logisticos;
 using ALOG.Modelos.Modelos.Vacios;
+using ALOGRepositorios.Services.Catalogos.ICatalogos;
 using ALOGRepositorios.Services.Login.ILogin;
 using ALOGRepositorios.Services.Logisticos;
 using ALOGRepositorios.Services.Logisticos.ILogisticos;
@@ -11,6 +13,8 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using static AlogisticsWASM.Pages.Vacios.Solicitudes.SolicitudesCRUDCMP;
 using static System.Net.WebRequestMethods;
 using static System.Runtime.InteropServices.JavaScript.JSType;
@@ -31,6 +35,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] private ISLOSolicitudesService SLOSolicitudesService { get; set; }
         [Inject] private ISLOTransporteSolicitudService SLOTransporteSolicitudService { get; set; }
         [Inject] private ILoginService _loginService { get; set; }
+        [Inject] private ICatTipoEstadoService tipoEstadoService { get; set; }
         [Inject] private NotificationService notificationService { get; set; }
         [Inject] private ISLODocumentosService sloDocumentosService { get; set; }
         [Inject] private IJSRuntime JS { get; set; }
@@ -81,6 +86,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private List<SLOTransporteDetalle> lstDetallesAsignados = new List<SLOTransporteDetalle>();
         private List<SLOTransportesCron> lstTransportesCrons = new List<SLOTransportesCron>();
         private List<TimelineEvent> lstEventos = new();
+        private ICollection<CatTipoEstados> lstTipoEstados;
         private Orientation orientation = Orientation.Vertical;
         private LinePosition position = LinePosition.Center;
         private bool reverse;
@@ -95,11 +101,13 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private RadzenUpload uploadFiles;
         private List<SLOCargarArchivo> lstCargarArchivos = new List<SLOCargarArchivo>();
         private RadzenDataGrid<SLOCargarArchivo> documentosGrid;
-        
+
+        private int idCatEstadoTerminado;
+        private int? idEstadoActual;
         #endregion
 
         #region INICIALIZAR
-        protected override void OnInitialized()
+        protected override async Task OnInitializedAsync()
         {
 
             InicializarCards();
@@ -108,6 +116,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             {
                 selectedCardId = cards[0].Id;
             }
+
+            lstTipoEstados = await tipoEstadoService.GetTiposEstado();
             
         }
 
@@ -130,12 +140,19 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         #region CARD IZQUIERDA
         private async Task BotonClickeado(SLOTControlTerrestre item)
         {
+
+            idCatEstadoTerminado = lstTipoEstados
+            .Where(d => d.TipoEstado == "T")
+            .Select(d => d.IdCatTipoEstados)
+            .FirstOrDefault();
+            
             Console.WriteLine($"Botón clickeado para placa: {item.sloTransporteAsignado}");
             objCotControlTerrestre = item;
             try
             {
                 if (objCotControlTerrestre != null)
                 {
+                                        
 
                     objTControlTerrestreModificable = new()
                     {
@@ -167,6 +184,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     await ConstruirEventos(); // Separa la lógica en un método
                     InvokeAsync(StateHasChanged); // Fuerza la actualización del UI
                     //await gridDocumentos.Reload();
+                    idEstadoActual = objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados;
                 }
             }
             catch (Exception ex)
@@ -485,14 +503,59 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             List<string> Validaciones = new();
             Validaciones = (List<string>)ValidateControlTerrestre();
 
-            if (objCotControlTerrestre.FConfirmaBooking == null)
+            // Validaciones de campos de fecha
+            if (objTControlTerrestre.FConfirmaBooking == null)
                 Validaciones.Add("No se ha establecido una fecha de <strong>Confirmación de Booking</strong>");
 
-            if (objCotControlTerrestre.FFinOperacion == null)
-                Validaciones.Add("Establecer fecha <strong>Fin de la operación</strong>");
+            if (objTControlTerrestre.FFinDespachoAA == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Fin de proceso de despacho aduanal</strong>");
 
-            //if(validar que exista POD cargado);
-            //Validaciones.Add("Para finalizar la operación es necesario subir <strong>Prueba de Entrega</strong>");
+            if (objTControlTerrestre.FUnidensitiocarga == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Sitio de Carga</strong>");
+
+            if (objTControlTerrestre.FIniciaTransitoEXPO == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado estadounidense)</strong>");
+
+            if (objTControlTerrestre.FUnidadencarga == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Proceso de Carga</strong>");
+
+            if (objTControlTerrestre.FPuntoDescarga == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en punto de descarga</strong>");
+
+            if (objTControlTerrestre.FFinalizaCarga == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de Carga</strong>");
+
+            if (objTControlTerrestre.FEnProcesoDescarga == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en proceso de descarga</strong>");
+
+            if (objTControlTerrestre.FIniciaTransito == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado mexicano)</strong>");
+
+            if (objTControlTerrestre.FFinDescarga == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de descarga</strong>");
+
+            if (objTControlTerrestre.FEnFrontera == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en frontera mexicana para exportación</strong>");
+
+            if (objTControlTerrestre.FRecepcionPOD == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Prueba de entrega</strong>");
+
+            if (objTControlTerrestreModificable.FInicioDespachoAA == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Inicio de proceso de despacho aduanal</strong>");
+
+            if (objTControlTerrestre.FFinOperacion == null)
+                Validaciones.Add("No se ha establecido una fecha de <strong>Fin de la operación</strong>");
+
+            var idPOD = lstDocumentos
+            .Where(d => d.catDocumentos.Acronimo == "POD")
+            .Select(d => d.catDocumentos.IdCatDocumento)
+            .FirstOrDefault();
+
+            if (!lstDocumentos.Any(d => d.IdCatDocumento == idPOD))
+            {
+                Validaciones.Add("Para finalizar la operación es necesario subir <strong>Prueba de Entrega</strong>");
+            }
+
 
 
             if (Validaciones.Any())
@@ -519,11 +582,16 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
             if (decision)
             {
-                RespuestaGenericaDTO response = await sloTorreControlTerrestreService.ActualizarTControlTerrestre(objTControlTerrestre);
-                
+                RespuestaGenericaDTO response = await SLOTransporteSolicitudService.SLOTransporteSolicitudFinalizar(objCotControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
+
+
                 if (response.IsSuccess)
                 {
-                    //SLOSolicitudesService.ActualizarSolicitudSLO();
+                    await sweetAlertService.FireAsync("Solicitud Finalizada", "La Solicitud de Transporte ha sido finalizada correctamente", SweetAlertIcon.Success);
+
+                    int idSolicitud = objCotControlTerrestre.IdSLOSolicitud;
+                    dialogService.Close(true);
+                                        
                 }
 
             }

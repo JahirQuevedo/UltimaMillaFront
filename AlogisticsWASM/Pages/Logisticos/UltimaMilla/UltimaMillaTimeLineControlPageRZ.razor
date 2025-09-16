@@ -90,7 +90,83 @@
     /* .timeline-item-eventual .rz-timeline-point {
         display: none !important;
     } */ 
+    /* ------------- “Chips” de Estado ------------- */
+    .status-chip {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        text-align: center;
+        min-width: 64px;
+    }
 
+    /* ABIERTO */
+    .status-1 {
+        background-color: #000000; /* negro */
+        color: white;
+    }
+
+    /* EN PROCESO */
+    .status-2 {
+        background-color: #ffb425; /* naranja */
+        color: black;
+    }
+
+    /* TERMINADO */
+    .status-3 {
+        background-color: #4caf50; /* verde */
+        color: white;
+    }
+
+    /* CANCELADO */
+    .status-4 {
+        background-color: #f44336; /* rojo */
+        color: white;
+    }
+
+    /* PENDIENTE */
+    .status-5 {
+        background-color: #9e9e9e; /* gris medio */
+        color: white;
+    }
+
+
+    .chips-container {
+        display: flex;
+        gap: 0.25rem; /* Reducido para que estén casi pegadas */
+        justify-content: flex-end;
+        /* min-height: 50px; */
+        /* margin-bottom: 0.5rem;
+            padding-right: 1rem; */
+    }
+
+    .estado-chip {
+        background-color: gray;
+        padding: 0 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        color: white;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        justify-content: space-between; /* separa texto y número */
+        min-width: 120px;
+        height: 40px;
+        border-radius: 4px;
+        gap: 8px;
+    }
+
+        .estado-chip .notificacion {
+            background-color: red;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 50px; /* se adapta mejor a números largos */
+            line-height: 1;
+            min-width: 24px;
+            text-align: center;
+        }
 </style>
 
 @* <strong>Usuario: @UsuarioDTO.Nombre</strong> *@
@@ -214,7 +290,7 @@
         </RadzenColumn>
 
         <!-- Timeline Central -->
-        <RadzenColumn Size="4">
+        <RadzenColumn Size="5">
         <RadzenCard Style="border-radius: 12px; margin-bottom: 0.5rem; position: relative;">
         <div class="modal-header" style="background-color: darkred; padding: 0.5rem;">
             @* <RadzenText Style="color: white;">Solicitud de Transporte: @if(objTControlTerrestre != null){@objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO}</RadzenText> *@
@@ -235,7 +311,8 @@
 
         @if (objTControlTerrestre.IdSLOTransporteAsignado != null)
         {
-            <RadzenFieldset>
+
+            @* <RadzenFieldset Style="min-width: 100px;">
                 <RadzenRow Class="two-col-form">
                     <RadzenColumn Size="6">
                         <RadzenFormField Text="Confirmación de Booking">
@@ -244,8 +321,8 @@
                                               DateFormat="dd/MM/yyyy HH:mm"
                                               HourFormat="24"
                                               TimeOnly="false"
-                                              Style="width:100%;"                                              
-                                              />
+                                              Style="width:100%;"
+                                              Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -257,7 +334,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
 
@@ -269,19 +346,19 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
                     <RadzenColumn Size="6">
-                        <RadzenFormField Text="Unidad inicia tránsito a destino (lado estadounidense)">
+                        <RadzenFormField Text="Unidad inicia tránsito a destino (lado estadounidense)" Style="min-width: 100px;">
                             <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FIniciaTransitoEXPO"
                                               ShowTime="true"
                                               DateFormat="dd/MM/yyyy HH:mm"
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -293,7 +370,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -305,7 +382,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -317,7 +394,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -329,7 +406,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -341,7 +418,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -353,19 +430,20 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
                     <RadzenColumn Size="6">
-                        <RadzenFormField Text="Unidad en frontera mexicana para exportación">
-                            <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FEnFrontera"
+                                <RadzenFormField Text="Unidad en frontera mexicana para exportación">
+                                    
+                                    <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FEnFrontera"
                                               ShowTime="true"
                                               DateFormat="dd/MM/yyyy HH:mm"
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -377,7 +455,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -389,7 +467,7 @@
                                               HourFormat="24"
                                               TimeOnly="false"
                                               Style="width:100%;"
-                                              />
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
                             
@@ -400,8 +478,8 @@
                                               DateFormat="dd/MM/yyyy HH:mm"
                                               HourFormat="24"
                                               TimeOnly="false"
-                                              Style="width:100%;"                                              
-                                              />
+                                              Style="width:100%;"
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)" />
                         </RadzenFormField>
                     </RadzenColumn>
 
@@ -411,7 +489,8 @@
                                 <RadzenButton ButtonType="ButtonType.Button"
                                               ButtonStyle="ButtonStyle.Primary"
                                               Style="border-radius:8px;"
-                                              Click="@GuardarCambiosTimeLine">
+                                              Click="@GuardarCambiosTimeLine"
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)">
                                     Guardar cambios
                                 </RadzenButton>
                             </div>
@@ -421,14 +500,202 @@
                                               ButtonStyle="ButtonStyle.Danger"
                                               Style="border-radius:8px;"
                                               Click="@(() => FinalizarOperacion())"
-                                >
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatTipoEstado)">
                                     Fin de la operación
                                 </RadzenButton>
                             </div>
                         </div>
                     </RadzenColumn>
                 </RadzenRow>
-            </RadzenFieldset>
+            </RadzenFieldset> *@
+
+                    <RadzenFieldset Style="min-width: 100px;">
+                        <RadzenRow Class="two-col-form">
+
+                            <RadzenColumn Size="6" Style="margin-top: -1rem;">
+                                <div class="field-label">Confirmación de Booking</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FConfirmaBooking"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6" Style="margin-top: -1rem;">
+                                <div class="field-label">Fin de proceso de despacho aduanal</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinDespachoAA"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Unidad en Sitio de Carga</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FUnidensitiocarga"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6" Style="margin-top: -1.3rem;">
+                                <div class="field-label">Unidad inicia tránsito a destino (lado estadounidense)</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FIniciaTransitoEXPO"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Unidad en Proceso de Carga</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FUnidadencarga"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Unidad en punto de descarga</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FPuntoDescarga"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Finalización de Carga</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinalizaCarga"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Unidad en proceso de descarga</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FEnProcesoDescarga"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Unidad inicia tránsito a destino (lado mexicano)</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FIniciaTransito"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6" Style="margin-top: 1.2rem;">
+                                <div class="field-label">Finalización de descarga</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinDescarga"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Unidad en frontera mexicana para exportación</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FEnFrontera"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Prueba de entrega (cargar documentos sellados y firmados)</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FRecepcionPOD"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Inicio de proceso de despacho aduanal</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FInicioDespachoAA"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="6">
+                                <div class="field-label">Fin de la operación</div>
+                                <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinOperacion"
+                                                  ShowTime="true"
+                                                  DateFormat="dd/MM/yyyy HH:mm"
+                                                  HourFormat="24"
+                                                  Style="width:100%;"
+                                                  Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
+                            </RadzenColumn>
+
+                            <RadzenColumn Size="12">
+                                <div class="two-col-actions">
+                                    <div class="left">
+                                        <RadzenButton ButtonType="ButtonType.Button"
+                                                      ButtonStyle="ButtonStyle.Primary"
+                                                      Style="border-radius:8px;"
+                                                      Click="@GuardarCambiosTimeLine"
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)">
+                                            Guardar cambios
+                                        </RadzenButton>
+                                    </div>
+                                    <span class=@($"status-chip status-{idEstadoActual}")>
+                                        @lstTipoEstados.Where(e => e.IdCatTipoEstados == idEstadoActual).Select(e => e.Nombre).FirstOrDefault()
+                                    </span>
+
+                                    <div class="right">
+                                        <RadzenButton ButtonType="ButtonType.Button"
+                                                      ButtonStyle="ButtonStyle.Danger"
+                                                      Style="border-radius:8px;"
+                                                      Click="@(() => FinalizarOperacion())"
+                                                      Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)">
+                                            Fin de la operación
+                                        </RadzenButton>
+                                    </div>
+                                </div>
+                            </RadzenColumn>
+                        </RadzenRow>
+                    </RadzenFieldset>
+
+                    <style>
+                        .field-label {
+                            font-weight: 600;
+                            margin-bottom: 4px;
+                            white-space: normal;
+                            word-break: break-word;
+                        }
+
+                        .field-label {
+                            max-width: 100%;
+                            display: block;
+                        }
+
+                    </style>
+
         }
 
         else
@@ -464,12 +731,12 @@
                 <RadzenUpload @ref="uploadFiles"
                               ChooseText="Agregar documentos"
                               Multiple="true"
-                              
+                              Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)"
                               Auto="true"
                               Change="@OnUploadChange"
                               Style="width:40%;"
                               InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
-                              Disabled="false"/>   <!-- <‑‑ aquí -->
+                              />   <!-- <‑‑ aquí -->
 
                 @if (lstCargarArchivos != null && lstCargarArchivos.Any())
                 {
@@ -499,7 +766,8 @@
                                         <RadzenButton Icon="close"
                                                       ButtonStyle="ButtonStyle.Danger"
                                                       Size="ButtonSize.Small"
-                                                      Click="@(() => EliminarDocumento(doc))" />
+                                                      Click="@(() => EliminarDocumento(doc))"
+                                                      Visible="@(!(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado))" />
                                     </Template>
                                 </RadzenDataGridColumn>
                             </Columns>
@@ -560,10 +828,12 @@
                                                   Size="ButtonSize.Small"
                                                   ButtonStyle="ButtonStyle.Info"
                                                   Click="@(args => AbrirDocumentoCont(item))" />
+                                                  
                                     <RadzenButton Icon="delete"
                                                   Size="ButtonSize.Small"
                                                   ButtonStyle="ButtonStyle.Danger"
-                                                  Click="@(() => BajaDocumento(item))" />
+                                                  Click="@(() => BajaDocumento(item))"
+                                                  Visible="@(!(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado))" />
                                 </Template>
                             </RadzenDataGridColumn>
                         </Columns>
@@ -608,7 +878,8 @@
                                               ButtonStyle="ButtonStyle.Danger"
                                               Icon="add_circle"
                                               Style="border-radius: 12px; min-width: 140px;"
-                                              Click="@(() => AgregarTracking())">
+                                              Click="@(() => AgregarTracking())"
+                                              Disabled="@((objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado))">
                                     Agregar Eventualidad
                                 </RadzenButton>
                             </div>
