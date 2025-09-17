@@ -40,7 +40,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] private ISLODocumentosService sloDocumentosService { get; set; }
         [Inject] private IJSRuntime JS { get; set; }
         [Inject] private HttpClient Http { get; set; }
-        [Inject] private DialogService dialogService { get; set; }
+        [Inject] private DialogService dialogService { get; set; }        
         #endregion
 
         #region MODELOS DTO
@@ -77,6 +77,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             TransitoMaritimoAereo,
             UltimaMilla
         }
+
+        public class ScreenSize
+        {
+            public int Width { get; set; }
+            public int Height { get; set; }
+        }
         #endregion
 
         #region OBJETOS Y LISTAS
@@ -104,6 +110,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         private int idCatEstadoTerminado;
         private int? idEstadoActual;
+
+        private int ancho;
+        private int alto;
+        private string zoomType;
         #endregion
 
         #region INICIALIZAR
@@ -121,6 +131,29 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             
         }
 
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                var size = await JS.InvokeAsync<ScreenSize>("getSizeScreen");
+                ancho = size.Width;
+                alto = size.Height;
+                //await CargaDatos();
+                if (ancho < 1300)
+                {
+                    zoomType = "display-zoom";
+                }
+                else
+                {
+                    zoomType = "";
+                }
+                StateHasChanged();
+
+                // Registrar listener de resize
+                await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
+            }
+        }
+
         private void InicializarCards()
         {
             cards = new List<CardModel>
@@ -136,6 +169,27 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         #endregion
 
         #region FUNCIONES UI
+
+        #region CONTROLAR TAMAÑO PANTALLA
+        [JSInvokable]
+        public Task OnBrowserResize(ScreenSize size)
+        {
+            ancho = size.Width;
+            alto = size.Height;
+
+            // Aplicar estilos dinámicos o lógica según el tamaño
+            if (ancho < 1300)
+            {
+                zoomType = "display-zoom";
+            }
+            else
+            {
+                zoomType = "";
+            }
+            StateHasChanged(); // fuerza re-render
+            return Task.CompletedTask;
+        }
+        #endregion
 
         #region CARD IZQUIERDA
         private async Task BotonClickeado(SLOTControlTerrestre item)
@@ -842,6 +896,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     Height = "600px",
                     Draggable = true,
                     Resizable = true,
+                    Style = "border-radius: 12px;",
                     CloseDialogOnOverlayClick = false
                 }
             );

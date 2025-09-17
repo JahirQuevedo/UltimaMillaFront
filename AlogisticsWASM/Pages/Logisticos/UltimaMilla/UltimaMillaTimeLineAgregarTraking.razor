@@ -12,12 +12,12 @@
             <RadzenDropDown @bind-Value="transporteCron.IdCatTipoEventoCron"
                             Data="@listaTiposEventos"
                             TextProperty="Nombre" ValueProperty="IdCatTipoEventoCron"
-                            Style="width: 100%;" Placeholder="Seleccione un evento"
+                            Style="width: 100%; border-radius: 12px;" Placeholder="Seleccione un evento"
                             Name="IdCatTipoEventoCron" />
 
             <RadzenLabel Text="Comentarios" Component="TextArea" />
             <RadzenTextArea @bind-Value="transporteCron.Comentarios" Name="Comentarios"
-                            Style="width: 100%;" Rows="3" MaxLength="250" />
+                            Style="width: 100%; border-radius: 12px;" Rows="3" MaxLength="250" />
 
             @* <RadzenLabel Text="Fecha de Registro" Component="DatePicker" />
             <RadzenDatePicker @bind-Value="transporteCron.FechaRegistro" Name="FechaRegistro" Style="width: 100%;" ShowTime="true" /> *@
@@ -29,7 +29,7 @@
             <RadzenDatePicker @bind-Value="transporteCron.FechaEvento" Name="FechaEvento" Style="width: 100%;" ShowTime="true" />
 
             <RadzenLabel Text="URL Maps" Component="TextBox" />
-            <RadzenTextBox @bind-Value="transporteCron.URLMaps" Name="URLMaps" Style="width: 100%;" MaxLength="250" />
+            <RadzenTextBox @bind-Value="transporteCron.URLMaps" Name="URLMaps" Style="width: 100%; border-radius: 12px;" MaxLength="250" />
             
             
 
@@ -98,9 +98,9 @@
                       Style="margin-top: 1rem; background-color: #4CAF50; color: white; border-radius: 8px;" />
 
         <RadzenButton Text="Cancelar"
-                      ButtonStyle="ButtonStyle.Secondary"
+                      ButtonStyle="ButtonStyle.Danger"
                       Icon="cancel"
                       Click="OnCancel"
-                      Style="margin-left: 1rem; margin-top: 1rem;" />
+                      Style="margin-left: 1rem; margin-top: 1rem; border-radius: 8px;" />
     </RadzenFieldset>
 </RadzenTemplateForm>

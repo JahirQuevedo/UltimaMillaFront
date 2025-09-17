@@ -10,6 +10,11 @@
 
 
 <style>
+
+    .display-zoom {
+        zoom: 0.75;
+    }
+
     :root {
         --rz-grid-header-color: white;
         --rz-grid-header-background-color: darkred;
@@ -173,7 +178,7 @@
 @* <strong>Torre de Control: @TControlTerrestre.IdTControlTerrestre</strong> *@
 <div class="modal-wrapper" style="position: relative; padding: 1rem;">
 <!-- Cards Laterales -->
-<RadzenRow>
+<RadzenRow class="@zoomType">
         <RadzenColumn Size="2">
             @foreach (var card in cards)
             {
