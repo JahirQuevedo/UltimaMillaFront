@@ -1,9 +1,14 @@
 ﻿@page "/ultima-milla-tran"
 @inject Radzen.DialogService DialogService
+@inject IJSRuntime JS 
 @using ALOG.Modelos.Modelos.Logisticos;
 @using ALOGRepositorios.Services.Logisticos
 @using Radzen;
 <style>
+    .display-zoom {
+        zoom: 0.75;
+    }
+
     :root {
     --rz-grid-header-color: white;
     --rz-grid-header-background-color: darkred;
@@ -51,7 +56,7 @@
 
     </div>  *@
     
-    <RadzenFieldset Text="Información de solicitud" Style="margin-top: -1rem; margin-bottom: 1rem; padding: -1rem;">
+    <RadzenFieldset Text="Información de solicitud" Style="margin-top: -1rem; margin-bottom: 1rem; padding: -1rem;" class="@zoomType">
     <!-- Cuerpo -->
     <div class="mt-4" style="margin-left: 1rem;">
         
@@ -101,10 +106,10 @@
                     <RadzenRow>
                         <!-- Columna 1: Fecha -->
                         <RadzenColumn Size="3">
-                            <RadzenFieldset Text="Posicionamiento">
-                                <div style="margin: 0.5rem; text-align: center;">
+                            <RadzenFieldset>
+                                <div style="text-align: center;">
                                     <h7><strong>@objSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy")</strong></h7>
-                                        <h7><strong>@objSolicitudes.FechaPosicionamiento?.ToString("HH:mm") </strong> hrs.</h7>
+                                        <h7><strong>@objSolicitudes.FechaPosicionamiento?.ToString("HH:mm") </strong>hrs.</h7>
                                 </div>
                             </RadzenFieldset>
                         </RadzenColumn>
@@ -154,14 +159,14 @@
                                     Disabled="@(Modo == "R")" /> *@
 
                    <h5 style="margin-top: 0.9rem; margin-left: 3.0rem;">Transporte Terrestre</h5>
-                <RadzenFieldset Text="Lugar de entrega (Destino)">
+                <RadzenFieldset Text="Lugar de entrega (Destino)" Style="min-height: 220px;">
                     <RadzenRow>
                         <!-- Columna 1: Fecha -->
                         <RadzenColumn Size="3">
-                            <RadzenFieldset Text="Entrega">
-                                <div style="margin: 0.5rem; text-align: center;">
+                            <RadzenFieldset>
+                                <div style="text-align: center;">
                                     <h7><strong>@Solicitud.FechaFin?.ToString("dd/MM/yyyy")</strong></h7>
-                                        <h7><strong>@objSolicitudes.FechaFin?.ToString("HH:mm") </strong> hrs.</h7>
+                                        <h7><strong>@objSolicitudes.FechaFin?.ToString("HH:mm") </strong>hrs.</h7>
                                 </div>
                             </RadzenFieldset>
                         </RadzenColumn>
@@ -263,7 +268,7 @@
         </RadzenDataGrid> *@
 
 
-            <RadzenFieldset Text="Transporte Asignado" Style="margin-top: 2rem;">
+            <RadzenFieldset Text="Transporte Asignado" Style="margin-top: 2rem; min-height: 220px;" class="@zoomType">
                 <RadzenRow Gutter="16">
                     <!-- Placas -->
                     <RadzenColumn Size="2">
@@ -413,16 +418,16 @@
             <RadzenButton Icon="add_circle" Text="Crear"
                           ButtonStyle="ButtonStyle.Secondary"
                           Click="@(() => CrearSolicitudTransporte())"
-                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "C")"/>
+                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "C")" class="@zoomType"/>
 
             <RadzenButton Icon="cancel" Text="Cancelar"
                           ButtonStyle="ButtonStyle.Primary"
                           Click="@(() => DialogService.Close(null))"
-                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "C")"/>
+                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "C")" class="@zoomType"/>
             <RadzenButton Icon="cancel" Text="Cerrar"
                           ButtonStyle="ButtonStyle.Primary"
                           Click="@(() => DialogService.Close(null))"
-                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "R")"/>
+                          Style="border-radius: 8px; min-width: 120px; margin-top: 20px;" Visible="@(Modo == "R")" class="@zoomType"/>
 
 
         </div>

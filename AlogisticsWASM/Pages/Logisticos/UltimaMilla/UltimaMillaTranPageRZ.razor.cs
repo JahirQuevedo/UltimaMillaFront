@@ -11,10 +11,12 @@ using ALOGRespositorios.Modelos.Dtos.Control;
 using CurrieTechnologies.Razor.SweetAlert2;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.JSInterop;
 using Newtonsoft.Json.Linq;
 using Radzen;
 using Radzen.Blazor;
 using System.Drawing.Text;
+using static AlogisticsWASM.Pages.Logisticos.UltimaMilla.UltimaMillaPageRZ;
 using static AlogisticsWASM.Pages.Vacios.Solicitudes.SolicitudesCRUDCMP;
 
 namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
@@ -45,6 +47,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] private ICatDocumentoService documentoService { get; set; }
         [Inject] private ISLODocumentosService sloDocumentosService { get; set; }
         [Inject] public NotificationService NotificationService { get; set; }
+        //[Inject] JSRuntime JS { get; set; }
         #endregion
 
 
@@ -55,6 +58,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             public int Id { get; set; }
             public SLOTransporteDetalle? TransporteAsignado { get; set; }
             public SLOSolicitudesDetalle? SolicitudesDet { get; set; }
+        }
+
+        public class ScreenSize
+        {
+            public int Width { get; set; }
+            public int Height { get; set; }
         }
         #endregion
 
@@ -105,6 +114,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         private RadzenUpload uploadFiles;
         List<string> Validaciones = new();
+
+        private int ancho;
+        private int alto;
+        private string zoomType;
         #endregion
 
         #region Funciones
@@ -199,6 +212,50 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     DialogService.Close(false);
                 }
             }
+        }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                var size = await JS.InvokeAsync<ScreenSize>("getSizeScreen");
+                ancho = size.Width;
+                alto = size.Height;
+                //await CargaDatos();
+                if (ancho < 1300)
+                {                    
+                    zoomType = "display-zoom";
+                }
+                else
+                {                    
+                    zoomType = "";
+                }
+                StateHasChanged();
+
+                // Registrar listener de resize
+                await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
+            }
+        }
+        #endregion
+
+        #region CONTROLAR TAMAÑO PANTALLA
+        [JSInvokable]
+        public Task OnBrowserResize(ScreenSize size)
+        {
+            ancho = size.Width;
+            alto = size.Height;
+
+            // Aplicar estilos dinámicos o lógica según el tamaño
+            if (ancho < 1300)
+            {                
+                zoomType = "display-zoom";
+            }
+            else
+            {                
+                zoomType = "";
+            }
+            StateHasChanged(); // fuerza re-render
+            return Task.CompletedTask;
         }
         #endregion
 
