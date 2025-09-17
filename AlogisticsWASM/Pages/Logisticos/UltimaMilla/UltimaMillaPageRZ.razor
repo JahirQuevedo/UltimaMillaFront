@@ -20,6 +20,10 @@
 
 
 <style>
+    .display-zoom
+    {
+        zoom: 0.75;
+    }
     :root {
         --rz-grid-header-color: white;
         --rz-grid-header-background-color: darkred;
@@ -66,8 +70,25 @@
 
         .full-grid .rz-datagrid {
             flex: 1 1 auto;
-            height: 100%;
+            height: 100%;            
         }
+
+        .grid-zoom{
+        --rz-grid-cell-border: none;
+        --rz-grid-bottom-cell-border: none;
+        --rz-grid-right-cell-border: none;
+        border-radius: 12px;
+        font-size: 10px;
+        zoom: 0.75;        
+        }
+
+    .grid-amplio {
+        --rz-grid-cell-border: none;
+        --rz-grid-bottom-cell-border: none;
+        --rz-grid-right-cell-border: none;
+        border-radius: 12px;
+        font-size: 10px;        
+    }
 
         /* ------------- Encabezado ------------- */
         .full-grid .rz-datagrid-header {
@@ -232,7 +253,9 @@
     AlignItems="AlignItems.Center"
     Gap="0.25rem"
     Wrap="FlexWrap.Wrap"
-    Style="width: 100%;">
+    Style="width: 100%;"
+    class="@zoomType"
+    >
 
         <!-- Iconos de transporte -->
         <RadzenStack Orientation="Orientation.Horizontal"
@@ -268,7 +291,8 @@
                                 FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                                 FilterOperator="StringFilterOperator.Contains"
                                 FilterAutoCompleteType="AutoCompleteType.On"
-                                Change="@(() => FiltrarDTO())" />
+                                Change="@(() => FiltrarDTO())"                                 
+                                />
             </div>
 
             <!-- Estado -->
@@ -363,7 +387,7 @@ else if(cargando == false)
         <!-- -->
         <RadzenCard Variant="Variant.Outlined" Class="rz-card">
 
-            <div class="chips-container">
+            <div class="chips-container @zoomType">
                 <div class="estado-chip">
                     Abierto
                     <span class="notificacion">@lstSLOSolicitudes.Count(s => s.catTipoEstado?.TipoEstado == "A")</span>
@@ -376,31 +400,27 @@ else if(cargando == false)
 
 
             <RadzenDataGrid @ref="gridSolicitudes"
-            Data="@lstSLOSolicitudes"                           
-            Style="
-                                --rz-grid-cell-border: none;
-                                --rz-grid-bottom-cell-border: none;
-                                --rz-grid-right-cell-border: none;
-                                border-radius:12px;
-            "
+            Data="@lstSLOSolicitudes"                                       
+            AllowColumnResize="true"
             TItem="SLOSolicitudes"
-            AllowPaging="true"
+            AllowPaging="true"            
             PageSize="@pageSize"
-            Class="rz-datagrid"
+            Class="@gridClass"
             ShowPagingSummary="false"
+            Responsive="true"
             ShowPagination="true">
                 <Columns>
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Tipo Transporte">
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="T. Transporte" Resizable="true">
                         <Template Context="item">
                             @item.catTipoOperacion?.Nombre
                         </Template>
                     </RadzenDataGridColumn>                                          
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Ref.Alo">
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Ref.Alo" Resizable="true">
                         <Template Context="data">
                             @data.Orden?.ReferenciaALO
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="ReferenciaCliente" Title="Ref.Cte" />
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="ReferenciaCliente" Title="Ref.Cte" Resizable="true"/>
                     @* <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Cliente">
                         <Template Context="s">
                             <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
@@ -411,13 +431,13 @@ else if(cargando == false)
                         </Template>
                     </RadzenDataGridColumn> *@
 
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Nombre del cliente">
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Nombre del cliente" Resizable="true">
                         <Template Context="data">
                             @data.Cliente?.RazonSocial
                         </Template>
                     </RadzenDataGridColumn>
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="Booking" Title="Booking" />
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Mercancías">
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="Booking" Title="Booking" Resizable="true"/>
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Mercancías" Resizable="true">
                         <Template Context="data">
                             @* @string.Join(", ", data.sloSOlicitudesDetalle?
                                      .Where(d => d.Activo && d.catTipoMercancia != null)
@@ -428,13 +448,13 @@ else if(cargando == false)
                         </Template>
                     </RadzenDataGridColumn>
                     @* <RadzenDataGridColumn TItem="DtUltimaMillaEnc" Property="Cargamento" Title="Cargamento" /> *@
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="catClienteUbicacionOrigen.NombreLugar" Title="Origen"/>                       
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="catClienteUbicacionDestino.NombreLugar" Title="Destino" />
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="FechaPosicionamiento" Title="Inicia" />
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="FechaFin" Title="Termina" />
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="catClienteUbicacionOrigen.NombreLugar" Title="Origen" Resizable="true"/>                       
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="catClienteUbicacionDestino.NombreLugar" Title="Destino" Resizable="true"/>
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="FechaPosicionamiento" Title="Inicia" Resizable="true"/>
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Property="FechaFin" Title="Termina" Resizable="true"/>
 
                     <!-- Estado con “chip” de color -->
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Estado" Width="7%">
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Estado" Width="7%" Resizable="true">
                         <Template Context="data">
                             @* <span class=@($"status-chip status-{data.catTipoEstados?.IdCatTipoEstados}")>
                                 @data.catTipoEstados?.Nombre
@@ -447,7 +467,7 @@ else if(cargando == false)
 
                     @* <RadzenDataGridColumn TItem="DtUltimaMillaEnc" Property="catTipoEstados.Nombre" Title="Status"/> *@
                     <!-- Icono según tipo -->
-                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Acciones">
+                    <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Acciones" Resizable="true">
                         <Template Context="solicitud">
                             <div class='icon-container icon-document'
                                  @onclick='@(() => OpenModal("E", solicitud))'>

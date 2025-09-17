@@ -10,13 +10,14 @@ using ALOGRepositorios.Services.Logisticos.ILogisticos;
 using ALOGRespositorios.Modelos.Dtos.Control;
 using CurrieTechnologies.Razor.SweetAlert2;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
 namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 {
     public partial class UltimaMillaPageRZ
     {
-        #region Variables
+        #region SERVICIOS
         [Inject] private IAcarreosService _acarreoService { get; set; }
         [Inject] SweetAlertService SweetAlertService { get; set; }
         [Inject] private IUltimaMillaEncabezadoService _encabezadoService { get; set; }
@@ -28,14 +29,16 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] ICatClientesService ClientesService { get; set; }
         [Inject] ISLOTControlTerrestreService SLOTControlTerrestreService { get; set; }
         [Inject] ISLOSolicitudesDetalleService solicitudesDetalleService { get; set; }
-        //[Inject] private IJSRuntime JSRuntime { get; set; }
+        [Inject] IJSRuntime JS { get; set; }
 
-        private int pageSize = 10; // Valor inicial
+
 
         //[Inject] public IOrdenService OrdenService { get; set; }
         [Inject] ILoginService _loginService { get; set; }
+        #endregion
 
-
+        #region Variables
+        private int pageSize = 10; // Valor inicial
         private ICollection<DtUltimaMillaEnc> _encabezados;
         private IEnumerable<DtUltimaMillaEnc> _IEencabezados;
         private ODataEnumerable<DtUltimaMillaEnc> _ODencabezados;
@@ -87,15 +90,77 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private ICollection<CatClientes> lstCatClientes;
         private bool cargando = true;
         private Dictionary<int, string> tiposMercanciaPorSolicitud = new();
+        int alto;
+        int ancho;
+        private string gridClass = "";
+        private string zoomType = "";
         #endregion Variables
 
         #region Init
         protected override async Task OnInitializedAsync()
-        {
+        {            
             await CargaDatos();
         }
-        #endregion Init
-        #region Obtener Datos
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                var size = await JS.InvokeAsync<ScreenSize>("getSizeScreen");
+                ancho = size.Width;
+                alto = size.Height;
+                //await CargaDatos();
+                if (ancho < 1300)
+                {
+                    gridClass = "grid-zoom";
+                    zoomType = "display-zoom";
+                }
+                else
+                {
+                    gridClass = "grid-amplio";
+                    zoomType = "";
+                }
+                    StateHasChanged();
+
+                // Registrar listener de resize
+                await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
+            }
+        }
+        #endregion
+
+        #region DTO´s
+        public class ScreenSize
+        {
+            public int Width { get; set; }
+            public int Height { get; set; }
+        }
+
+        #endregion
+
+        #region CONTROLAR TAMAÑO PANTALLA
+        [JSInvokable]
+        public Task OnBrowserResize(ScreenSize size)
+        {
+            ancho = size.Width;
+            alto = size.Height;
+
+            // Aplicar estilos dinámicos o lógica según el tamaño
+            if (ancho < 1300)
+            {
+                gridClass = "grid-zoom";
+                zoomType = "display-zoom";
+            }
+            else
+            {
+                gridClass = "grid-amplio";
+                zoomType = "";
+            }
+            StateHasChanged(); // fuerza re-render
+            return Task.CompletedTask;
+        }
+        #endregion
+        
+        #region CARGAR DATOS
         async Task CargaDatos()
         {
             try
@@ -126,8 +191,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             {
                 cargando = false;
                 StateHasChanged();
-            }
-
+            }            
 
         }
         #endregion

@@ -542,7 +542,7 @@
                                                   Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
                             </RadzenColumn>
 
-                            <RadzenColumn Size="6" Style="margin-top: -1.3rem;">
+                            <RadzenColumn Size="6">
                                 <div class="field-label">Unidad inicia tránsito a destino (lado estadounidense)</div>
                                 <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FIniciaTransitoEXPO"
                                                   ShowTime="true"
@@ -602,7 +602,7 @@
                                                   Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)" />
                             </RadzenColumn>
 
-                            <RadzenColumn Size="6" Style="margin-top: 1.2rem;">
+                            <RadzenColumn Size="6">
                                 <div class="field-label">Finalización de descarga</div>
                                 <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FFinDescarga"
                                                   ShowTime="true"
@@ -687,6 +687,7 @@
                             margin-bottom: 4px;
                             white-space: normal;
                             word-break: break-word;
+                            font-size: 10px;
                         }
 
                         .field-label {
