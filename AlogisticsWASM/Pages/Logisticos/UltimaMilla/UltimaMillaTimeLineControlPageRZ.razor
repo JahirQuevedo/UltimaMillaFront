@@ -172,135 +172,72 @@
             min-width: 24px;
             text-align: center;
         }
+
+    .field-label {
+        font-weight: 600;
+        margin-bottom: 4px;
+        white-space: normal;
+        word-break: break-word;
+        font-size: 13px;
+    }
+
+    .field-label {
+        max-width: 100%;
+        display: block;
+    }
+
 </style>
 
 @* <strong>Usuario: @UsuarioDTO.Nombre</strong> *@
 @* <strong>Torre de Control: @TControlTerrestre.IdTControlTerrestre</strong> *@
-<div class="modal-wrapper" style="position: relative; padding: 1rem;">
-<!-- Cards Laterales -->
+<div class="modal-wrapper" style="position: relative; padding: 1rem;">    
 <RadzenRow class="@zoomType">
         <RadzenColumn Size="2">
-            @foreach (var card in cards)
-            {
-                <RadzenCard @onclick="() => SelectCard(card.Id)"
-                            Style="@(selectedCardId == card.Id
-                                ? "border-radius: 12px; margin-bottom: 0.5rem; border: 2px solid #4CAF50; box-shadow: 0 4px 8px rgba(0,0,0,0.1); cursor:pointer; padding:0.5rem;"
-                                                            : "border-radius: 12px; margin-bottom: 0.5rem; cursor:pointer;padding:0.5rem;")">
-                    <div class="modal-header" style="background-color: darkred; padding: 0.5rem;">
-                        @* <RadzenText Style="color: white;">@card.Title</RadzenText> *@
-                        @if (card.MostrarGrid)
-                        {
-                            <RadzenText Style="color:white;">Información del Transporte</RadzenText>
-                        }
-                        else
-                        {
-                            <RadzenText Style="color:white;">Carga Transportada</RadzenText>
-                        }
-                    </div>
-                    <RadzenFieldset Style="padding:-2.5rem;">
+        <RadzenCard Style="border-radius: 12px;">            
+                <RadzenDataGrid Data="@TControlTerrestre"
+                                TItem="SLOTControlTerrestre"
+                                AllowPaging="true"
+                                PageSize="5"
+                                Responsive="true"
+                                AllowColumnResize="true"
+                                Style="padding:-2rem; margin:0; border-radius:12px; width:100%; margin-left: -1rem; margin-right: -2rem; min-width: 250px;"
+                                RowSelect="@(item => MostrarControlTower(item))">
 
-                        @if (card.MostrarGrid)
-                            {
-                                @* <RadzenDataGrid Data="@TControlTerrestre" TItem="SLOTControlTerrestre" AllowPaging="true" PageSize="5" Responsive="true" Style="border-radius:12px;">
-                                    <Columns>
-                                        <RadzenDataGridColumn TItem="SLOTControlTerrestre" Property="sloTransporteAsignado.Placas" Title="Placas" Width="150px" />
-                                        <RadzenDataGridColumn TItem="SLOTControlTerrestre" Title="Acción" Width="100px">
-                                            <Template Context="item">
-                                                <button class="btn btn-sm btn-primary" @onclick="() => BotonClickeado(item)">Ver</button>
-                                            </Template>
-                                        </RadzenDataGridColumn>
-                                    </Columns>
-                                </RadzenDataGrid> *@
-                                <RadzenDataGrid Data="@TControlTerrestre"
-                                                TItem="SLOTControlTerrestre"
-                                                AllowPaging="true"
-                                                PageSize="5"
-                                                Responsive="true"
-                                                AllowColumnResize="true"
-                                                Style="padding:-2rem; margin:0; border-radius:12px; width:100%;"
-                                                RowSelect="@(item => BotonClickeado(item))"
-                                                >
+                    <Columns>
+                        <!-- Columna del ojo -->
+                        <RadzenDataGridColumn Title="Ver">
+                            <Template Context="data">
+                                <div class="icon-container"
+                                     @onclick='() => VerDetalle("R", data)'
+                                     @onclick:stopPropagation
+                                     style="cursor:pointer;">
+                                    <img src="img/UltimaMilla/eye.svg" />
+                                </div>
+                            </Template>
+                        </RadzenDataGridColumn>
 
-                                    <Columns>
-                                        <!-- Columna del ojo -->
-                                        <RadzenDataGridColumn Title="Ver">
-                                            <Template Context="data">
-                                                <div class="icon-container" 
-                                                     @onclick='() => VerDetalle("R",data)' 
-                                                     @onclick:stopPropagation
-                                                     style="cursor:pointer;">
-                                                    <img src="img/UltimaMilla/eye.svg"/>
-                                                </div>
-                                            </Template>
-                                        </RadzenDataGridColumn>
+                        <!-- Columna Placas -->
+                        <RadzenDataGridColumn TItem="SLOTControlTerrestre"
+                                              Property="sloTransporteAsignado.Placas"
+                                              Title="Vehículo"
+                                              Width="150px" />
 
-                                        <!-- Columna Placas -->
-                                        <RadzenDataGridColumn TItem="SLOTControlTerrestre"
-                                                              Property="sloTransporteAsignado.Placas"
-                                                              Title="Vehículo"
-                                                              Width="150px"/>
-        
-                                        <!-- Columna Transportista -->
-                                        @* <RadzenDataGridColumn TItem="SLOTControlTerrestre" Title="Transportista">
+                        <!-- Columna Transportista -->
+                        @* <RadzenDataGridColumn TItem="SLOTControlTerrestre" Title="Transportista">
                                             <Template Context="data">
                                                 @(data?.sloTransporteAsignado?.sloTransporteSolicitud?.catTransportistas?.RazonSocial ?? "N/A")
                                             </Template>
                                         </RadzenDataGridColumn> *@
-                                    </Columns>
-                                </RadzenDataGrid>
-
-
-
-                            }
-                            else if(lstDetallesAsignados == null)
-                            {
-                            <RadzenDataGrid Data="@lstDetallesAsignados" TItem="SLOTransporteDetalle" Style="padding:-1.5rem; margin:0; border-radius:12px; width:100%;" Responsive="true" AllowColumnResize="true">
-                                <Columns>
-                                    
-                                    <RadzenDataGridColumn TItem="SLOTransporteDetalle" Title="Mercancia">
-                                        <Template Context="data">
-                                            @(data?.sloSolicitudes?.sloSOlicitudesDetalle?
-                                                .FirstOrDefault(det => det.IdSLOSolicitudDet == data.IdSLOSolicitudDet)
-                                                ?.catTipoMercancia?.Nombre ?? "N/A")
-
-                                        </Template>
-                                    </RadzenDataGridColumn>
-
-                                    <RadzenDataGridColumn TItem="SLOTransporteDetalle" Title="Cantidad">
-                                        <Template Context="data">
-                                            @(data.sloSolicitudes?.sloSOlicitudesDetalle?
-                                                .FirstOrDefault(det => det.IdSLOSolicitudDet == data.IdSLOSolicitudDet)?.Cantidad ?? 0)
-                                        </Template>
-                                    </RadzenDataGridColumn>
-                                    <RadzenDataGridColumn TItem="SLOTransporteDetalle" Title="Peso">
-                                        <Template Context="data">
-                                            @(data.sloSolicitudes?.sloSOlicitudesDetalle?
-                                                .FirstOrDefault(det => det.IdSLOSolicitudDet == data.IdSLOSolicitudDet)?.Peso ?? 0)
-                                        </Template>
-                                    </RadzenDataGridColumn>
-                                </Columns>
-                                </RadzenDataGrid>
-
-
-                            }
-                            else
-                            {
-                                <RadzenText>No ha datos seleccionados</RadzenText>
-                            }
-<div class="card-content">
-                        </div>
-                    </RadzenFieldset>
-                </RadzenCard>
-            }
+                    </Columns>
+                </RadzenDataGrid>            
+        </RadzenCard>        
         </RadzenColumn>
-
         <!-- Timeline Central -->
-        <RadzenColumn Size="5">
+        <RadzenColumn Size="6">
         <RadzenCard Style="border-radius: 12px; margin-bottom: 0.5rem; position: relative;">
         <div class="modal-header" style="background-color: darkred; padding: 0.5rem;">
             @* <RadzenText Style="color: white;">Solicitud de Transporte: @if(objTControlTerrestre != null){@objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO}</RadzenText> *@
-            <RadzenText Style="color: white;">
-                Solicitud de Transporte: 
+            <RadzenText Style="color: white;">                
                 @if (objTControlTerrestre != null 
                      && objTControlTerrestre.sloSolicitudes != null 
                      && objTControlTerrestre.sloSolicitudes.Orden != null)
@@ -308,7 +245,14 @@
                     @objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO
                 }
             </RadzenText>
-
+                    @if (idEstadoActual != null)
+                    {   
+                        @* <RadzenText Style="align-content: end; color: white; display: inline-block;">Estado:</RadzenText> *@
+                        <span class=@($"status-chip status-{idEstadoActual}")>
+                        @lstTipoEstados.Where(e => e.IdCatTipoEstados == idEstadoActual).Select(e => e.Nombre).FirstOrDefault()
+                    </span>
+                    }
+                    
             @* <RadzenText Style="color: white;">Referencia ALO: @TControlTerrestre.sloSolicitudes.Orden.ReferenciaALO</RadzenText>
                     <RadzenText Style="color: white;">Fecha de Solicitud: @TControlTerrestre.FechaRegistro</RadzenText> *@
         </div>
@@ -668,9 +612,7 @@
                                             Guardar cambios
                                         </RadzenButton>
                                     </div>
-                                    <span class=@($"status-chip status-{idEstadoActual}")>
-                                        @lstTipoEstados.Where(e => e.IdCatTipoEstados == idEstadoActual).Select(e => e.Nombre).FirstOrDefault()
-                                    </span>
+                                   
 
                                     <div class="right">
                                         <RadzenButton ButtonType="ButtonType.Button"
@@ -686,22 +628,7 @@
                         </RadzenRow>
                     </RadzenFieldset>
 
-                    <style>
-                        .field-label {
-                            font-weight: 600;
-                            margin-bottom: 4px;
-                            white-space: normal;
-                            word-break: break-word;
-                            font-size: 10px;
-                        }
-
-                        .field-label {
-                            max-width: 100%;
-                            display: block;
-                        }
-
-                    </style>
-
+               
         }
 
         else

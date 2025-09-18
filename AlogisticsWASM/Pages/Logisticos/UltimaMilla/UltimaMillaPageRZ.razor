@@ -342,7 +342,7 @@
 
                 <!-- Botón crear solicitud -->
                 <div style="width:auto; padding-top: 1rem;">
-                    <RadzenButton Click="@(() => OpenModal("C"))"
+                    <RadzenButton Click="@(() => SolicitudServicio("C"))"
                                   Text="Crear Solicitud"
                                   Icon="add_circle"
                                   ButtonStyle="ButtonStyle.Primary"
@@ -470,7 +470,7 @@ else if(cargando == false)
                     <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Acciones" Resizable="true">
                         <Template Context="solicitud">
                             <div class='icon-container icon-document'
-                                 @onclick='@(() => OpenModal("E", solicitud))'>
+                                 @onclick='@(() => SolicitudServicio("E", solicitud))'>
                                 <img src="img/UltimaMilla/document.svg" />
                             </div>
 
@@ -486,7 +486,7 @@ else if(cargando == false)
                             @if (solicitud.IdCatTipoEstado == 1)
                             {
                                 <div class="icon-container icon-trash"
-                                     @onclick='@(() => BajaSolicitud(solicitud.IdSLOSolicitud))'>
+                                     @onclick='@(() => BajaSolicitudServicio(solicitud.IdSLOSolicitud))'>
                                     <img src="img/UltimaMilla/trash.svg" />
                                 </div>
                             }

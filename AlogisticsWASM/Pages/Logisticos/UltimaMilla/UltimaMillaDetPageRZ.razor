@@ -7,6 +7,10 @@
 
 <style>
 
+    .display-zoom {
+        
+    }
+
     .ubicacion-grid-min {
         display: grid;
         grid-template-columns: 1fr 1fr; /* dos columnas */
@@ -126,8 +130,8 @@
 
 </style>
 
-<div class="modal-wrapper" style="position: relative; padding: -1rem;">
-
+<div class="modal-wrapper @zoomType" style="position: relative; padding: -1rem;">
+    
 	<div class="modal-wrapper" style="position: relative; padding-top: -1rem;">
 
 
@@ -157,7 +161,7 @@
                 
                         @if(Modo == "C")
                         {
-                            <RadzenLabel Style="display:flex;margin:0.5rem">Cliente</RadzenLabel>
+                            <RadzenLabel Style="display:flex;margin:0.5rem; margin-top: -2rem;">Cliente</RadzenLabel>
                             <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatCliente"
                                             Placeholder="Cliente"
                                             Data="@lstClientes"
@@ -173,7 +177,7 @@
                         } else if(Modo == "E")
                         {
                             @* <RadzenLabel Text="@(objSLOSolicitudes?.Cliente.RazonSocial)" /> *@
-                            <h6>Cliente</h6>
+                            <h6 style="margin-top: -2rem;">Cliente</h6>
                             <h5>@(objSLOSolicitudes?.Cliente.RazonSocial)</h5>
                         }                                        
             </div>
@@ -391,7 +395,7 @@
                         @if(Modo == "E")
                         {
                             @* <RadzenLabel Style="display:flow;margin:0.5rem; margin-top: 1.1rem;" Visible="@(Modo == "E")">Estado</RadzenLabel> *@
-                            <h6>Estado</h6>
+                            <h6 style="margin-top: -2rem;">Estado</h6>
                             <span class=@($"status-chip status-{objSLOSolicitudes.catTipoEstado?.IdCatTipoEstados}")>
                                 @objSLOSolicitudes.catTipoEstado?.Nombre
                             </span>
@@ -407,7 +411,7 @@
             
             @if (Modo == "C")
             {
-                <RadzenLabel Style="display:flex; margin:0.5rem;">Referencia Cliente</RadzenLabel>
+                <RadzenLabel Style="display:flex; margin:0.5rem; margin-top: -2rem;">Referencia Cliente</RadzenLabel>
                 <RadzenTextBox @bind-Value="objSLOSolicitudes.ReferenciaCliente"
                                Style="width: 80%; border-radius: 12px;"
                                Placeholder="Referencia"

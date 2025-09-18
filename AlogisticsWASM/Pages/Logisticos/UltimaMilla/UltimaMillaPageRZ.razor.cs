@@ -90,6 +90,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private ICollection<CatClientes> lstCatClientes;
         private bool cargando = true;
         private Dictionary<int, string> tiposMercanciaPorSolicitud = new();
+
+        //Control Tamaño Pantalla
         int alto;
         int ancho;
         private string gridClass = "";
@@ -125,6 +127,15 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 // Registrar listener de resize
                 await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
             }
+        }
+
+        private string GetTiposMercancia(int solicitudId)
+        {
+            if (tiposMercanciaPorSolicitud.TryGetValue(solicitudId, out var tipos))
+            {
+                return tipos;
+            }
+            return string.Empty;
         }
         #endregion
 
@@ -196,11 +207,24 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         }
         #endregion
 
-        #region Modal
-        async Task OpenModal(string modo, SLOSolicitudes? solicitud = null)
+        #region SOLICITUD DE SERVICIO
+        async Task SolicitudServicio(string modo, SLOSolicitudes? solicitud = null)
         {
+            string anchoModal;
+            string zoomType;
+            //Definir dimensiones del Modal dependiendo del tamaño de la pantalla
+            if(ancho < 1300)
+            {
+                anchoModal = "75%";
+                
+            }
+            else
+            {
+                anchoModal = "60%";
+                zoomType = "";
+            }
 
-            var parameters = new Dictionary<string, object>
+                var parameters = new Dictionary<string, object>
     {
         { "Modo", modo },
         { "UsuarioToken", await _loginService.ObtenerdatosToken() }
@@ -216,11 +240,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 parameters,
                 new DialogOptions
                 {
-                    Width = "60%",
+                    Width = anchoModal,
                     Height = "80%",
                     Resizable = true,
                     Draggable = true,
-                    Style = "border-radius: 12px;"
+                    Style = $"border-radius: 12px;"
                 });
 
             if (response == true)
@@ -244,9 +268,36 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 await gridSolicitudes.Reload();
             }
         }
+        async Task BajaSolicitudServicio(int id)
+        {
+            var result = await SweetAlertService.FireAsync(new SweetAlertOptions
+            {
+                Title = "¿Está seguro?",
+                Html = $"¿Dar de baja la solicitud con Ref. ALO: <strong>{lstSLOSolicitudes.Where(s => s.IdSLOSolicitud == id).Select(s => s.Orden.ReferenciaALO).FirstOrDefault()}</strong>?",
+                Icon = SweetAlertIcon.Warning,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Sí, eliminar",
+                CancelButtonText = "Cancelar"
+            });
+            if (result.IsConfirmed)
+            {
+                RespuestaGenericaDTO respuestaGenericaDTO = await _solicitudesService.BajaSolicitudSLO(id);
+                if (respuestaGenericaDTO.IsSuccess == true)
+                {
+                    await SweetAlertService.FireAsync(
+                       "Solicitud de servicio dada de baja",
+                       "La solicitud ha sido dada de baja correctamente.",
+                       SweetAlertIcon.Success
+                   );
 
+                    await CargaDatos(); // Recarga el grid
+                    await gridSolicitudes.Reload();
+                }
+            }
+        }
+        #endregion
 
-
+        #region SOLICITUD DE TRANSPORTE
         async Task SolicitudTransportista(string modo, SLOSolicitudes? solicitud = null)
         {
             try
@@ -295,37 +346,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 Console.WriteLine(ex);
             }
 
-        }
+        }             
+        #endregion
 
-        async Task BajaSolicitud(int id)
-        {
-            var result = await SweetAlertService.FireAsync(new SweetAlertOptions
-            {
-                Title = "¿Está seguro?",
-                Text = $"¿Desea eliminar la solicitud con id: {id}?",
-                Icon = SweetAlertIcon.Warning,
-                ShowCancelButton = true,
-                ConfirmButtonText = "Sí, eliminar",
-                CancelButtonText = "Cancelar"
-            });
-            if (result.IsConfirmed)
-            {
-                RespuestaGenericaDTO respuestaGenericaDTO = await _solicitudesService.BajaSolicitudSLO(id);
-                if (respuestaGenericaDTO.IsSuccess == true)
-                {
-                    await SweetAlertService.FireAsync(
-                       "Solicitud de servicio dada de baja",
-                       "La solicitud ha sido dada de baja correctamente.",
-                       SweetAlertIcon.Success
-                   );
-
-                    await CargaDatos(); // Recarga el grid
-                    await gridSolicitudes.Reload();
-                }
-            }
-        }
-        #endregion Modal
-
+        #region CONTROL TOWER
         private async Task ControlTower(SLOSolicitudes solicitud)
         {
             //Verificar si existe el un transporte asignado para obtener el Control Tower
@@ -365,31 +389,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
 
         }
-        //private async Task MostrarEstado(Servicio item, string tipo)
-        //{
-        //    // Lógica para abrir modal según el tipo
-        //  var response =  await DialogService.OpenAsync<UltimaMillaTimeLineControlPageRZ>(
-        //        $"Estado del servicio - {tipo.ToUpper()}",
-        //        new Dictionary<string, object>
-        //        {
-        //            {"Datos", item },
-        //            {"Tipo", tipo }
-        //        },
-        //        new DialogOptions
-        //        {
-        //            Width = "100%",
-        //            Height = "100%",
-        //            Draggable = true,
-        //            Resizable = true
-        //        });
+        #endregion
 
-        //    if(response == true)
-        //    {
-        //        await CargaDatos();
-        //        await gridSolicitudes.Reload();
-        //    }
-        //}
-
+        #region FILTRO
         private async Task FiltrarDTO()
         {
             List<string> validarList = new List<string>();
@@ -403,7 +405,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
             if (validarList.Any())
             {
-                SweetAlertService.FireAsync("Filtro no valido", mensaje, SweetAlertIcon.Warning);
+                await SweetAlertService.FireAsync("Filtro no valido", mensaje, SweetAlertIcon.Warning);
                 return;
             }
 
@@ -417,15 +419,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             objFiltroSolicitudes = new FiltroSLOSolicitudes();
             await FiltrarDTO();
         }
-
-        private string GetTiposMercancia(int solicitudId)
-        {
-            if (tiposMercanciaPorSolicitud.TryGetValue(solicitudId, out var tipos))
-            {
-                return tipos;
-            }
-            return string.Empty;
-        }
+        #endregion        
 
     }
 }

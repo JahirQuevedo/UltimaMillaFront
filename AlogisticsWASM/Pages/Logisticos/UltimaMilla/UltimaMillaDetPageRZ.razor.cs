@@ -6,6 +6,7 @@ using ALOGRepositorios.Services.Logisticos.ILogisticos;
 using ALOGRespositorios.Modelos.Dtos.Control;
 using CurrieTechnologies.Razor.SweetAlert2;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Radzen;
 using Radzen.Blazor;
 using static AlogisticsWASM.Pages.Vacios.Solicitudes.SolicitudesCRUDCMP;
@@ -14,7 +15,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 {
     public partial class UltimaMillaDetPageRZ
     {
+        #region PARAMETROS
         [Parameter] public UsuarioTokenDTO UsuarioToken { get; set; } // Ensure UsuarioToken is passed as a parameter
+        #endregion
+
+        #region SERVICIOS
         [Inject] protected NotificationService NotificationService { get; set; } // Ensure NotificationService is injected
         [Inject] SweetAlertService SweetAlertService { get; set; }
         [Inject] ICatTipoTransporteService TipoTransporteService { get; set; }
@@ -35,8 +40,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] private ICatPaisMunicipiosService catPaisMunicipiosService { get; set; }
         [Parameter] public string Modo { get; set; } = "C";
         [Parameter] public SLOSolicitudes? Solicitud { get; set; }
+        [Inject] IJSRuntime JS { get; set; }
+        #endregion
 
-
+        #region OBJETOS, LISTAS, VARIABLES
         SLOSolicitudes objSLOSolicitudes = new SLOSolicitudes();
         private CatClientesUbicaciones objClientesUbicaciones = new CatClientesUbicaciones();
         private DateTime? FechaSalida { get; set; } = DateTime.Today;
@@ -56,8 +63,37 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private ICollection<CatTipoEstados> lstCatEstados;
         private List<CatPaises> lstPaises;
         private List<CatPaisEstados> lstPaisEstados;
-        private List<CatPaisMunicipios> lstMunicipios;        
+        private List<CatPaisMunicipios> lstMunicipios;
 
+        //Control Tamaño Pantalla
+        int alto;
+        int ancho;        
+        private string zoomType = "";
+
+        //CONTROL DE TABS
+        private string acronimoTipoCargaSeleccionado =>
+        lstCatTipoCarga?.FirstOrDefault(x => x.IdCatTipoCarga == objSLOSolicitudes.IdCatTipoCarga)?.Acronimo ?? "";
+
+        private int selectedTabIndex;
+
+        //Grid SLOSolicitudesDetalle
+        private RadzenDataGrid<SLOSolicitudesDetalle> gridSolicitudesDetalle;
+        private List<SLOSolicitudesDetalle> Items = [];
+        private bool inInsert = false;
+        private SLOSolicitudesDetalle detalleEnEdicion = null;
+
+        private RadzenAccordion accordionRef;
+        #endregion
+
+        #region DTO´s
+        public class ScreenSize
+        {
+            public int Width { get; set; }
+            public int Height { get; set; }
+        }
+        #endregion
+
+        #region INICIALIZAR
         protected override async Task OnInitializedAsync()
         {
             if (Modo == "E")
@@ -103,12 +139,53 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         }
 
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender)
+            {
+                var size = await JS.InvokeAsync<ScreenSize>("getSizeScreen");
+                ancho = size.Width;
+                alto = size.Height;
+                //await CargaDatos();
+                if (ancho < 1300)
+                {
+                    zoomType = "display-zoom";
+                }
+                else
+                {
+                    zoomType = "";
+                }
+                StateHasChanged();
 
-        private string acronimoTipoCargaSeleccionado =>
-    lstCatTipoCarga?.FirstOrDefault(x => x.IdCatTipoCarga == objSLOSolicitudes.IdCatTipoCarga)?.Acronimo ?? "";
+                // Registrar listener de resize
+                await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
+            }
+        }
+        #endregion
 
-        private int selectedTabIndex;
+        #region CONTROLAR TAMAÑO PANTALLA
+        [JSInvokable]
+        public Task OnBrowserResize(ScreenSize size)
+        {
+            ancho = size.Width;
+            alto = size.Height;
 
+            // Aplicar estilos dinámicos o lógica según el tamaño
+            if (ancho < 1300)
+            {                
+                zoomType = "display-zoom";
+            }
+            else
+            {                
+                zoomType = "";
+            }
+            StateHasChanged(); // fuerza re-render
+            return Task.CompletedTask;
+        }
+        #endregion
+
+        #region FUNCIONES DE MERCANCIA    
+        //CONTROL DE TABS
         private void CambiarTabPorTipoCarga()
         {
             // Busca el acrónimo del tipo de carga seleccionado
@@ -125,71 +202,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             var seleccionado = selectedTabIndex;
         }
 
-        //Grid SLOSolicitudesDetalle
-        private RadzenDataGrid<SLOSolicitudesDetalle> gridSolicitudesDetalle;
-        private List<SLOSolicitudesDetalle> Items = [];        
-        private bool inInsert = false;
-        private SLOSolicitudesDetalle detalleEnEdicion = null;
-
-        #region FUNCIONES MERCANCIA               
-        //private async Task InsertarDetalle()
-        //{
-        //    try
-        //    {
-        //        // Validar detalles incompletos en Items
-        //        var detallePendienteItems = Items.FirstOrDefault(d => ValidarDetalleLista(d).Any());
-
-        //        // Validar detalle que esté en edición
-        //        var erroresGrid = detalleEnEdicion != null ? ValidarDetalleLista(detalleEnEdicion) : new List<string>();
-
-        //        if (detallePendienteItems != null || erroresGrid.Any())
-        //        {
-        //            var errores = detallePendienteItems != null
-        //                            ? ValidarDetalleLista(detallePendienteItems)
-        //                            : erroresGrid;
-
-        //            string mensaje = "<ul style='padding-left:20px; line-height:1.5;'>" +
-        //                             string.Join("", errores.Select(e => $"<li>{e}</li>")) +
-        //                             "</ul>";
-
-        //            await SweetAlertService.FireAsync("Completa la informacón de mercancía pendiente", mensaje, SweetAlertIcon.Warning);                    
-        //            return; // No permitir insertar un nuevo detalle
-        //        }
-
-        //        // Insertar nuevo detalle
-        //        inInsert = true;
-        //        detalleEnEdicion = new SLOSolicitudesDetalle()
-        //        {
-        //            MciaPeligrosa = false,
-        //            Cantidad = 0,
-        //            Peso = 0.0m,
-        //            IdCatMercancia = 0,
-        //            Piezas = 0,
-        //            Activo = true
-        //        };
-
-        //        await gridSolicitudesDetalle.InsertRow(detalleEnEdicion);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await SweetAlertService.FireAsync("Error", "Error al agregar mercancia: " + ex.Message, SweetAlertIcon.Error);
-        //    }
-        //}
-
-
-
-        //private async Task EditarDetalle(SLOSolicitudesDetalle item)
-        //{
-        //    try
-        //    {
-        //        await gridSolicitudesDetalle.EditRow(item);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MostrarError("Error al editar detalle: " + ex.Message);
-        //    }
-        //}
-
+        //CONTROL DE GRID DE PALETIZADA
         // Eliminar detalle
         private async Task InsertarDetalle()
         {
@@ -361,84 +374,6 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
         }
 
-
-        //Cancelar edición
-        //private async Task CancelarEdicion(SLOSolicitudesDetalle item)
-        //{
-        //    try
-        //    {
-        //        gridSolicitudesDetalle.CancelEditRow(item);
-        //        inInsert = false;
-
-        //        // Si estaba en modo inserción y canceló, remover el item vacío
-        //        if (inInsert && Items.Contains(item))
-        //        {
-        //            Items.Remove(item);
-        //        }
-
-        //        StateHasChanged(); // Forzar actualización
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MostrarError("Error al cancelar edición: " + ex.Message);
-        //    }
-        //}
-
-
-        // Guardar todos los detalles
-        //private async Task AgregarDetalle(SLOSolicitudesDetalle item)
-        //{
-        //    try
-        //    {
-        //        var errores = ValidarDetalleLista(item);
-
-        //        if (errores.Any())
-        //        {
-        //            // Construir mensaje HTML para SweetAlert
-        //            string mensaje = "<ul style='padding-left:20px; line-height:1.5;'>" +
-        //                             string.Join("", errores.Select(e => $"<li>{e}</li>")) +
-        //                             "</ul>";
-
-        //            await SweetAlertService.FireAsync("Falta Información", mensaje, SweetAlertIcon.Warning);
-
-        //            // Mantener fila en edición
-        //            detalleEnEdicion = item;
-        //            await gridSolicitudesDetalle.EditRow(item);
-        //            return; // Salir sin guardar
-        //        }
-
-        //        // Guardar detalle en Items solo si pasó validación
-        //        if (inInsert)
-        //        {
-        //            Items.Add(item);
-        //            inInsert = false;
-        //        }
-        //        else
-        //        {
-        //            var existingItem = Items.FirstOrDefault(i => i == item);
-        //            if (existingItem != null)
-        //            {
-        //                existingItem.MciaPeligrosa = item.MciaPeligrosa;
-        //                existingItem.Cantidad = item.Cantidad;
-        //                existingItem.Peso = item.Peso;
-        //                existingItem.IdCatMercancia = item.IdCatMercancia;
-        //                existingItem.Piezas = item.Piezas;
-        //            }
-        //        }
-
-        //        // Actualizar fila en el grid
-        //        await gridSolicitudesDetalle.UpdateRow(item);
-
-        //        // Limpiar estado de edición
-        //        detalleEnEdicion = null;
-        //        StateHasChanged();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        await SweetAlertService.FireAsync("Error", "Error al guardar detalle: " + ex.Message, SweetAlertIcon.Error);
-        //    }
-        //}
-
         private async Task CancelarEdicion(SLOSolicitudesDetalle item)
         {
             try
@@ -457,25 +392,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 MostrarError("Error al cancelar edición: " + ex.Message);
             }
         }
-        //private async Task GuardarTodosDetalles()
-        //{
-        //    try
-        //    {
-        //        if (!Items.Any())
-        //        {
-        //            MostrarError("No hay detalles para guardar");
-        //            return;
-        //        }
-
-        //        // Ejemplo: var resultado = await SolicitudesService.GuardarDetalles(Items);
-        //        //MostrarExito("Detalles guardados correctamente");
-        //        await gridSolicitudesDetalle.Reload();
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        MostrarError("Error al guardar detalles: " + ex.Message);
-        //    }
-        //}       
+              
 
         // Mostrar notificación de error
         private void MostrarError(string mensaje)
@@ -515,6 +432,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         #endregion
 
+        #region GUARDADO Y VALIDACIONES
+        //GENERAR SOLICITUD DE SERVICIO
         private async Task GenerarSolicitud()
         {
             List<string> Validaciones = new List<string>();
@@ -562,7 +481,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (objSLOSolicitudes.FechaPosicionamiento == objSLOSolicitudes.FechaFin)
                 Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser la misma que <strong>Fecha esperada de Entrega</strong>");
 
-            if(objSLOSolicitudes.FechaPosicionamiento > objSLOSolicitudes.FechaFin)
+            if (objSLOSolicitudes.FechaPosicionamiento > objSLOSolicitudes.FechaFin)
                 Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser superior que <strong>Fecha esperada de Entrega</strong>");
 
             if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
@@ -584,7 +503,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 }
                 var editingItems = gridSolicitudesDetalle.EditRows;
             }
-             // colección de filas en modo edición
+            // colección de filas en modo edición
 
             if (detalleEnEdicion != null)
             {
@@ -642,96 +561,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         }
 
-        //private async Task ActualizarSolicitud(SLOSolicitudes solicitud)
-        //{
-        //    List<string> Validaciones = new List<string>();
-
-        //    RespuestaGenericaDTO respuestaGenericaDTO;          
-
-        //    objSLOSolicitudes.FechaPosicionamiento = FechaSalida;
-        //    objSLOSolicitudes.FechaFin = FechaEntrega;
-        //    objSLOSolicitudes.sloSOlicitudesDetalle = Items;
-        //    objSLOSolicitudes.IdCatTipoOperComercio = 1;
-
-        //    //Validaciones
-        //    if (objSLOSolicitudes.IdCatCliente < 1)
-        //        Validaciones.Add("No se ha seleccionado un <strong>Cliente</strong>");
-
-        //    if (objSLOSolicitudes.IdCatUbicacionOrigen < 1)
-        //        Validaciones.Add("Debe seleccionar al menos una <strong>Ubicación de Origen</strong>");
-
-        //    if (objSLOSolicitudes.IdCatUbicacionDestino < 1)
-        //        Validaciones.Add("Debe seleccionar al menos una <strong>Ubicación de Destino</strong>");
-
-        //    if (objSLOSolicitudes.IdCatTipoOperacion < 1)
-        //        Validaciones.Add("Debe seleccionar al menos un <strong>Tipo de Operación Comercial</strong>");
-
-        //    if (!objSLOSolicitudes.FechaPosicionamiento.HasValue)
-        //        Validaciones.Add("Debe seleccionar una <strong>Fecha de Posicionamiento</strong>");
-
-        //    if (!objSLOSolicitudes.FechaFin.HasValue)
-        //        Validaciones.Add("Debe seleccionar una <strong>Fecha de Finalización</strong>");
-
-        //    if (objSLOSolicitudes.IdCatTipoCarga < 1 || objSLOSolicitudes.IdCatTipoCarga == null)
-        //        Validaciones.Add("Se debe establecer un <strong>Tipo de Carga</strong>");
-
-        //    if (objSLOSolicitudes.IdCatUbicacionOrigen == objSLOSolicitudes.IdCatUbicacionDestino)
-        //        Validaciones.Add("La <strong>Ubicación de Origen</strong> y la <strong>Ubicación de Destino</strong> no pueden ser iguales");
-
-        //    if (objSLOSolicitudes.FechaPosicionamiento == objSLOSolicitudes.FechaFin)
-        //        Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser la misma que <strong>Fecha esperada de Entrega</strong>");
-
-        //    if (objSLOSolicitudes.FechaPosicionamiento > objSLOSolicitudes.FechaFin)
-        //        Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser superior que <strong>Fecha esperada de Entrega</strong>");
-
-        //    if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
-        //        Validaciones.Add("La solicitud debe tener al menos una <strong>Mercancia</strong> a transportar");
-
-        //    if (Validaciones.Any())
-        //    {
-        //        // Unimos los errores en un string con saltos de línea
-        //        string mensaje = "<ul style='padding-left: 20px; line-height: 1.6;'>" +
-        //                         string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
-        //                         "</ul>";
-        //        await SweetAlertService.FireAsync("Datos incompletos o no válidos", mensaje, SweetAlertIcon.Warning);
-        //        return;
-        //    }
-
-        //    objSLOSolicitudes.IdCatUsuario = UsuarioToken.IdCatUsuario;
-        //    objSLOSolicitudes.catClienteUbicacionDestino = null;
-        //    objSLOSolicitudes.catClienteUbicacionOrigen = null;
-        //    objSLOSolicitudes.catTipoEstado = null;
-        //    objSLOSolicitudes.catTipoOperacion = null;
-        //    objSLOSolicitudes.catUsuario = null;
-        //    objSLOSolicitudes.Cliente = null;
-        //    objSLOSolicitudes.Orden = null;
-
-        //    try
-        //    {
-        //        respuestaGenericaDTO = await SLOSolicitudesService.ActualizarSolicitudSLO(solicitud);
-        //        if (respuestaGenericaDTO.IsSuccess == true)
-        //        {
-        //            await SweetAlertService.FireAsync("Actualizado", "Solicitud de Servicios Actualizada Correctamente", SweetAlertIcon.Success);
-
-        //            DialogService.Close(true);
-        //        }
-        //        else
-        //        {
-        //            await SweetAlertService.FireAsync(
-        //          "Solicitud de servicio no fue actualizada",
-        //          "La solicitud no pudo ser modificada correctamente.",
-        //          SweetAlertIcon.Error
-        //            );
-        //        }
-        //    } catch (Exception ex)
-        //    {
-        //        Console.WriteLine($"{ex}");
-        //    }
-
-
-
-        //}
-
+        //ACTUALIZAR SOLICITUD DE SERVICIO
         private async Task ActualizarSolicitud(SLOSolicitudes solicitud)
         {
             List<string> Validaciones = new List<string>();
@@ -801,8 +631,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 Validaciones.Add("Datos no completos en Detalle de Mercancía.");
 
 
-                // Mostrar errores si existen
-                if (Validaciones.Any())
+            // Mostrar errores si existen
+            if (Validaciones.Any())
             {
                 string mensaje = "<ul style='padding-left: 20px; line-height: 1.6;'>" +
                                  string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
@@ -845,12 +675,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
         }
 
-
-        private RadzenAccordion accordionRef;
-
-
+        //MANEJO DE UBICACIONES
         private async Task AgregarUbicacion()
         {
+            string anchoModal = "";
+            string altoModal = "";
             try
             {
                 if (objSLOSolicitudes?.IdCatCliente == null)
@@ -859,21 +688,31 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     return;
                 }
 
-                // Abrir el diálogo de agregar ubicación
-                var resultado = await DialogService.OpenAsync<UbicacionForm>(
-                    "Agregar Ubicación",
-                    new Dictionary<string, object>
-                    {
+                if(ancho < 1300)
+                {
+                    anchoModal = "85%";
+                    altoModal = "75%";
+                }
+                else
+                {
+                    anchoModal = "50%";
+                    altoModal = "55%";
+                }
+                    // Abrir el diálogo de agregar ubicación
+                    var resultado = await DialogService.OpenAsync<UbicacionForm>(
+                        "Agregar Ubicación",
+                        new Dictionary<string, object>
+                        {
                         { "IdCatCliente", objSLOSolicitudes.IdCatCliente }
-                    },
-                    new DialogOptions
-                    {
-                        Width = "50%",
-                        Height = "55%",
-                        Resizable = true,
-                        Draggable = true,
-                        Style = "border-radius: 12px;"
-                    });
+                        },
+                        new DialogOptions
+                        {
+                            Width = anchoModal,
+                            Height = altoModal,
+                            Resizable = true,
+                            Draggable = true,
+                            Style = "border-radius: 12px;"
+                        });
 
                 if (resultado)
                 {
@@ -922,11 +761,14 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
         }
 
+        //CERRAR MODAL
         private void CerrarModal()
         {
-            Solicitud = null;            
+            Solicitud = null;
             DialogService.Close(false);
         }
+        #endregion
+       
     }
 }
 

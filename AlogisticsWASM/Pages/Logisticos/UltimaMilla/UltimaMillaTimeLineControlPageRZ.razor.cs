@@ -192,14 +192,16 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         #endregion
 
         #region CARD IZQUIERDA
-        private async Task BotonClickeado(SLOTControlTerrestre item)
+        private async Task MostrarControlTower(SLOTControlTerrestre item)
         {
 
             idCatEstadoTerminado = lstTipoEstados
             .Where(d => d.TipoEstado == "T")
             .Select(d => d.IdCatTipoEstados)
             .FirstOrDefault();
-            
+
+            objCotControlTerrestre = new();
+
             Console.WriteLine($"Botón clickeado para placa: {item.sloTransporteAsignado}");
             objCotControlTerrestre = item;
             try
@@ -235,10 +237,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
                     lstDocumentos = await sloDocumentosService.sloGetFilesTask(item.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
                     Console.WriteLine($"Registros cargados: {lstDocumentos?.Count ?? 0}");
-                    await ConstruirEventos(); // Separa la lógica en un método
-                    InvokeAsync(StateHasChanged); // Fuerza la actualización del UI
-                    //await gridDocumentos.Reload();
+                    await ConstruirEventos(); 
+                     
                     idEstadoActual = objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados;
+                    StateHasChanged();
                 }
             }
             catch (Exception ex)

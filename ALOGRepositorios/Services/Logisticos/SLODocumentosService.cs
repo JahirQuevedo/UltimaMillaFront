@@ -161,6 +161,7 @@ namespace ALOGRepositorios.Services.Logisticos
             catch (HttpRequestException httpEx)
             {
                 Console.WriteLine($"[HTTP] {httpEx.Message}");
+
                 throw;
             }
             catch (Exception ex)
