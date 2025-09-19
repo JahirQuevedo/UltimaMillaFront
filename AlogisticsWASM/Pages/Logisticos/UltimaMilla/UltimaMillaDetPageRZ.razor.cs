@@ -540,8 +540,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             // Si pasó todas las validaciones            
             //objSLOSolicitudes.FechaInicio = DateTime.Now;
             objSLOSolicitudes.FechaRegistro = DateTime.Now;
-            objSLOSolicitudes.IdCatTipoEstado = 1;
-            objSLOSolicitudes.IdCatTipoOperComercio = 1;
+            objSLOSolicitudes.IdCatTipoEstado = 1;            
             objSLOSolicitudes.Activo = true;
             objSLOSolicitudes.IdCatUsuario = UsuarioToken.IdCatUsuario;
             objSLOSolicitudes.catClienteUbicacionDestino = null;

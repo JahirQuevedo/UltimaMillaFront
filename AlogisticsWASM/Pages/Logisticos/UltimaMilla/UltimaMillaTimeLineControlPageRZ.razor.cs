@@ -40,7 +40,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] private ISLODocumentosService sloDocumentosService { get; set; }
         [Inject] private IJSRuntime JS { get; set; }
         [Inject] private HttpClient Http { get; set; }
-        [Inject] private DialogService dialogService { get; set; }        
+        [Inject] private DialogService dialogService { get; set; }
+        [Inject] private ICatTipoOperacionesComercioService catTipoOperacionesComercioService { get; set; }
         #endregion
 
         #region MODELOS DTO
@@ -102,6 +103,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private Evento? eventualidadSeleccionada;
         private List<CardModel> cards = new();
         private List<SLOSolicitudesDocumentos> lstDocumentos = null;
+        private List<CatTipoOperacionComercio> lstOperacionComercial;
         private RadzenDataGrid<SLOSolicitudesDocumentos> gridDocumentos;
         private RadzenDataGrid<SLOSolicitudesDocumentos> gridArchivos;
         private RadzenUpload uploadFiles;
@@ -110,10 +112,17 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         private int idCatEstadoTerminado;
         private int? idEstadoActual;
-
+        
+        //Control de tamaño de pantalla
         private int ancho;
         private int alto;
         private string zoomType;
+
+        //Variables de catalogo
+        private int idOperacionComercialNacional;
+        private int idOperacionComercialExtrangero;
+
+        private string NombreOperacionComercial;        
         #endregion
 
         #region INICIALIZAR
@@ -128,7 +137,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
 
             lstTipoEstados = await tipoEstadoService.GetTiposEstado();
-            
+
+            lstOperacionComercial = await catTipoOperacionesComercioService.GetCatTipoOperacionesComercio();
+            idOperacionComercialNacional = lstOperacionComercial.Where(n => n.Acronimo == "NAL").Select(n => n.IdCatTipoOperComercio).FirstOrDefault();
+            idOperacionComercialExtrangero = lstOperacionComercial.Where(e => e.Acronimo == "INTER").Select(e => e.IdCatTipoOperComercio).FirstOrDefault();
         }
 
         protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -199,11 +211,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             .Where(d => d.TipoEstado == "T")
             .Select(d => d.IdCatTipoEstados)
             .FirstOrDefault();
-
-            objCotControlTerrestre = new();
-
-            Console.WriteLine($"Botón clickeado para placa: {item.sloTransporteAsignado}");
+            
+            objCotControlTerrestre = new();            
             objCotControlTerrestre = item;
+
             try
             {
                 if (objCotControlTerrestre != null)
@@ -235,11 +246,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                         .sloTransporteDetalle
                         .ToList();
 
-                    lstDocumentos = await sloDocumentosService.sloGetFilesTask(item.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
-                    Console.WriteLine($"Registros cargados: {lstDocumentos?.Count ?? 0}");
+                    lstDocumentos = await sloDocumentosService.sloGetFilesTask(item.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);                    
                     await ConstruirEventos(); 
                      
                     idEstadoActual = objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados;
+
+                    NombreOperacionComercial = objCotControlTerrestre.sloSolicitudes.catTipoOperComercio.Nombre;
                     StateHasChanged();
                 }
             }
@@ -366,30 +378,135 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         /// - Si dos fechas consecutivas están rellenas, la segunda debe ser al menos 1 minuto mayor que la primera.
         /// - Los eventos “eventualidades” deben estar dentro del rango mínimo-máximo de las fechas definidas.
         /// </summary>
+        //private IEnumerable<string> ValidateControlTerrestre()
+        //{
+        //    var errores = new List<string>();
+
+        //    // 1) Declara tu arreglo de tuplas CON NOMBRES (Nombre, Fecha)
+        //    var fechasOrdenadas = new (string Nombre, DateTime? Fecha)[]
+        //    {
+        //("Confirmación de Booking",       objTControlTerrestre?.FConfirmaBooking),
+        //("Unidad en sitio de carga",      objTControlTerrestre?.FUnidensitiocarga),
+        //("Unidad en proceso de carga",    objTControlTerrestre?.FUnidadencarga),
+        //("Finalización de carga",         objTControlTerrestre?.FFinalizaCarga),
+        //("Inicia tránsito a destino (mex)",   objTControlTerrestre?.FIniciaTransito),
+        //("Unidad en frontera mexicana para exportación", objTControlTerrestre?.FEnFrontera),
+        //("Inicio de despacho aduanal",    objTControlTerrestre?.FInicioDespachoAA),
+        //("Fin de proceso de despacho aduanal",   objTControlTerrestre?.FFinDespachoAA),
+        //("Inicia tránsito a destino (usa)",     objTControlTerrestre?.FIniciaTransitoEXPO),
+        //("Punto de descarga",            objTControlTerrestre?.FPuntoDescarga),
+        //("En proceso de descarga",       objTControlTerrestre?.FEnProcesoDescarga),
+        //("Finalización de descarga",     objTControlTerrestre?.FFinDescarga),
+        //("Recepción POD",                objTControlTerrestre?.FRecepcionPOD),
+        //("Fin de la operación",          objTControlTerrestre?.FFinOperacion)
+        //    };
+
+        //    // 2) Validación secuencial: cada fecha definida debe ser >= (al menos 1 min mayor) que la anterior definida
+        //    DateTime? ultimaFecha = null;
+        //    string nombreUltima = null;
+
+        //    foreach (var (nombre, fecha) in fechasOrdenadas)
+        //    {
+        //        if (!fecha.HasValue) continue;
+
+        //        // Regla: fecha actual debe ser >= última + 1 minuto
+        //        // Error si es menor que (última + 1 minuto). Igual a +1 minuto SÍ es válido.
+        //        if (ultimaFecha.HasValue && fecha.Value < ultimaFecha.Value.AddMinutes(1))
+        //        {
+        //            errores.Add($"La fecha '{nombre}' debe ser mayor a '{nombreUltima}'.");
+        //        }
+
+        //        ultimaFecha = fecha;
+        //        nombreUltima = nombre;
+        //    }
+
+        //    // 3) Validar eventualidades dentro del rango [min, max] de las fechas definidas
+        //    if (lstTransportesCrons != null && lstTransportesCrons.Any())
+        //    {
+        //        var fechasDefinidas = fechasOrdenadas
+        //            .Where(f => f.Fecha.HasValue)
+        //            .Select(f => f.Fecha!.Value)   // ya filtramos HasValue, se puede usar !
+        //            .ToList();
+
+        //        if (fechasDefinidas.Any())
+        //        {
+        //            var minFecha = fechasDefinidas.Min();
+        //            var maxFecha = fechasDefinidas.Max();
+
+        //            foreach (var cron in lstTransportesCrons)
+        //            {
+        //                // Si tu regla es que un evento sin fecha viene como DateTime.MinValue
+        //                if (cron.FechaEvento == DateTime.MinValue) continue;
+
+        //                if (cron.FechaEvento < minFecha || cron.FechaEvento > maxFecha)
+        //                {
+        //                    errores.Add(
+        //                        $"El evento '{cron.catTipoEventosCron?.Nombre ?? "Evento"}' " +
+        //                        $"con fecha {cron.FechaEvento:dd/MM/yyyy HH:mm} " +
+        //                        $"está fuera del rango de fechas de la operación."
+        //                    );
+        //                }                        
+        //            }
+
+        //        }
+        //    }
+
+        //    return errores;
+        //}
+
         private IEnumerable<string> ValidateControlTerrestre()
         {
             var errores = new List<string>();
 
-            // 1) Declara tu arreglo de tuplas CON NOMBRES (Nombre, Fecha)
-            var fechasOrdenadas = new (string Nombre, DateTime? Fecha)[]
-            {
-        ("Confirmación de Booking",       objTControlTerrestre?.FConfirmaBooking),
-        ("Unidad en sitio de carga",      objTControlTerrestre?.FUnidensitiocarga),
-        ("Unidad en proceso de carga",    objTControlTerrestre?.FUnidadencarga),
-        ("Finalización de carga",         objTControlTerrestre?.FFinalizaCarga),
-        ("Inicia tránsito a destino (mex)",   objTControlTerrestre?.FIniciaTransito),
-        ("Unidad en frontera mexicana para exportación", objTControlTerrestre?.FEnFrontera),
-        ("Inicio de despacho aduanal",    objTControlTerrestre?.FInicioDespachoAA),
-        ("Fin de proceso de despacho aduanal",   objTControlTerrestre?.FFinDespachoAA),
-        ("Inicia tránsito a destino (usa)",     objTControlTerrestre?.FIniciaTransitoEXPO),
-        ("Punto de descarga",            objTControlTerrestre?.FPuntoDescarga),
-        ("En proceso de descarga",       objTControlTerrestre?.FEnProcesoDescarga),
-        ("Finalización de descarga",     objTControlTerrestre?.FFinDescarga),
-        ("Recepción POD",                objTControlTerrestre?.FRecepcionPOD),
-        ("Fin de la operación",          objTControlTerrestre?.FFinOperacion)
-            };
+            // Detectar tipo de operación
+            var tipoOperacion = objTControlTerrestre?.sloSolicitudes?.IdCatTipoOperComercio;
 
-            // 2) Validación secuencial: cada fecha definida debe ser >= (al menos 1 min mayor) que la anterior definida
+            // Definir hitos de acuerdo al tipo
+            (string Nombre, DateTime? Fecha)[] fechasOrdenadas;
+
+            if (tipoOperacion == idOperacionComercialNacional)
+            {
+                fechasOrdenadas = new (string, DateTime?)[]
+                {
+            ("Confirmación de Booking",   objTControlTerrestre?.FConfirmaBooking),
+            ("Unidad en sitio de carga",  objTControlTerrestre?.FUnidensitiocarga),
+            ("Unidad en proceso de carga",objTControlTerrestre?.FUnidadencarga),
+            ("Finalización de carga",     objTControlTerrestre?.FFinalizaCarga),
+            ("Inicia tránsito a destino", objTControlTerrestre?.FIniciaTransito),
+            ("Punto de descarga",         objTControlTerrestre?.FPuntoDescarga),
+            ("En proceso de descarga",    objTControlTerrestre?.FEnProcesoDescarga),
+            ("Finalización de descarga",  objTControlTerrestre?.FFinDescarga),
+            ("Recepción POD",             objTControlTerrestre?.FRecepcionPOD),
+            ("Fin de la operación",       objTControlTerrestre?.FFinOperacion)
+                };
+            }
+            else if (tipoOperacion == idOperacionComercialExtrangero)
+            {
+                fechasOrdenadas = new (string, DateTime?)[]
+                {
+            ("Confirmación de Booking",       objTControlTerrestre?.FConfirmaBooking),
+            ("Unidad en sitio de carga",      objTControlTerrestre?.FUnidensitiocarga),
+            ("Unidad en proceso de carga",    objTControlTerrestre?.FUnidadencarga),
+            ("Finalización de carga",         objTControlTerrestre?.FFinalizaCarga),
+            ("Inicia tránsito a destino (mex)", objTControlTerrestre?.FIniciaTransito),
+            ("Unidad en frontera mexicana",   objTControlTerrestre?.FEnFrontera),
+            ("Inicio de despacho aduanal",    objTControlTerrestre?.FInicioDespachoAA),
+            ("Fin de despacho aduanal",       objTControlTerrestre?.FFinDespachoAA),
+            ("Inicia tránsito a destino (usa)", objTControlTerrestre?.FIniciaTransitoEXPO),
+            ("Punto de descarga",             objTControlTerrestre?.FPuntoDescarga),
+            ("En proceso de descarga",        objTControlTerrestre?.FEnProcesoDescarga),
+            ("Finalización de descarga",      objTControlTerrestre?.FFinDescarga),
+            ("Recepción POD",                 objTControlTerrestre?.FRecepcionPOD),
+            ("Fin de la operación",           objTControlTerrestre?.FFinOperacion)
+                };
+            }
+            else
+            {
+                // Por defecto, ninguna validación si no se reconoce el tipo
+                fechasOrdenadas = Array.Empty<(string, DateTime?)>();
+            }
+
+            // Validación secuencial
             DateTime? ultimaFecha = null;
             string nombreUltima = null;
 
@@ -397,8 +514,6 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             {
                 if (!fecha.HasValue) continue;
 
-                // Regla: fecha actual debe ser >= última + 1 minuto
-                // Error si es menor que (última + 1 minuto). Igual a +1 minuto SÍ es válido.
                 if (ultimaFecha.HasValue && fecha.Value < ultimaFecha.Value.AddMinutes(1))
                 {
                     errores.Add($"La fecha '{nombre}' debe ser mayor a '{nombreUltima}'.");
@@ -408,12 +523,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 nombreUltima = nombre;
             }
 
-            // 3) Validar eventualidades dentro del rango [min, max] de las fechas definidas
+            // Validar eventos externos en rango [min, max]
             if (lstTransportesCrons != null && lstTransportesCrons.Any())
             {
                 var fechasDefinidas = fechasOrdenadas
                     .Where(f => f.Fecha.HasValue)
-                    .Select(f => f.Fecha!.Value)   // ya filtramos HasValue, se puede usar !
+                    .Select(f => f.Fecha!.Value)
                     .ToList();
 
                 if (fechasDefinidas.Any())
@@ -423,7 +538,6 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
                     foreach (var cron in lstTransportesCrons)
                     {
-                        // Si tu regla es que un evento sin fecha viene como DateTime.MinValue
                         if (cron.FechaEvento == DateTime.MinValue) continue;
 
                         if (cron.FechaEvento < minFecha || cron.FechaEvento > maxFecha)
@@ -433,14 +547,14 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                                 $"con fecha {cron.FechaEvento:dd/MM/yyyy HH:mm} " +
                                 $"está fuera del rango de fechas de la operación."
                             );
-                        }                        
+                        }
                     }
-
                 }
             }
 
             return errores;
         }
+
 
 
 
@@ -554,69 +668,214 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         /// <summary>
         /// Abre la ventana modal para finalizar operación.
         /// </summary>
+        //private async Task FinalizarOperacion()
+        //{
+        //    List<string> Validaciones = new();
+        //    Validaciones = (List<string>)ValidateControlTerrestre();
+
+        //    // Validaciones de campos de fecha
+        //    if (objTControlTerrestre.FConfirmaBooking == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Confirmación de Booking</strong>");
+
+        //    if (objTControlTerrestre.FFinDespachoAA == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Fin de proceso de despacho aduanal</strong>");
+
+        //    if (objTControlTerrestre.FUnidensitiocarga == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Sitio de Carga</strong>");
+
+        //    if (objTControlTerrestre.FIniciaTransitoEXPO == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado estadounidense)</strong>");
+
+        //    if (objTControlTerrestre.FUnidadencarga == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Proceso de Carga</strong>");
+
+        //    if (objTControlTerrestre.FPuntoDescarga == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en punto de descarga</strong>");
+
+        //    if (objTControlTerrestre.FFinalizaCarga == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de Carga</strong>");
+
+        //    if (objTControlTerrestre.FEnProcesoDescarga == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en proceso de descarga</strong>");
+
+        //    if (objTControlTerrestre.FIniciaTransito == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado mexicano)</strong>");
+
+        //    if (objTControlTerrestre.FFinDescarga == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de descarga</strong>");
+
+        //    if (objTControlTerrestre.FEnFrontera == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en frontera mexicana para exportación</strong>");
+
+        //    if (objTControlTerrestre.FRecepcionPOD == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Prueba de entrega</strong>");
+
+        //    if (objTControlTerrestreModificable.FInicioDespachoAA == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Inicio de proceso de despacho aduanal</strong>");
+
+        //    if (objTControlTerrestre.FFinOperacion == null)
+        //        Validaciones.Add("No se ha establecido una fecha de <strong>Fin de la operación</strong>");
+
+        //    var idPOD = lstDocumentos
+        //    .Where(d => d.catDocumentos.Acronimo == "POD")
+        //    .Select(d => d.catDocumentos.IdCatDocumento)
+        //    .FirstOrDefault();
+
+        //    if (!lstDocumentos.Any(d => d.IdCatDocumento == idPOD))
+        //    {
+        //        Validaciones.Add("Para finalizar la operación es necesario subir <strong>Prueba de Entrega</strong>");
+        //    }
+
+
+
+        //    if (Validaciones.Any())
+        //    {
+        //        // Unimos los errores en un string con saltos de línea
+        //        string mensaje = "<ul style='padding-left: 20px; line-height: 1.6;'>" +
+        //                         string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
+        //                         "</ul>";
+        //        await sweetAlertService.FireAsync("Datos incompletos", mensaje, SweetAlertIcon.Warning);
+        //        return;
+        //    }
+
+        //    var result = await sweetAlertService.FireAsync(new SweetAlertOptions
+        //    {
+        //        Title = "Finalizar proceso",
+        //        Text = "Está a punto de finalizar el proceso",
+        //        Icon = SweetAlertIcon.Info,
+        //        ShowCancelButton = true,
+        //        ConfirmButtonText = "Sí, finalizar",
+        //        CancelButtonText = "Cancelar"
+        //    });
+
+        //    bool decision = result.IsConfirmed;
+
+        //    if (decision)
+        //    {
+        //        RespuestaGenericaDTO response = await SLOTransporteSolicitudService.SLOTransporteSolicitudFinalizar(objCotControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
+
+
+        //        if (response.IsSuccess)
+        //        {
+        //            await sweetAlertService.FireAsync("Solicitud Finalizada", "La Solicitud de Transporte ha sido finalizada correctamente", SweetAlertIcon.Success);
+
+        //            int idSolicitud = objCotControlTerrestre.IdSLOSolicitud;
+        //            dialogService.Close(true);
+
+        //        }
+
+        //    }
+
+        //}
         private async Task FinalizarOperacion()
         {
             List<string> Validaciones = new();
             Validaciones = (List<string>)ValidateControlTerrestre();
 
-            // Validaciones de campos de fecha
-            if (objTControlTerrestre.FConfirmaBooking == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Confirmación de Booking</strong>");
+            var tipoOperacion = objTControlTerrestre?.sloSolicitudes?.IdCatTipoOperComercio;
 
-            if (objTControlTerrestre.FFinDespachoAA == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Fin de proceso de despacho aduanal</strong>");
+            // =============================
+            // Validaciones NACIONAL
+            // =============================
+            if (tipoOperacion == idOperacionComercialNacional)
+            {
+                if (objTControlTerrestre.FConfirmaBooking == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Confirmación de Booking</strong>");
 
-            if (objTControlTerrestre.FUnidensitiocarga == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Sitio de Carga</strong>");
+                if (objTControlTerrestre.FUnidensitiocarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Sitio de Carga</strong>");
 
-            if (objTControlTerrestre.FIniciaTransitoEXPO == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado estadounidense)</strong>");
+                if (objTControlTerrestre.FUnidadencarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Proceso de Carga</strong>");
 
-            if (objTControlTerrestre.FUnidadencarga == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Proceso de Carga</strong>");
+                if (objTControlTerrestre.FFinalizaCarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de Carga</strong>");
 
-            if (objTControlTerrestre.FPuntoDescarga == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en punto de descarga</strong>");
+                if (objTControlTerrestre.FIniciaTransito == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino</strong>");
 
-            if (objTControlTerrestre.FFinalizaCarga == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de Carga</strong>");
+                if (objTControlTerrestre.FPuntoDescarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en punto de descarga</strong>");
 
-            if (objTControlTerrestre.FEnProcesoDescarga == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en proceso de descarga</strong>");
+                if (objTControlTerrestre.FEnProcesoDescarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en proceso de descarga</strong>");
 
-            if (objTControlTerrestre.FIniciaTransito == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado mexicano)</strong>");
+                if (objTControlTerrestre.FFinDescarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de descarga</strong>");
 
-            if (objTControlTerrestre.FFinDescarga == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de descarga</strong>");
+                if (objTControlTerrestre.FRecepcionPOD == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Prueba de entrega</strong>");
 
-            if (objTControlTerrestre.FEnFrontera == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en frontera mexicana para exportación</strong>");
+                if (objTControlTerrestre.FFinOperacion == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Fin de la operación</strong>");
+            }
 
-            if (objTControlTerrestre.FRecepcionPOD == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Prueba de entrega</strong>");
+            // =============================
+            // Validaciones INTERNACIONAL
+            // =============================
+            else if (tipoOperacion == idOperacionComercialExtrangero)
+            {
+                if (objTControlTerrestre.FConfirmaBooking == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Confirmación de Booking</strong>");
 
-            if (objTControlTerrestreModificable.FInicioDespachoAA == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Inicio de proceso de despacho aduanal</strong>");
+                if (objTControlTerrestre.FUnidensitiocarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Sitio de Carga</strong>");
 
-            if (objTControlTerrestre.FFinOperacion == null)
-                Validaciones.Add("No se ha establecido una fecha de <strong>Fin de la operación</strong>");
+                if (objTControlTerrestre.FUnidadencarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en Proceso de Carga</strong>");
 
+                if (objTControlTerrestre.FFinalizaCarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de Carga</strong>");
+
+                if (objTControlTerrestre.FIniciaTransito == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado mexicano)</strong>");
+
+                if (objTControlTerrestre.FEnFrontera == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en frontera mexicana para exportación</strong>");
+
+                if (objTControlTerrestre.FInicioDespachoAA == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Inicio de proceso de despacho aduanal</strong>");
+
+                if (objTControlTerrestre.FFinDespachoAA == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Fin de proceso de despacho aduanal</strong>");
+
+                if (objTControlTerrestre.FIniciaTransitoEXPO == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad inicia tránsito a destino (lado estadounidense)</strong>");
+
+                if (objTControlTerrestre.FPuntoDescarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en punto de descarga</strong>");
+
+                if (objTControlTerrestre.FEnProcesoDescarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Unidad en proceso de descarga</strong>");
+
+                if (objTControlTerrestre.FFinDescarga == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Finalización de descarga</strong>");
+
+                if (objTControlTerrestre.FRecepcionPOD == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Prueba de entrega</strong>");
+
+                if (objTControlTerrestre.FFinOperacion == null)
+                    Validaciones.Add("No se ha establecido una fecha de <strong>Fin de la operación</strong>");
+            }
+
+            // =============================
+            // Validación común: documento POD
+            // =============================
             var idPOD = lstDocumentos
-            .Where(d => d.catDocumentos.Acronimo == "POD")
-            .Select(d => d.catDocumentos.IdCatDocumento)
-            .FirstOrDefault();
+                .Where(d => d.catDocumentos.Acronimo == "POD")
+                .Select(d => d.catDocumentos.IdCatDocumento)
+                .FirstOrDefault();
 
             if (!lstDocumentos.Any(d => d.IdCatDocumento == idPOD))
             {
                 Validaciones.Add("Para finalizar la operación es necesario subir <strong>Prueba de Entrega</strong>");
             }
 
-
-
+            // =============================
+            // Mostrar errores si existen
+            // =============================
             if (Validaciones.Any())
             {
-                // Unimos los errores en un string con saltos de línea
                 string mensaje = "<ul style='padding-left: 20px; line-height: 1.6;'>" +
                                  string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
                                  "</ul>";
@@ -624,6 +883,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 return;
             }
 
+            // =============================
+            // Confirmar finalización
+            // =============================
             var result = await sweetAlertService.FireAsync(new SweetAlertOptions
             {
                 Title = "Finalizar proceso",
@@ -634,25 +896,23 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 CancelButtonText = "Cancelar"
             });
 
-            bool decision = result.IsConfirmed;
-
-            if (decision)
+            if (result.IsConfirmed)
             {
-                RespuestaGenericaDTO response = await SLOTransporteSolicitudService.SLOTransporteSolicitudFinalizar(objCotControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
-
+                RespuestaGenericaDTO response =
+                    await SLOTransporteSolicitudService.SLOTransporteSolicitudFinalizar(
+                        objCotControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
 
                 if (response.IsSuccess)
                 {
-                    await sweetAlertService.FireAsync("Solicitud Finalizada", "La Solicitud de Transporte ha sido finalizada correctamente", SweetAlertIcon.Success);
+                    await sweetAlertService.FireAsync("Solicitud Finalizada",
+                        "La Solicitud de Transporte ha sido finalizada correctamente",
+                        SweetAlertIcon.Success);
 
-                    int idSolicitud = objCotControlTerrestre.IdSLOSolicitud;
                     dialogService.Close(true);
-                                        
                 }
-
             }
-
         }
+
 
         private async Task AbrirDocumentoCont(SLOSolicitudesDocumentos doc)
         {

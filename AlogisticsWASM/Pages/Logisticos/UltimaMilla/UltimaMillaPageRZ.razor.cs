@@ -255,12 +255,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 //    SweetAlertIcon.Success
                 //);
 
-                //await CargaDatos(); // Recarga el grid
+                await CargaDatos(); // Recarga el grid
                 lstSLOSolicitudes = await _solicitudesService.GetSolicitudes(objFiltroSolicitudes);
-                cargando = true;
-                StateHasChanged();
+                //cargando = true;
+                //StateHasChanged();
                 await gridSolicitudes.Reload();
-                cargando = false;
+                //cargando = false;
                 StateHasChanged();
             } if(response == false)
             {

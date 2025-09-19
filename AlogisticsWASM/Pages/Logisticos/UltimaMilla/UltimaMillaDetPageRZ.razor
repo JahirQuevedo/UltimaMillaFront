@@ -199,7 +199,16 @@
 					TextProperty="NombreLugar"
 					ValueProperty="IdClienteUbicacion"
                     Style="width: 70%; border-radius: 8px;" /> <RadzenButton ButtonType="ButtonType.Button" Icon="add_circle" Style="border-radius: 12px; padding:0rem;"/> *@
-            
+                    @if(Modo == "C")
+                    {
+                        <RadzenLabel Style="display:flex; margin:0.5rem;" Text="Tipo de Operación Comercial" />
+                        <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoOperComercio"
+                            Data="@lstCatTipoOperacionesComercio"
+                            Placeholder="Operación"
+                            TextProperty="Nombre"
+                            ValueProperty="IdCatTipoOperComercio"
+                            Style="width: 80%; border-radius: 8px;" />
+                    }
 
                     @if(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
                     {
@@ -225,44 +234,7 @@
                                       Visible="@(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)" />
                     }                
            
-                
-            @* @if (objSLOSolicitudes.IdCatUbicacionOrigen != 0)
-            {
-                <RadzenAccordion>
-                    <Items>
-                        <RadzenAccordionItem Text="Lugar de Posicionamiento (Origen)" Selected="true">
-                            <RadzenFieldset Style="width:80%; padding:0.5rem;">
-                                <RadzenRow>
-                                    <!-- Bloque de información compacta -->
-                                    <RadzenColumn Size="6">
-                                        <RadzenStack Orientation="Orientation.Vertical" Gap="0.25rem">
-                                            <div><strong>País:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.catPaises?.Nombre</div>
-                                            <div><strong>Estado:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.catPaisEstados?.Nombre</div>
-                                            <div><strong>Municipio:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.catPaisMunicipios?.Nombre</div>
-                                            <div><strong>Colonia:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Colonia</div>
-                                            <div><strong>Calle:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Calle</div>
-                                            <div><strong>No. Exterior:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.NoExterior</div>
-                                            <div><strong>No. Interior:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.NoInterior</div>
-                                            <div><strong>Nombre Lugar:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.NombreLugar</div>
-                                            <div><strong>CP:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.CP</div>
-                                            <div><strong>Contacto:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Contacto</div>
-                                            <div><strong>Referencia:</strong> @objSLOSolicitudes.catClienteUbicacionOrigen?.Referencia</div>
-                                        </RadzenStack>
-                                    </RadzenColumn>
-
-                                    <!-- Opcional: Fecha de Posicionamiento -->
-                                    @* <RadzenColumn Size="6">
-                        <div style="text-align:center;">
-                            <div><strong>Fecha Posicionamiento:</strong></div>
-                            <div>@objSLOSolicitudes.FechaPosicionamiento?.ToString("dd/MM/yyyy HH:mm")</div>
-                        </div>
-                    </RadzenColumn> 
-                                </RadzenRow>
-                            </RadzenFieldset>
-                        </RadzenAccordionItem>
-                    </Items>
-                </RadzenAccordion>
-            } *@
+                        
 
                     @if (objSLOSolicitudes.IdCatUbicacionOrigen != 0)
                     {
@@ -347,27 +319,7 @@
                 Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
 
             @* <RadzenLabel Style="display:flex; margin:0.5rem;">Hora solicitada de Salida</RadzenLabel>
-            <RadzenDatePicker @bind-Value=@HoraSalida ShowTime="true" TimeOnly="true" DateFormat="HH:mm" Name="DatePickerTimeOnly"/> *@
-
-            <!--Tipo de operacion comercial-->
-            
-                    @if(Modo == "C")
-                    {
-                        <RadzenLabel Style="display:flex;margin:0.5rem">Tipo de Operación Comercial</RadzenLabel>
-                        <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoOperacion"
-                                        Placeholder="Tipo Operacion Comercial"
-                                        Data="lstCatTipoOperacion"
-                                        TextProperty="Nombre"
-                                        ValueProperty="IdCatTipoOperacion"
-                                        Style="width: 80%; border-radius: 8px;"
-                        Disabled="@(Modo == "E")" />
-                    }else if(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
-                    {
-                        @* <RadzenLabel Text="@(objSLOSolicitudes?.catTipoOperacion.Nombre)"/> *@
-                        <h6>Tipo de Operación Comercial</h6>
-                        <h5>@(objSLOSolicitudes?.catTipoOperacion.Nombre)</h5>
-                    }
-
+            <RadzenDatePicker @bind-Value=@HoraSalida ShowTime="true" TimeOnly="true" DateFormat="HH:mm" Name="DatePickerTimeOnly"/> *@            
 
             <!--Tipo de cargamento-->
             @if(Modo == "C")
@@ -408,6 +360,7 @@
                                 Style="width: 80%; border-radius: 8px;"  
                                 />*@
             </div>
+                    
             
             @if (Modo == "C")
             {
@@ -432,8 +385,27 @@
                         {
                             <h5>@objSLOSolicitudes.ReferenciaCliente</h5>
                         }
-                        
-            }            
+
+                    }
+
+                    <!--Tipo de operacion comercial-->
+                    @if (Modo == "C")
+                    {
+                        <RadzenLabel Style="display:flex;margin:0.5rem">Tipo de Operación</RadzenLabel>
+                        <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoOperacion"
+                                        Placeholder="Tipo Operacion Comercial"
+                                        Data="lstCatTipoOperacion"
+                                        TextProperty="Nombre"
+                                        ValueProperty="IdCatTipoOperacion"
+                                        Style="width: 80%; border-radius: 8px;"
+                                        Disabled="@(Modo == "E")" />
+                    }
+                    else if (objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
+                    {
+                        @* <RadzenLabel Text="@(objSLOSolicitudes?.catTipoOperacion.Nombre)"/> *@
+                        <h6>Tipo de Operación Comercial</h6>
+                        <h5>@(objSLOSolicitudes?.catTipoOperacion.Nombre)</h5>
+                    }
 
             <!--Destino campo-->
                     @if (objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
