@@ -3,6 +3,7 @@ using ALOG.Modelos.Modelos.Logisticos;
 using ALOGRepositorios.Services.Logisticos.ILogisticos;
 using ClienteBlazorWASM.Helpers;
 using Newtonsoft.Json;
+using Radzen;
 using System.Text;
 
 namespace ALOGRepositorios.Services.Logisticos
@@ -14,6 +15,78 @@ namespace ALOGRepositorios.Services.Logisticos
         public SLOTransporteCronService(HttpClient httpClient)
         {
             _httpClient = httpClient;
+        }
+
+        public async Task<RespuestaGenericaDTO> ActualizarSLOTransporteCron(SLOTransportesCron transportesCron)
+        {
+            RespuestaGenericaDTO respuestaGenericaDTO = new RespuestaGenericaDTO();
+            respuestaGenericaDTO.IsSuccess = false;
+            try
+            {
+                var jsonSerial = JsonConvert.SerializeObject(transportesCron);
+                var json = new StringContent(jsonSerial, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"{Inicializar.UrlApiLogistico}SLOTorreControl/ActualizarTransporteCron", json);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    respuestaGenericaDTO.IsSuccess = true;
+                    respuestaGenericaDTO.strMensaje = "Eventualidad actualizada correctamente";
+                    return respuestaGenericaDTO;
+                }
+                else
+                {
+                    respuestaGenericaDTO.IsSuccess = false;
+                    respuestaGenericaDTO.lstrErrorMessages.Add("Error al Actualizar Eventualidad");
+                    return respuestaGenericaDTO;
+                }
+
+            }
+            catch (Exception ex)
+            {
+                respuestaGenericaDTO.IsSuccess = false;
+                respuestaGenericaDTO.lstrErrorMessages.Add($"Error en la petición al servidor: {ex.Message}");
+                return respuestaGenericaDTO;
+            }
+        }
+
+        public async Task<RespuestaGenericaDTO> ObtenerPorIDTransporteCron(int idTransporteCron)
+        {
+            RespuestaGenericaDTO respuestaGenericaDTO = new RespuestaGenericaDTO();
+
+            try
+            {
+                var response = await _httpClient.GetAsync($"{Inicializar.UrlApiLogistico}SLOTorreControl/ObtenerPorIDTransporteCron/{idTransporteCron}");
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var jsonReaded = await response.Content.ReadAsStringAsync();
+                    SLOTransportesCron transporteCron = new SLOTransportesCron();
+
+                    transporteCron = JsonConvert.DeserializeObject<SLOTransportesCron>(jsonReaded);
+
+                    respuestaGenericaDTO.IsSuccess = true;
+                    respuestaGenericaDTO.Entidad = transporteCron;
+
+                    return respuestaGenericaDTO;
+                }
+                else
+                {
+                    respuestaGenericaDTO.IsSuccess = false;
+                    respuestaGenericaDTO.lstrErrorMessages = new List<string>
+                    {
+                        "Error al obtener la entidad"
+                    };
+                    return respuestaGenericaDTO;
+                }
+            }
+            catch (Exception ex)
+            {
+                respuestaGenericaDTO.lstrErrorMessages.Add(ex.Message);
+                respuestaGenericaDTO.IsSuccess = false ;
+                return respuestaGenericaDTO;
+            }
+
         }
 
         public async Task<RespuestaGenericaDTO> SLOTransporteCronCrear(SLOTransportesCron trasnporteCron)
@@ -33,8 +106,8 @@ namespace ALOGRepositorios.Services.Logisticos
                         json);
                 if (response.IsSuccessStatusCode)
                 {
-                    respuestaGenericaDto.IsSuccess = true;
-                    respuestaGenericaDto.strMensaje = "Eventualidad creada correctamente";
+                    var jsonReaded = await response.Content.ReadAsStringAsync();
+                    respuestaGenericaDto = JsonConvert.DeserializeObject<RespuestaGenericaDTO>(jsonReaded);
                     return respuestaGenericaDto;
                 }
                 else

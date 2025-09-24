@@ -7,5 +7,7 @@ namespace ALOGRepositorios.Services.Logisticos.ILogisticos
     {
         Task<RespuestaGenericaDTO> SLOTransporteCronCrear(SLOTransportesCron trasnporteCron);
         Task<List<SLOTransportesCron>> SLOTransporteCronListar(int idTransAsignado);
+        Task<RespuestaGenericaDTO> ObtenerPorIDTransporteCron(int idTransporteCron);
+        Task<RespuestaGenericaDTO> ActualizarSLOTransporteCron(SLOTransportesCron transportesCron);
     }
 }

@@ -50,12 +50,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 // Inicializar la lista con los archivos seleccionados
                 foreach (var f in Archivos)
                 {
-                    if (f.Size > 10 * 1024 * 1024) // 10 MB en bytes
+                    if (f.Size > 2.1 * 1024 * 1024) // 10 MB en bytes
                     {
                         IJsHelper.MostrarNotificacion(
                             NotificationService,
                             "Validación",
-                            $"El archivo {f.Name} excede el tamaño máximo permitido de 10 MB.",
+                            $"El archivo {f.Name} excede el tamaño máximo permitido de 2 MB.",
                             NotificationSeverity.Warning,
                             5000
                         );
@@ -68,6 +68,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                         NombreArchivo = f.Name,
                         SizeFile = f.Size
                     });
+                }
+                if(Documentos.Count == 0)
+                {
+                    DialogService.Close(false);
                 }
             }
             else
@@ -107,7 +111,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
 
             // Validar tamaño máximo de archivo
-            var sobrepeso = Documentos.Where(d => d.SizeFile > 10 * 1024 * 1024).ToList();
+            var sobrepeso = Documentos.Where(d => d.SizeFile > 2.1 * 1024 * 1024).ToList();
             if (sobrepeso.Any())
             {
                 var listaNombres = string.Join(", ", sobrepeso.Select(s => s.NombreArchivo));
@@ -136,6 +140,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         private void Cerrar(MouseEventArgs arg)
         {
+            Archivos = new();
             DialogService.Close(false);
         }
 

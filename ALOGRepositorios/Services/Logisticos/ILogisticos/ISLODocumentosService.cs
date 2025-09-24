@@ -6,7 +6,7 @@ namespace ALOGRepositorios.Services.Logisticos.ILogisticos
 {
     public interface ISLODocumentosService
     {
-        Task<bool> SLOUploadFile(SLOCargarArchivo sloCargarArchivoDTO);
+        Task<RespuestaGenericaDTO> SLOUploadFile(SLOCargarArchivo sloCargarArchivoDTO);
         Task<List<SLOSolicitudesDocumentos>> sloGetFilesTask(int idSLOTransporteSolicitud);
         //Task AbrirDocumentoCont(SLOSolicitudesDocumentos doc);
         Task<RespuestaGenericaDTO> BajaDocumento(SLOSolicitudesDocumentos archivoBaja);

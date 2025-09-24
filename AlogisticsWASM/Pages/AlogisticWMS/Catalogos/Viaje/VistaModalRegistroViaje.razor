@@ -179,7 +179,7 @@
     async void Submit(MonitorViaje monitorViaje)
     {
         string _mensaje = String.Empty;
-        ////Console.WriteLine("-> Guardar Datos Viaje args : " + JsonSerializer.Serialize(monitorViaje));
+        ////Console.WriteLine("-> GuardarEventualidad Datos Viaje args : " + JsonSerializer.Serialize(monitorViaje));
         _mensaje = valTipoOperacion.ToString();
 
         var _result = ValidarRegistroViaje(monitorViaje);
@@ -189,7 +189,7 @@
             monitorViaje.IdEmpresaLogin = 1;
             monitorViaje.TipoOperacion = valTipoOperacion.Equals(1) ? TipoOperacionAduanera.Importacion : TipoOperacionAduanera.Exportacion;
             ////Console.WriteLine("-> Barco Selected : " + nombreBarcoSelected);
-            ////Console.WriteLine("-> Guardar Datos Viaje args : " + JsonSerializer.Serialize(monitorViaje));
+            ////Console.WriteLine("-> GuardarEventualidad Datos Viaje args : " + JsonSerializer.Serialize(monitorViaje));
 
             @* if (nombreBarcoSelected.Equals(string.Empty)) {
                 monitorViaje.Barco = null;

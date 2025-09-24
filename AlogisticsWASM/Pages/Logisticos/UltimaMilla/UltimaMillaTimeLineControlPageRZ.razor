@@ -267,7 +267,7 @@
                      <RadzenFieldset Style="min-width: 100px;">
                         <RadzenRow Class="two-col-form">
             
-            @if(objTControlTerrestre.sloSolicitudes.IdCatTipoOperComercio == idOperacionComercialExtrangero)
+            @if(objTControlTerrestre.sloSolicitudes.IdCatTipoOperComercio == idOperacionEXPORTACION)
                     {
                             <RadzenColumn Size="6" Style="margin-top: -1rem;">
                                 <div class="field-label">Confirmación de Booking</div>
@@ -380,7 +380,7 @@
                             </RadzenColumn>
 
                             <RadzenColumn Size="6">
-                                <div class="field-label">Prueba de entrega (cargar documentos sellados y firmados)</div>
+                                <div class="field-label">Prueba de entrega (POD)</div>
                                 <RadzenDatePicker @bind-Value="objTControlTerrestreModificable.FRecepcionPOD"
                                                   ShowTime="true"
                                                   DateFormat="dd/MM/yyyy HH:mm"
@@ -435,7 +435,7 @@
                                 </RadzenColumn>
 
                             } 
-                            else if(objTControlTerrestre.sloSolicitudes.IdCatTipoOperComercio == idOperacionComercialNacional)
+                            else if(objTControlTerrestre.sloSolicitudes.IdCatTipoOperComercio == idOperacionNACIONAL)
                             {
                                 <RadzenColumn Size="6" Style="margin-top: -1rem;">
                                     <div class="field-label">Confirmación de Booking</div>
@@ -647,6 +647,7 @@
                 <RadzenUpload @ref="uploadFiles"
                               ChooseText="Agregar documentos"
                               Multiple="true"
+                              Accept=".jpg,.jpeg,.png,.pdf,image/*"
                               Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)"
                               Auto="true"
                               Change="@OnUploadChange"
@@ -794,7 +795,7 @@
                                               ButtonStyle="ButtonStyle.Danger"
                                               Icon="add_circle"
                                               Style="border-radius: 12px; min-width: 140px;"
-                                              Click="@(() => AgregarTracking())"
+                                              Click="@(() => AgregarEventualidad())"
                                               Disabled="@((objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado))">
                                     Agregar Eventualidad
                                 </RadzenButton>
@@ -821,8 +822,10 @@
                                     {
                                         <RadzenTimelineItem PointSize="PointSize.Small" PointStyle="PointStyle.Danger">
                                             <ChildContent>
+                                                <div onclick="@(() => EditarEventualidad(e.idCron))">
                                                 <RadzenText>@e.Titulo</RadzenText>
                                                 <RadzenText>@e.Fecha.ToString("dd/MM/yyyy HH:mm")</RadzenText>
+                                                </div>
                                             </ChildContent>
                                         </RadzenTimelineItem>
                                     }

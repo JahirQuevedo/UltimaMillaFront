@@ -51,9 +51,11 @@ namespace ALOGRepositorios.Services.Logisticos
             _httpClient = httpClient;
         }
 
-        public async Task<bool> SLOUploadFile(SLOCargarArchivo sloCargarArchivoDTO)
+        public async Task<RespuestaGenericaDTO> SLOUploadFile(SLOCargarArchivo sloCargarArchivoDTO)
         {
             RespuestaGenericaDTO respuestaGenericaDto = new RespuestaGenericaDTO();
+            respuestaGenericaDto.lstrErrorMessages.Add("Error al procesar el documeno.");
+            respuestaGenericaDto.IsSuccess = false;
             try
             {
                 var content = new MultipartFormDataContent();
@@ -69,7 +71,7 @@ namespace ALOGRepositorios.Services.Logisticos
                 }
                 else
                 {
-                    return false; // No hay archivo que enviar
+                    return respuestaGenericaDto; // No hay archivo que enviar
                 }
 
                 // Agregar datos adicionales
@@ -86,21 +88,79 @@ namespace ALOGRepositorios.Services.Logisticos
                 var response = await _httpClient.PostAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/subirArchivo",
                     content);
 
+                var jsonReaded = await response.Content.ReadAsStringAsync();
+                respuestaGenericaDto = JsonConvert.DeserializeObject<RespuestaGenericaDTO>(jsonReaded);
+
                 if (response.IsSuccessStatusCode)
                 {
-                    return true;
+
+                    return respuestaGenericaDto;
                 }
                 else
                 {
-                    return false;
+                    return respuestaGenericaDto;
                 }
 
             }
-            catch
+            catch(Exception ex)
             {
-                return false;
+                respuestaGenericaDto.lstrErrorMessages.Add(ex.ToString());
+                return respuestaGenericaDto;
             }
         }
+
+        //public async Task<RespuestaGenericaDTO> SLOUploadFileGet(SLOCargarArchivo sloCargarArchivoDTO)
+        //{
+        //    RespuestaGenericaDTO respuestaGenericaDto = new RespuestaGenericaDTO();
+        //    respuestaGenericaDto.IsSuccess = false;
+
+        //    try
+        //    {
+        //        var content = new MultipartFormDataContent();
+
+        //        // Crear StreamContent a partir de los bytes
+        //        if (sloCargarArchivoDTO.FileBytes != null)
+        //        {
+        //            var streamContent = new ByteArrayContent(sloCargarArchivoDTO.FileBytes);
+        //            streamContent.Headers.ContentType =
+        //                new System.Net.Http.Headers.MediaTypeHeaderValue(sloCargarArchivoDTO.ContentType ??
+        //                                                                 "application/octet-stream");
+        //            content.Add(streamContent, "File", sloCargarArchivoDTO.NombreArchivo);
+        //        }
+        //        else
+        //        {
+        //            return respuestaGenericaDto; // No hay archivo que enviar
+        //        }
+
+        //        // Agregar datos adicionales
+        //        content.Add(new StringContent(sloCargarArchivoDTO.IdOrden.ToString()),
+        //            nameof(sloCargarArchivoDTO.IdOrden));
+        //        content.Add(new StringContent(sloCargarArchivoDTO.Identificador ?? ""),
+        //            nameof(sloCargarArchivoDTO.Identificador));
+        //        content.Add(new StringContent(sloCargarArchivoDTO.TipoDocumento ?? ""),
+        //            nameof(sloCargarArchivoDTO.TipoDocumento));
+        //        content.Add(new StringContent(sloCargarArchivoDTO.IdUsuario.ToString()),
+        //            nameof(sloCargarArchivoDTO.IdUsuario));
+
+        //        // Enviar al API
+        //        var response = await _httpClient.PostAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/subirArchivo",
+        //            content);
+
+        //        if (response.IsSuccessStatusCode)
+        //        {
+        //            return true;
+        //        }
+        //        else
+        //        {
+        //            return false;
+        //        }
+
+        //    }
+        //    catch
+        //    {
+        //        return false;
+        //    }
+        //}
 
         [Inject] private JSRuntime JS { get; set; }
         [Inject] private NotificationService notificationService { get; set; }

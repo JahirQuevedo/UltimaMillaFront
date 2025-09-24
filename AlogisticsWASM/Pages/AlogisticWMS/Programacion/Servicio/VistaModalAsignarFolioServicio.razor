@@ -464,13 +464,13 @@
                     }
 
                     ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Success, 
-                    Summary = "Guardar Servicio", 
+                    Summary = "GuardarEventualidad Servicio", 
                     Detail = "Se creo correctamente el Servicio: " + _result.MensajeRespuesta, Duration = 4000 });
 
                 } else {
 
                     ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
-                    Summary = "Guardar Servicio", 
+                    Summary = "GuardarEventualidad Servicio", 
                     Detail = _result.MensajeRespuesta, Duration = 4000 });
 
                 } 
@@ -487,7 +487,7 @@
 
         } else {
             ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, 
-                Summary = "Guardar Servicio", 
+                Summary = "GuardarEventualidad Servicio", 
                 Detail = resultBase.MensajeRespuesta, Duration = 4000 });
         }
 

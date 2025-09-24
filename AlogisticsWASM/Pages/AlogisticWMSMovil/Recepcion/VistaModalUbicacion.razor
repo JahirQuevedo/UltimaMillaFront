@@ -172,7 +172,7 @@
 
             if (_confirmar) {
 
-                var result = await DialogServiceConfirm.Confirm("Desea Guardar la Ubicación?", "Ubicación Almacén", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
+                var result = await DialogServiceConfirm.Confirm("Desea GuardarEventualidad la Ubicación?", "Ubicación Almacén", new ConfirmOptions() { OkButtonText = "Si", CancelButtonText = "No" });
 
                 _validaDatos = result.HasValue ? (bool)result : false;
             }

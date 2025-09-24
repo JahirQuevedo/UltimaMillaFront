@@ -47,10 +47,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Inject] private ICatDocumentoService documentoService { get; set; }
         [Inject] private ISLODocumentosService sloDocumentosService { get; set; }
         [Inject] public NotificationService NotificationService { get; set; }
+        [Inject] public ICatTipoOperacionesTransportesService CatTipoOperacionesTransportesService { get; set; }
         //[Inject] JSRuntime JS { get; set; }
         #endregion
-
-
 
         #region DTO's
         public class CargamentoDTO
@@ -83,7 +82,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private List<SLOSolicitudesDetalle> lstCargamento = new();
         private List<SLOTransporteDetalle> lstTransporteDetalle = new();
         private List<SLOCargarArchivo> lstCargarArchivos = new List<SLOCargarArchivo>();
-
+        private List<CatTipoOperacionesTransportes> lstCatTipoOperacionesTransporte = new List<CatTipoOperacionesTransportes>();
 
 
         private SLOCargarArchivo archiCarga = new SLOCargarArchivo
@@ -122,7 +121,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         #region Funciones
 
-        #region Inicializar
+        #region INICIALIZAR
 
         protected override async Task OnInitializedAsync()
         {
@@ -132,7 +131,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             lstCatTipoEstados = await CatTipoEstadoService.GetTiposEstado();
             lstCatClientesUbicaciones = await CatClientesUbicacionesService.CatClientesUbicacionesListar();
             lstCatTipoTransporte = await CatTipoTransporteService.GetTipoTransporte();
+            lstCatTipoOperacionesTransporte = await CatTipoOperacionesTransportesService.GetTiposOperacionesTransportes();
             objSLOTransporteSolicitud.IdCatTipoEstados = Solicitud.IdCatTipoEstado;
+
 
             if (SolicitudTransporte != null && SolicitudTransporte.IdSLOTransporteSolicitud > 0)
             {
@@ -264,7 +265,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         {
             try
             {
-                objSLOTransporteSolicitud.IdCatTipoTransporte = 1;
+                //objSLOTransporteSolicitud.IdCatTipoTransporte = 1;
                 objSLOTransporteSolicitud.IdCatUsuarios = UsuarioToken.IdCatUsuario;
                 objSLOTransporteSolicitud.IdSLOSolicitud = objSolicitudes.IdSLOSolicitud;
                 objSLOTransporteSolicitud.Activo = true;
@@ -272,6 +273,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
                 if (objSLOTransporteSolicitud.IdCatTransportista == 0)
                     Validaciones.Add("Se debe asignar un Transportista");
+
+                if (objSLOTransporteSolicitud.IdCatTipoOperTransportes == 0)
+                    Validaciones.Add("Se debe asignar un tipo de transporte");
 
                 if (selectedItems == null || !selectedItems.Any())
                     Validaciones.Add("No hay mercancía seleccionada para su transporte");
@@ -308,7 +312,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 {
                     var detalle = new SLOTransporteDetalle
                     {
-                        IdCatTipoTransporte = 1,
+                        IdCatTipoOperTransportes = objSLOTransporteSolicitud.IdCatTipoOperTransportes,                        
                         IdCatTipoEstados = 1,
                         FechaRegistro = DateTime.Now,
                         Activo = true,
@@ -361,7 +365,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                         objTransporteAsignado.IdCatUsuarios = UsuarioToken.IdCatUsuario;
                         objTransporteAsignado.FechaRegistro = DateTime.Now;
                         objTransporteAsignado.Activo = true;
-                        objTransporteAsignado.IdCatTipoTransporte = 1;
+                        objTransporteAsignado.IdCatTipoOperTransportes = objSLOTransporteSolicitud.IdCatTipoOperTransportes;
+                        //objTransporteAsignado.IdCatTipoTransporte = 1;
                         //objTransporteAsignado.sloTransporteAsignadoDetalle = new List<SLOTransporteAsignadoDetalle>();
 
                         //foreach (var item in objSLOTransporteSolicitud.sloTransporteDetalle)
@@ -449,12 +454,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             respuestaGenericaDTO.IsSuccess = false;
             //objTransporteAsignado.IdCatUsuarios = UsuarioToken.IdCatUsuario;
             objTransporteAsignado.IdSLOTransporteSolicitud = objSLOTransporteSolicitud.IdSLOTransporteSolicitud;
-            objTransporteAsignado.IdCatTipoTransporte = objSLOTransporteSolicitud.IdCatTipoTransporte;
+            objTransporteAsignado.IdCatTipoOperTransportes = objSLOTransporteSolicitud.IdCatTipoOperTransportes;
             objSLOTransporteSolicitud.IdCatTipoEstados = 2;
             var nuevoTransporteAsignado = new SLOTransporteAsignado()
             {
                 IdCatUsuarios = UsuarioToken.IdCatUsuario,
-                IdCatTipoTransporte = objSLOTransporteSolicitud.IdCatTipoTransporte,
+                IdCatTipoOperTransportes = objSLOTransporteSolicitud.IdCatTipoOperTransportes,
                 Placas = objTransporteAsignado.Placas,
                 Economico = objTransporteAsignado.Economico,
                 Color = objTransporteAsignado.Color,
@@ -647,10 +652,19 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         //    }
         //}
         private async Task OnUploadChange(UploadChangeEventArgs args)
-        {
+        {            
+
             var files = args.Files?.ToList();
             if (files == null || !files.Any())
                 return;
+
+            if (files.Count > 6)
+            {
+                await SweetAlertService.FireAsync("Cantidad Máxima Superada", "No se puede cargar más de 6 archivos de forma simultanea.", SweetAlertIcon.Warning);
+                await uploadFiles.ClearFiles();
+                return;
+            }
+
 
             // Abrir modal para clasificar los archivos
             var result = await DialogService.OpenAsync<UltimaMillaModalDocumentos>(
@@ -669,7 +683,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     if (doc.FileInfo != null)
                     {
                         using var ms = new MemoryStream();
-                        await doc.FileInfo.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
+                        await doc.FileInfo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024).CopyToAsync(ms);
                         fileBytes = ms.ToArray();
                     }
 
@@ -689,6 +703,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 // Limpiar selección del upload
                 await uploadFiles.ClearFiles();
             }
+            await uploadFiles.ClearFiles();
         }
 
 
@@ -732,9 +747,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     //    Text = $"{procesados + 1} de {total}"
                     //});
 
-                    bool respon = await sloDocumentosService.SLOUploadFile(archiCarga);
+                    RespuestaGenericaDTO respon = await sloDocumentosService.SLOUploadFile(archiCarga);
 
-                    if (!respon)
+                    if (!respon.IsSuccess)
                     {
                         todosCorrectos = false;
                         await SweetAlertService.CloseAsync();
@@ -776,8 +791,5 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
 
         #endregion
-
-
-
     }
 }

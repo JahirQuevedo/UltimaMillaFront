@@ -70,7 +70,7 @@ namespace AlogisticsWASM.Pages.Vacios.Solicitudes
                 //var base64 = Convert.ToBase64String(stream.ToArray());
                 //string rutaDocumento = $"data:application/pdf;base64,{base64}";
                 // Aquí deberías guardar el archivo en backend o en wwwroot si aplica
-                // await ServicioUpload.Guardar(stream, rutaDocumento);
+                // await ServicioUpload.GuardarEventualidad(stream, rutaDocumento);
 
                 NotificationService.Notify(new NotificationMessage
                 {

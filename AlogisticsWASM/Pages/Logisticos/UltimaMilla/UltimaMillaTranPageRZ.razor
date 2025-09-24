@@ -102,7 +102,7 @@
                                     FilterAutoCompleteType="AutoCompleteType.On"
                                     Disabled="@(Modo == "R")" />
 
-                <RadzenFieldset Text="Lugar de posicionamiento (Origen)">
+                    <RadzenFieldset Text="Lugar de posicionamiento (Origen)" Style="min-height: 220px;">
                     <RadzenRow>
                         <!-- Columna 1: Fecha -->
                         <RadzenColumn Size="3">
@@ -150,15 +150,15 @@
                 Style="width: 100%; border-radius: 8px;" 
                 Disabled="true"/> *@
 
-                    @* <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoTransporte"
-                                    Data="@lstCatTipoTransporte"
-                                    TextProperty="Nombre"
-                                    ValueProperty="IdCatTipoTransporte"
+                    <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoOperTransportes"
+                                    Data="@lstCatTipoOperacionesTransporte"
+                                    TextProperty="catTipoTransporte.Nombre"
+                                    ValueProperty="IdCatTipoOperTransportes"
                                     Placeholder="Tipo de transporte"
-                                    Style="width: 100%; border-radius: 8px;"
-                                    Disabled="@(Modo == "R")" /> *@
+                                    Style="width: 100%; border-radius: 8px; margin-bottom: 10px;"
+                                    Disabled="@(Modo == "R")" />
 
-                   <h5 style="margin-top: 0.9rem; margin-left: 3.0rem;">Transporte Terrestre</h5>
+                   @* <h5 style="margin-top: 0.9rem; margin-left: 3.0rem;">Transporte Terrestre</h5> *@
                 <RadzenFieldset Text="Lugar de entrega (Destino)" Style="min-height: 220px;">
                     <RadzenRow>
                         <!-- Columna 1: Fecha -->
@@ -375,7 +375,7 @@
                                       Multiple="true"
                                       Accept="application/pdf"
                                       Auto="true"
-                                      Change="@OnUploadChange"
+                                      Change="@OnUploadChange"                                      
                                       Style="width:40%;"
                                       InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
                                       Visible="@(Modo == "C")"/>   <!-- <‑‑ aquí -->

@@ -228,7 +228,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                                      string.Join("", errores.Select(e => $"<li>{e}</li>")) +
                                      "</ul>";
                     
-                    await SweetAlertService.FireAsync("Completa la información de mercancía pendiente", mensaje, SweetAlertIcon.Warning);
+                    await SweetAlertService.FireAsync("Falta Información", "Complete la información de mercancía pendiente para proceguir"/* mensaje*/, SweetAlertIcon.Warning);
 
                     // Mantener fila en edición
                     //if (detallePendienteItems != null)
@@ -338,13 +338,13 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                                      string.Join("", errores.Select(e => $"<li>{e}</li>")) +
                                      "</ul>";
 
-                    await SweetAlertService.FireAsync("Falta Información", mensaje, SweetAlertIcon.Warning);
+                    await SweetAlertService.FireAsync("Falta Información", "Por favor complete la información faltante de mercancía", SweetAlertIcon.Warning);
                     detalleEnEdicion = item;
                     //await gridSolicitudesDetalle.EditRow(item);
                     return; // No continuar si hay errores
                 }
 
-                // Guardar detalles si no hay errores
+                // GuardarEventualidad detalles si no hay errores
                 //await GuardarTodosDetalles();
 
                 if (inInsert)

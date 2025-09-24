@@ -997,26 +997,26 @@
             ////Console.WriteLine("-> Se validan datos de la Referencia");
             if (monitorReferencia.Mercancias.Trim().Length.Equals(0)) {
                 JSRuntime.InvokeVoidAsync("eval", $@"document.getElementById(""REF_MERCANCIAS"").focus()");
-                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+                ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "GuardarEventualidad Referencia", Detail = _mensaje, Duration = 4000 });
                 _validarDatos = false;
             } 
         } else {
             _mensaje = "Favor de registra una descripción de la mercancía";
             JSRuntime.InvokeVoidAsync("eval", $@"document.getElementById(""REF_MERCANCIAS"").focus()");
-            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "GuardarEventualidad Referencia", Detail = _mensaje, Duration = 4000 });
             _validarDatos = false;
         }
 
         if (monitorReferencia.IdCatAduana.Equals(0)) {
             _mensaje = "Favor de selecciona la Aduana de Despacho";
-            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "GuardarEventualidad Referencia", Detail = _mensaje, Duration = 4000 });
             _validarDatos = false;
 
         }
 
         if (monitorReferencia.IdCliente.Equals(0)) {
             _mensaje = "Favor de selecciona el Cliente de la Operación";
-            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+            ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "GuardarEventualidad Referencia", Detail = _mensaje, Duration = 4000 });
             _validarDatos = false;
 
         }
@@ -1064,7 +1064,7 @@
                     
                 } else {
                     _mensaje = _resultBase.MensajeRespuesta;
-                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "Guardar Referencia", Detail = _mensaje, Duration = 4000 });
+                    ShowNotification(new NotificationMessage { Severity = NotificationSeverity.Warning, Summary = "GuardarEventualidad Referencia", Detail = _mensaje, Duration = 4000 });
                     
                 }
 

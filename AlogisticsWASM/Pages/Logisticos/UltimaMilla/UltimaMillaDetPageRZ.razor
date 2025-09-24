@@ -178,7 +178,7 @@
                         {
                             @* <RadzenLabel Text="@(objSLOSolicitudes?.Cliente.RazonSocial)" /> *@
                             <h6 style="margin-top: -2rem;">Cliente</h6>
-                            <h5>@(objSLOSolicitudes?.Cliente.RazonSocial)</h5>
+                            <h5>@(objSLOSolicitudes?.Cliente?.RazonSocial)</h5>
                         }                                        
             </div>
 
@@ -188,7 +188,7 @@
                 @* <RadzenTextBox Disabled="true" Visible="@(Modo == "E")" Style="width: 80%; border-radius: 8px;" Value="@($"{objSLOSolicitudes.Orden.ReferenciaALO}")" /> *@
                 @* <RadzenLabel Text="@(objSLOSolicitudes?.Orden.ReferenciaALO)"/> *@
                         <h6>Referencia ALO</h6>
-                        <h5>@(objSLOSolicitudes?.Orden.ReferenciaALO)</h5>
+                        <h5>@(objSLOSolicitudes?.Orden?.ReferenciaALO)</h5>
             }
 
 
@@ -207,7 +207,12 @@
                             Placeholder="Operación"
                             TextProperty="Nombre"
                             ValueProperty="IdCatTipoOperComercio"
-                            Style="width: 80%; border-radius: 8px;" />
+                        Style="width: 80%; border-radius: 8px;" />
+                    }
+                    else
+                    {
+                        <h6>Tipo de Operación Comercial</h6>
+                        <h5>@objSLOSolicitudes?.catTipoOperComercio?.Nombre</h5>
                     }
 
                     @if(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
@@ -218,7 +223,7 @@
                     }
                     @if(Modo == "C" || Modo == "E" && objSLOSolicitudes.IdCatTipoEstado == 1)
                     {
-                        <RadzenLabel Style="display:flex;margin:0.5rem">Ubicación de origen</RadzenLabel>
+                        <RadzenLabel Style="@($"display:flex;margin:0.5rem;{(objSLOSolicitudes?.ReferenciaCliente == null ? "margin-top:1rem;" : "")}")">Ubicación de origen</RadzenLabel>
                         <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatUbicacionOrigen"
                                         Placeholder="Origen"
                                         Data="@lstCatClientesUbicaciones"
@@ -376,13 +381,18 @@
                                Style="width: 80%; border-radius: 12px;"
                                Placeholder="Referencia"
                                Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" /> *@
-                               <h6>Referencia Cliente</h6>
-                        @if(objSLOSolicitudes.ReferenciaCliente == null || objSLOSolicitudes.ReferenciaCliente == "")
+
+                        @if (objSLOSolicitudes.ReferenciaCliente == null && objSLOSolicitudes.IdCatTipoEstado == 1 || objSLOSolicitudes.ReferenciaCliente == "" && objSLOSolicitudes.IdCatTipoEstado == 1)
                             {
-                            <h5>SIN REFERENCIA</h5>
+
+                            <RadzenLabel Style="display:flex; margin:0.5rem;">Referencia Cliente</RadzenLabel>
+                            <RadzenTextBox @bind-Value="objSLOSolicitudes.ReferenciaCliente"
+                                           Style="width: 80%; border-radius: 12px; margin-top: -0.5rem;"
+                                           Placeholder="Referencia Cliente" />
                         }
                         else
                         {
+                            <h6 style="margin-top: 0.5rem;">Referencia Cliente</h6>
                             <h5>@objSLOSolicitudes.ReferenciaCliente</h5>
                         }
 
@@ -400,11 +410,11 @@
                                         Style="width: 80%; border-radius: 8px;"
                                         Disabled="@(Modo == "E")" />
                     }
-                    else if (objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
+                    else if (objSLOSolicitudes.IdCatTipoEstado == 1 || objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)
                     {
                         @* <RadzenLabel Text="@(objSLOSolicitudes?.catTipoOperacion.Nombre)"/> *@
-                        <h6>Tipo de Operación Comercial</h6>
-                        <h5>@(objSLOSolicitudes?.catTipoOperacion.Nombre)</h5>
+                        <h6>Tipo de Operación</h6>
+                        <h5>@(objSLOSolicitudes?.catTipoOperacion?.Nombre)</h5>
                     }
 
             <!--Destino campo-->
