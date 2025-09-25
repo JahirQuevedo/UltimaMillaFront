@@ -83,6 +83,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private List<SLOTransporteDetalle> lstTransporteDetalle = new();
         private List<SLOCargarArchivo> lstCargarArchivos = new List<SLOCargarArchivo>();
         private List<CatTipoOperacionesTransportes> lstCatTipoOperacionesTransporte = new List<CatTipoOperacionesTransportes>();
+        private List<CatTipoOperacionesTransportes> lstCatTipoOperacionesTransporteTerrestre = new List<CatTipoOperacionesTransportes>();
 
 
         private SLOCargarArchivo archiCarga = new SLOCargarArchivo
@@ -158,6 +159,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 .Where(s => s.Acronimo == "CARTAPORTE" || s.Acronimo == "POD")
                 .ToList();
 
+            lstCatTipoOperacionesTransporteTerrestre = lstCatTipoOperacionesTransporte.Where(t => t.IdCatTipoOperacionesSLO == 1).ToList();
 
             if (Modo == "R")
             {
