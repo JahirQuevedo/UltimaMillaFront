@@ -27,6 +27,62 @@
 </style>
 
 <div style="padding:15px">
+
+    <!-- Título de la sección -->
+    <h4 style="margin-bottom:10px; font-weight:bold; color:#333;">Documentos a Cargar</h4>
+
+    <!-- Contenedor scrollable para documentos -->
+    <div style="max-height: 250px; overflow-y: auto; border:1px solid #ccc; padding:8px; border-radius:8px; background-color:#fff;">
+        @if (Documentos != null && Documentos.Any())
+        {
+            @foreach (var item in Documentos)
+            {
+                <div class="documento-item">
+                    <!-- Dropdown para seleccionar tipo de documento -->
+                    <RadzenDropDown Data="_listDocumentosFiltrado"
+                                    TextProperty="Nombre"
+                                    ValueProperty="Acronimo"
+                                    @bind-Value="item.AcronimoDocumento"
+                                    Placeholder="Seleccione tipo de documento"
+                                    Style="flex:1; min-width:200px" />
+
+                    <!-- Mostrar nombre del archivo cargado -->
+                    <RadzenText class="documento-info">
+                        @item.FileInfo?.Name (@(item.SizeFile / 1024) KB)
+                    </RadzenText>
+
+                    <!-- Botón eliminar documento -->
+                    <RadzenButton Icon="close"
+                                  ButtonStyle="ButtonStyle.Danger"
+                                  Size="ButtonSize.Small"
+                                  Style="border-radius:12px"
+                                  Click="@(() => EliminarDocumento(item))" />
+                </div>
+            }
+        }
+        else
+        {
+            <p style="font-size:13px; color:#888; text-align:center;">No hay documentos cargados</p>
+        }
+    </div>
+
+    <!-- Botones de acción -->
+    <div style="margin-top:15px; text-align:right;">
+        <RadzenButton Icon="save"
+                      ButtonStyle="ButtonStyle.Success"
+                      Style="border-radius:12px; margin-right:10px"
+                      Click="@Guardar">
+            Confirmar
+        </RadzenButton>
+        <RadzenButton ButtonStyle="ButtonStyle.Danger"
+                      Text="Cerrar"
+                      Style="border-radius:12px"
+                      Click="Cerrar" />
+    </div>
+</div>
+
+@* <div style="padding:15px">
+    <div style="max-height: 200px;">
     @foreach (var item in Documentos)
     {
         <div class="documento-item">
@@ -51,6 +107,7 @@
                           Click="@(() => EliminarDocumento(item))" />
         </div>
     }
+    </div>
 
     <!-- Botones de acción -->
     <div style="margin-top:15px;">
@@ -66,3 +123,4 @@
                       Click="Cerrar" />
     </div>
 </div>
+ *@

@@ -655,6 +655,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         {            
 
             var files = args.Files?.ToList();
+
             if (files == null || !files.Any())
                 return;
 
@@ -670,7 +671,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             var result = await DialogService.OpenAsync<UltimaMillaModalDocumentos>(
                 "Clasificar Documentos",
                 new Dictionary<string, object>() { { "Archivos", files }, { "Modo", "TRANSPORTE" } },
-                new DialogOptions() { Width = "40%", Height = "40%", Resizable = true, Draggable = true, ShowClose = false }
+                new DialogOptions() { Width = "60%", Height = "55%", Resizable = true, Draggable = true, ShowClose = false, Style = "border-radius: 12px;" }
             );
 
             // Procesar resultados del modal

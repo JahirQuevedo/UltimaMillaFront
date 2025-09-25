@@ -260,7 +260,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 "Clasificar Documentos",
                 new Dictionary<string, object>() { { "Archivos", files }, { "Modo", "INCIDENCIA" } },
                 new DialogOptions()
-                { Width = "40%", Height = "30%", Resizable = true, Draggable = true, ShowClose = false }
+                { Width = "60%", Height = "55%", Resizable = true, Draggable = true, ShowClose = false, Style = "border-radius: 12px;"}
             );
 
             // Procesar resultados del modal
@@ -458,12 +458,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 //await sweetAlertService.FireAsync("Cancelado", "No se eliminó el documento.", SweetAlertIcon.Info);
             }
         }
-
-        #endregion
         private void HacerEditableEventualidad(Microsoft.AspNetCore.Components.Web.MouseEventArgs args)
         {
             boolEditable = !boolEditable;
             StateHasChanged();
         }
+        #endregion
+
     }
 }
