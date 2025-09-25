@@ -125,8 +125,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             objTransporteCron.FechaRegistro = DateTime.Now;
             objTransporteCron.IdCatUsuarios = UsuarioDTO.IdCatUsuario;
 
-            if (objTransporteCron.FechaEvento < FechaMinimaBooking)
-                Validaciones.Add("Seleccionar <strong>Fecha Evento</strong> no menor a <strong>Confirmación de Booking</strong>");
+            if (objTransporteCron.FechaEvento <= FechaMinimaBooking)
+                Validaciones.Add("Seleccionar <strong>Fecha Evento</strong> no menor o igual a <strong>Confirmación de Booking</strong>");
 
             if (objTransporteCron.IdCatTipoEventoCron == 0)
                 Validaciones.Add("Establecer un <strong>Tipo de Evento</strong>");
@@ -218,8 +218,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             objTransporteCron.FechaRegistro = DateTime.Now;
             objTransporteCron.IdCatUsuarios = UsuarioDTO.IdCatUsuario;
 
-            if (objTransporteCron.FechaEvento < FechaMinimaBooking)
-                Validaciones.Add("Seleccionar <strong>Fecha Evento</strong> no menor a <strong>Confirmación de Booking</strong>");
+            if (objTransporteCron.FechaEvento <= FechaMinimaBooking)
+                Validaciones.Add("Seleccionar <strong>Fecha Evento</strong> no menor o igual a <strong>Confirmación de Booking</strong>");
 
             if (objTransporteCron.IdCatTipoEventoCron == 0)
                 Validaciones.Add("Establecer un <strong>Tipo de Evento</strong>");
