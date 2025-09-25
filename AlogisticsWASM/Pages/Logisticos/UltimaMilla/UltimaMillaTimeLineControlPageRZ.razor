@@ -647,13 +647,18 @@
                 <RadzenUpload @ref="uploadFiles"
                               ChooseText="Agregar documentos"
                               Multiple="true"
-                              Accept=".jpg,.jpeg,.png,.pdf,image/*"
+                              Accept=".jpg,.jpeg,.png,.pdf"
                               Disabled="@(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado)"
                               Auto="true"
                               Change="@OnUploadChange"
                               Style="width:40%;"
-                              InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
-                              />   <!-- <‑‑ aquí -->
+                              InputAttributes="@(new Dictionary<string, object> {
+                                            {"accept",".pdf, .jpg, .png"},
+                                            { "aria-label", "select file" },
+                                            { "title", "Seleccionar archivos PDF o imágenes (JPG, PNG)" },
+                                            { "oninput", "if(this.files.length > 10){ alert('Solo puedes seleccionar hasta 6 archivos simultaneamente.'); this.value=null; }" }
+                                        })" />
+
 
                 @if (lstCargarArchivos != null && lstCargarArchivos.Any())
                 {
@@ -725,6 +730,7 @@
                                     TItem="SLOSolicitudesDocumentos"
                                     Data="@lstDocumentos"
                                     AllowPaging="true" PageSize="4"
+                                    AllowColumnResize="true"
                                     Style="border-radius:12px;">
                         <Columns>
                             <RadzenDataGridColumn Title="T. Documento">

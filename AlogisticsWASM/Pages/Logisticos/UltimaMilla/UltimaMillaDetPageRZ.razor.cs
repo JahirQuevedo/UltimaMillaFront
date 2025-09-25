@@ -333,10 +333,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
                 if (errores.Any())
                 {
-                    // Construir un mensaje HTML para SweetAlert
-                    string mensaje = "<ul style='padding-left:20px; line-height:1.5;'>" +
-                                     string.Join("", errores.Select(e => $"<li>{e}</li>")) +
-                                     "</ul>";
+                    //// Construir un mensaje HTML para SweetAlert
+                    //string mensaje = "<ul style='padding-left:20px; line-height:1.5;'>" +
+                    //                 string.Join("", errores.Select(e => $"<li>{e}</li>")) +
+                    //                 "</ul>";
 
                     await SweetAlertService.FireAsync("Falta Información", "Por favor complete la información faltante de mercancía", SweetAlertIcon.Warning);
                     detalleEnEdicion = item;
@@ -410,8 +410,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         {
             var errores = new List<string>();
 
-            if (item.NoParte == null || item.NoParte == "")
-                errores.Add("<strong>NoParte</strong> no puede estar vacío");
+            if(string.IsNullOrWhiteSpace(item.NoParte))
+                errores.Add("<strong>NoParte</strong> no puede estar vacío HECHO POR JAHIR");
+            //if (item.NoParte == null || item.NoParte == "")
+            //    errores.Add("<strong>NoParte</strong> no puede estar vacío");
 
             if (item.Cantidad == null || item.Cantidad <= 0)
                 errores.Add("<strong>Cantidad Piezas</strong> debe ser mayor a 0");

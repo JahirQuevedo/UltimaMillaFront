@@ -127,6 +127,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private string NombreOperacionComercial;
 
         private List<SLOTransporteCronDocumentos> lstTransporteCronDocumentos = new();
+
+        //variables de RadzenUpload
+        private int uploadKey = 0;
+        private bool limpiarPendiente = false;
+        private const long MaxFileSize = 2 * 1024 * 1024; // 2 MB
+        private const int MaxCountFiles = 6;
         #endregion
 
         #region INICIALIZAR
@@ -169,6 +175,21 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 // Registrar listener de resize
                 await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
             }
+            if (limpiarPendiente && uploadFiles != null)
+            {
+                limpiarPendiente = false; // quitar flag antes de limpiar para evitar recursión
+                try
+                {
+                    await uploadFiles.ClearFiles();
+                }
+                catch
+                {
+                    // ignorar fallos al limpiar para no romper la UI
+                }
+                StateHasChanged();
+            }
+
+            await base.OnAfterRenderAsync(firstRender);
         }
 
         private void InicializarCards()
@@ -818,14 +839,63 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         private async Task OnUploadChange(UploadChangeEventArgs args)
         {
-            var files = args.Files?.ToList();
-            if (files == null || !files.Any())
+            // Si estamos limpiando por código, ignoramos el evento
+            if (limpiarPendiente)
+            {
+                return;
+            }
+
+            var files = args.Files?.ToList() ?? new List<Radzen.FileInfo>();
+
+            // Si no hay archivos (por ejemplo, ClearFiles disparó OnChange), salir sin mensajes
+            if (!files.Any())
                 return;
 
-            if (files.Count > 6)
+            // 1) Validaciones rápidas: cantidad
+            if (files.Count > MaxCountFiles)
             {
-                await sweetAlertService.FireAsync("Cantidad Máxima Superada", "No se puede cargar más de 6 archivos de forma simultanea.", SweetAlertIcon.Warning);
-                await uploadFiles.ClearFiles();
+                await MostrarAlertaLimiteCantidad();
+                // marcar limpieza para hacerla fuera del evento
+                limpiarPendiente = true;
+                return;
+            }
+
+            // 2) Validar tipos y tamaños (agrupar errores)
+            var errores = new List<string>();
+
+            // Tipos inválidos (solo permitimos PDF)
+            var tiposInvalidos = files
+                .Where(f =>
+                {
+                    var contentType = (f.ContentType ?? "").ToLowerInvariant();
+                    var ext = System.IO.Path.GetExtension(f.Name ?? "").ToLowerInvariant();
+                    return !(contentType == "application/pdf" || ext == ".pdf" ||
+         contentType.StartsWith("image/") ||
+         ext == ".jpg" || ext == ".jpeg" || ext == ".png");
+
+                })
+                .ToList();
+
+            if (tiposInvalidos.Any())
+                errores.Add($"Los siguientes archivos no son validos: {string.Join(", ", tiposInvalidos.Select(x => x.Name))}");
+
+            // Tamaño por archivo
+            var grandes = files.Where(f => f.Size > MaxFileSize).ToList();
+            if (grandes.Any())
+                errores.Add($"Los siguientes archivos exceden {MaxFileSize / 1024 / 1024} MB: {string.Join(", ", grandes.Select(x => x.Name))}");
+
+            if (errores.Any())
+            {
+                // Mostrar todos los errores juntos (puedes usar SweetAlert o NotificationService)
+                notificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Validación fallida",
+                    Detail = string.Join(" / ", errores),
+                    Duration = 6000
+                });
+
+                limpiarPendiente = true; // limpiar fuera del evento
                 return;
             }
 
@@ -865,9 +935,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                             IdUsuario = UsuarioDTO.IdCatUsuario
                         });
                     }
-                    var lista = lstCargarArchivos;
-
+                    var lista = lstCargarArchivos;                    
                     await ProcesarDocumentosAsync();
+                    limpiarPendiente = true;
                 }
                 catch (Exception ex)
                 {
@@ -876,9 +946,24 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
 
                 // Limpiar selección del upload
-                await uploadFiles.ClearFiles();
+                limpiarPendiente = true;
             }
-            await uploadFiles.ClearFiles();
+            limpiarPendiente = true;
+        }
+
+        private async Task MostrarAlertaLimiteCantidad()
+        {
+            // Si usas SweetAlertService:
+            // await SweetAlertService.FireAsync("Límite superado", $"No puedes cargar más de {MaxCountFiles} archivos.", SweetAlertIcon.Warning);
+
+            // O usar NotificationService:
+            notificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Cantidad máxima superada",
+                Detail = $"No puedes cargar más de {MaxCountFiles} archivos a la vez.",
+                Duration = 4000
+            });
         }
 
         private async Task EliminarDocumento(SLOCargarArchivo doc)
@@ -1055,7 +1140,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     { "IdCron",  idCron },
                      { "TControlTerrestre", objCotControlTerrestre },
                     {"UsuarioDTO", UsuarioDTO },
-                    {"Booking", objTControlTerrestre.FConfirmaBooking},
+                    {"Booking", objTControlTerrestre?.FConfirmaBooking},
 
                     {"Modo", "E" },
                  },
@@ -1082,7 +1167,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             {
                 await ConstruirEventos();
                 lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
-                await gridArchivos.Reload();
+                //await gridArchivos.Reload();
                 StateHasChanged();
             }
         }

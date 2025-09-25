@@ -151,7 +151,6 @@
                 Disabled="true"/> *@
 
                     <RadzenDropDown @bind-Value="objSLOTransporteSolicitud.IdCatTipoOperTransportes"
-                                    Data="@lstCatTipoOperacionesTransporte"
                                     Data="@lstCatTipoOperacionesTransporteTerrestre"
                                     TextProperty="catTipoTransporte.Nombre"
                                     ValueProperty="IdCatTipoOperTransportes"
@@ -374,12 +373,19 @@
                         <RadzenUpload @ref="uploadFiles"
                             ChooseText="Agregar documentos"
                                       Multiple="true"
-                                      Accept="application/pdf"
+                                      Accept=".pdf,application/pdf"
                                       Auto="true"
+                                      
                                       Change="@OnUploadChange"                                      
                                       Style="width:40%;"
-                                      InputAttributes="@(new Dictionary<string,object>{ { "aria-label", "select file" }})"
-                                      Visible="@(Modo == "C")"/>   <!-- <‑‑ aquí -->
+                                  InputAttributes="@(new Dictionary<string, object> {
+                                                    { "accept", ".pdf" },
+                                                    { "title", "Seleccionar archivos PDF" },
+                                                    { "oninput", "if(this.files.length > 10){ alert('Solo puedes seleccionar hasta 6 archivos PDF.'); this.value=null; }" }
+                                                })"
+                                      Visible="@(Modo == "C")"
+                                      @key="uploadKey"
+                                      />   <!-- <‑‑ aquí -->
 
 
                         @if (lstCargarArchivos != null && lstCargarArchivos.Any())

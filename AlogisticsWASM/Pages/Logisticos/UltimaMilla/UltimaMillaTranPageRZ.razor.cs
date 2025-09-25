@@ -118,6 +118,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private int ancho;
         private int alto;
         private string zoomType;
+        private int uploadKey = 0;
+        private bool limpiarPendiente = false;
+        private const long MaxFileSize = 2 * 1024 * 1024; // 2 MB
+        private const int MaxCountFiles = 6;
         #endregion
 
         #region Funciones
@@ -238,6 +242,22 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 // Registrar listener de resize
                 await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
             }
+
+            if (limpiarPendiente && uploadFiles != null)
+            {
+                limpiarPendiente = false; // quitar flag antes de limpiar para evitar recursión
+                try
+                {
+                    await uploadFiles.ClearFiles();
+                }
+                catch
+                {
+                    // ignorar fallos al limpiar para no romper la UI
+                }
+                StateHasChanged();
+            }
+
+            await base.OnAfterRenderAsync(firstRender);
         }
         #endregion
 
@@ -653,40 +673,213 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         //    }
         //}
+
+
+        //private async Task OnUploadChange(UploadChangeEventArgs args)
+        //{
+        //    long MaxFilesSize = 2 * 1024 * 1024; //2 MB
+        //    int MaxCountFiles = 6;
+        //    var files = args.Files?.ToList() ?? new List<Radzen.FileInfo>();
+
+        //    if (files.Count > 6)
+        //    {
+        //        NotificationService.Notify(new NotificationMessage
+        //        {
+        //            Severity = NotificationSeverity.Warning,
+        //            Summary = "Cantidad máxima superada",
+        //            Detail = $"No puedes cargar más de 6 archivos a la vez.",
+        //            Duration = 4000
+        //        });
+
+        //        // Limpia la selección para evitar el crash
+        //        await uploadFiles.ClearFiles();
+        //        return;
+        //    }
+
+        //    //Validar que los archivos sean del tipo valido
+        //    var filesInvalidos = args.Files?.ToList()
+        //.Where(f => f.ContentType != "application/pdf")
+        //.ToList();
+
+        //    foreach (var file in filesInvalidos)
+        //    {
+        //        NotificationService.Notify(new NotificationMessage
+        //        {
+        //            Severity = NotificationSeverity.Error,
+        //            Summary = "Tipo de archivo no permitido",
+        //            Detail = $"{file.Name} no es un PDF",
+        //            Duration = 4000
+        //        });
+
+        //        return;                ; // elimina archivos inválidos
+        //    }
+
+        //    List<string> validacionesDocumento = new();
+
+
+        //    if (files == null || !files.Any())
+        //    {
+        //        validacionesDocumento.Add("No se cargaron documentos");
+        //    }
+
+        //    if (files.Count >= MaxCountFiles)
+        //    {
+        //        validacionesDocumento.Add("Solo se pueden cargar 6 documentos simultaneamente");
+        //    }
+
+
+
+        //    foreach (var file in files)
+        //    {
+        //        if(file.Size > MaxFilesSize)
+        //        {
+        //            validacionesDocumento.Add($"{file.Name} excede el tamaño máximo permitido de 2 MB");
+        //            break;
+        //        }
+        //    }
+
+        //    if (validacionesDocumento.Any())
+        //    {
+        //        string validacionMensaje = string.Join(", ", validacionesDocumento);
+        //        NotificationService.Notify(new NotificationMessage
+        //        {
+        //            Severity = NotificationSeverity.Error,
+        //            Summary = "No hay archivos",
+        //            Detail = $"{validacionMensaje}",
+        //            Duration = 4000
+        //        });
+        //        //await uploadFiles.RemoveFile(file.Name);
+        //        //await uploadFiles.ClearFiles();                
+        //        return;
+        //    }
+
+
+
+        //    //if (files.Count > 6)
+        //    //{
+        //    //    await SweetAlertService.FireAsync("Cantidad Máxima Superada", "No se puede cargar más de 6 archivos de forma simultanea.", SweetAlertIcon.Warning);
+        //    //    await uploadFiles.ClearFiles();
+        //    //    return;
+        //    //}
+
+
+        //    // Abrir modal para clasificar los archivos
+        //    var result = await DialogService.OpenAsync<UltimaMillaModalDocumentos>(
+        //        "Clasificar Documentos",
+        //        new Dictionary<string, object>() { { "Archivos", files }, { "Modo", "TRANSPORTE" } },
+        //        new DialogOptions() { Width = "60%", Height = "55%", Resizable = true, Draggable = true, ShowClose = false, Style = "border-radius: 12px;" }
+        //    );
+
+        //    // Procesar resultados del modal
+        //    if (result is List<UltimaMillaModalDocumentos.DocumentoUploadItem> listaFinal && listaFinal.Any())
+        //    {
+        //        foreach (var doc in listaFinal)
+        //        {
+        //            // Convertir IBrowserFile a byte[]
+        //            byte[] fileBytes = null;
+        //            if (doc.FileInfo != null)
+        //            {
+        //                using var ms = new MemoryStream();
+        //                await doc.FileInfo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024).CopyToAsync(ms);
+        //                fileBytes = ms.ToArray();
+        //            }
+
+        //            lstCargarArchivos.Add(new SLOCargarArchivo()
+        //            {
+        //                TipoDocumento = doc.AcronimoDocumento,
+        //                Identificador = objTransporteAsignado.Placas,
+        //                NombreArchivo = doc.FileInfo?.Name,
+        //                SizeFile = doc.FileInfo?.Size ?? 0,
+        //                ContentType = doc.FileInfo?.ContentType,
+        //                FileBytes = fileBytes,
+        //                IdOrden = objSolicitudes.IdOrden,
+        //                IdUsuario = UsuarioToken.IdCatUsuario
+        //            });
+        //        }
+
+        //        // Limpiar selección del upload
+        //        await uploadFiles.ClearFiles();
+        //    }
+        //    await uploadFiles.ClearFiles();
+        //}
+                
+
         private async Task OnUploadChange(UploadChangeEventArgs args)
-        {            
-
-            var files = args.Files?.ToList();
-
-            if (files == null || !files.Any())
-                return;
-
-            if (files.Count > 6)
+        {
+            // Si estamos limpiando por código, ignoramos el evento
+            if (limpiarPendiente)
             {
-                await SweetAlertService.FireAsync("Cantidad Máxima Superada", "No se puede cargar más de 6 archivos de forma simultanea.", SweetAlertIcon.Warning);
-                await uploadFiles.ClearFiles();
                 return;
             }
 
+            var files = args.Files?.ToList() ?? new List<Radzen.FileInfo>();
 
-            // Abrir modal para clasificar los archivos
+            // Si no hay archivos (por ejemplo, ClearFiles disparó OnChange), salir sin mensajes
+            if (!files.Any())
+                return;
+
+            // 1) Validaciones rápidas: cantidad
+            if (files.Count > MaxCountFiles)
+            {
+                await MostrarAlertaLimiteCantidad();
+                // marcar limpieza para hacerla fuera del evento
+                limpiarPendiente = true;
+                return;
+            }
+
+            // 2) Validar tipos y tamaños (agrupar errores)
+            var errores = new List<string>();
+
+            // Tipos inválidos (solo permitimos PDF)
+            var tiposInvalidos = files
+                .Where(f =>
+                {
+                    var contentType = (f.ContentType ?? "").ToLowerInvariant();
+                    var ext = System.IO.Path.GetExtension(f.Name ?? "").ToLowerInvariant();
+                    return !(contentType == "application/pdf" || ext == ".pdf");
+                })
+                .ToList();
+
+            if (tiposInvalidos.Any())
+                errores.Add($"Los siguientes archivos no son PDF: {string.Join(", ", tiposInvalidos.Select(x => x.Name))}");
+
+            // Tamaño por archivo
+            var grandes = files.Where(f => f.Size > MaxFileSize).ToList();
+            if (grandes.Any())
+                errores.Add($"Los siguientes archivos exceden {MaxFileSize / 1024 / 1024} MB: {string.Join(", ", grandes.Select(x => x.Name))}");
+
+            if (errores.Any())
+            {
+                // Mostrar todos los errores juntos (puedes usar SweetAlert o NotificationService)
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Validación fallida",
+                    Detail = string.Join(" / ", errores),
+                    Duration = 6000
+                });
+
+                limpiarPendiente = true; // limpiar fuera del evento
+                return;
+            }
+
+            // 3) Si pasa validación, abrir modal para clasificar los archivos
             var result = await DialogService.OpenAsync<UltimaMillaModalDocumentos>(
                 "Clasificar Documentos",
                 new Dictionary<string, object>() { { "Archivos", files }, { "Modo", "TRANSPORTE" } },
                 new DialogOptions() { Width = "60%", Height = "55%", Resizable = true, Draggable = true, ShowClose = false, Style = "border-radius: 12px;" }
             );
 
-            // Procesar resultados del modal
+            // 4) Procesar resultado del modal
             if (result is List<UltimaMillaModalDocumentos.DocumentoUploadItem> listaFinal && listaFinal.Any())
             {
                 foreach (var doc in listaFinal)
                 {
-                    // Convertir IBrowserFile a byte[]
                     byte[] fileBytes = null;
                     if (doc.FileInfo != null)
                     {
                         using var ms = new MemoryStream();
-                        await doc.FileInfo.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024).CopyToAsync(ms);
+                        await doc.FileInfo.OpenReadStream(maxAllowedSize: MaxFileSize).CopyToAsync(ms);
                         fileBytes = ms.ToArray();
                     }
 
@@ -703,12 +896,30 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     });
                 }
 
-                // Limpiar selección del upload
-                await uploadFiles.ClearFiles();
+                // programar limpieza del componente después del render
+                limpiarPendiente = true;
             }
-            await uploadFiles.ClearFiles();
+            else
+            {
+                limpiarPendiente = true;
+            }
         }
 
+        // Método auxiliar para notificar límite (puedes usar SweetAlertService en vez de NotificationService)
+        private async Task MostrarAlertaLimiteCantidad()
+        {
+            // Si usas SweetAlertService:
+            // await SweetAlertService.FireAsync("Límite superado", $"No puedes cargar más de {MaxCountFiles} archivos.", SweetAlertIcon.Warning);
+
+            // O usar NotificationService:
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Cantidad máxima superada",
+                Detail = $"No puedes cargar más de {MaxCountFiles} archivos a la vez.",
+                Duration = 4000
+            });
+        }
 
         private async Task ProcesarDocumentosAsync()
         {
