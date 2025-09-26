@@ -16,6 +16,7 @@ using Newtonsoft.Json.Linq;
 using Radzen;
 using Radzen.Blazor;
 using System.Drawing.Text;
+using System.Text.RegularExpressions;
 using static AlogisticsWASM.Pages.Logisticos.UltimaMilla.UltimaMillaPageRZ;
 using static AlogisticsWASM.Pages.Vacios.Solicitudes.SolicitudesCRUDCMP;
 
@@ -160,7 +161,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
             lstCatDocumentos = await documentoService.GetTiposDocumento();
             lstTransporteDocumentos = lstCatDocumentos
-                .Where(s => s.Acronimo == "CARTAPORTE" || s.Acronimo == "POD")
+                .Where(s => s.Acronimo == "CARTAPORTE")
                 .ToList();
 
             lstCatTipoOperacionesTransporteTerrestre = lstCatTipoOperacionesTransporte.Where(t => t.IdCatTipoOperacionesSLO == 1).ToList();
@@ -230,11 +231,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 alto = size.Height;
                 //await CargaDatos();
                 if (ancho < 1300)
-                {                    
+                {
                     zoomType = "display-zoom";
                 }
                 else
-                {                    
+                {
                     zoomType = "";
                 }
                 StateHasChanged();
@@ -270,11 +271,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
             // Aplicar estilos dinámicos o lógica según el tamaño
             if (ancho < 1300)
-            {                
+            {
                 zoomType = "display-zoom";
             }
             else
-            {                
+            {
                 zoomType = "";
             }
             StateHasChanged(); // fuerza re-render
@@ -283,6 +284,131 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         #endregion
 
         #region Funciones de UI
+        #region VALIDAR EXPRESIONES REGULARES
+        bool ContieneCaracteresInvalidos(string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor))
+                return false; // No tiene sentido validar si está vacío, eso ya se valida aparte
+
+            // Regex que permite letras, números, guiones, espacios y puntos
+            string patron = @"^[a-zA-Z0-9\s\.-]+$";
+            return !Regex.IsMatch(valor, patron); // Devuelve true si hay caracteres inválidos
+        }
+        #endregion
+        private async Task<bool> MostrarValidacion()
+        {
+            // Construir un mensaje HTML para SweetAlert
+            string mensaje = "<ul style='padding-left:20px; line-height:1.5;'>" +
+                             string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
+                             "</ul>";
+
+
+            await SweetAlertService.FireAsync("Falta Información", mensaje, SweetAlertIcon.Warning);
+            Validaciones = new();
+            return false; // No continuar si hay errores
+        }
+        private async Task<bool> ValidarSolicitud()
+        {
+            //Validar Solicitud de Transporte
+            if (objSLOTransporteSolicitud.IdCatTransportista == 0)
+                Validaciones.Add("Se debe asignar un Transportista");
+
+            if (objSLOTransporteSolicitud.IdCatTipoOperTransportes == 0)
+                Validaciones.Add("Se debe asignar un tipo de transporte");
+
+            if (selectedItems == null || !selectedItems.Any())
+                Validaciones.Add("No hay mercancía seleccionada para su transporte");
+
+            if (Validaciones.Any())
+                return await MostrarValidacion();
+            //
+
+            // Validación de Placas
+            if (string.IsNullOrWhiteSpace(objTransporteAsignado.Placas))
+            {
+                Validaciones.Add("No se han agregado Placas de Transporte");
+            }
+            //else if (!Regex.IsMatch(objTransporteAsignado.Placas, @"^[A-Z0-9-]+$"))
+            //{
+            //    Validaciones.Add("Las placas solo pueden contener letras mayúsculas, números y guiones");
+            //}
+            //if (string.IsNullOrWhiteSpace(objTransporteAsignado.Placas))
+            //    Validaciones.Add("No se han agregado Placas de Transporte");
+            //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Placas))
+            //    Validaciones.Add("Las Placas contienen caracteres no permitidos");
+
+            if (string.IsNullOrWhiteSpace(objTransporteAsignado.Economico))
+                Validaciones.Add("No se ha agregado Económico");
+            //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Economico))
+            //    Validaciones.Add("El valor Económico contiene caracteres no permitidos");
+
+            if (string.IsNullOrWhiteSpace(objTransporteAsignado.Color))
+                Validaciones.Add("No se ha agregado un color de Transporte");
+            //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Color))
+            //    Validaciones.Add("El color contiene caracteres no permitidos");
+
+            if (string.IsNullOrWhiteSpace(objTransporteAsignado.Operador))
+                Validaciones.Add("No se ha agregado información de Conductor");
+            //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Operador))
+            //    Validaciones.Add("El nombre del conductor contiene caracteres no permitidos")
+
+            if (Validaciones.Any())
+                return await MostrarValidacion();
+
+
+            if (string.IsNullOrWhiteSpace(objTransporteAsignado.Marca))
+                Validaciones.Add("No se ha agregado Marca de transporte");
+            //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Marca))
+            //    Validaciones.Add("La marca contiene caracteres no permitidos");
+
+            if (string.IsNullOrWhiteSpace(objSLOTransporteSolicitud.CAAT))
+                Validaciones.Add("No se ha agregado información en CAAT");
+            //else if (ContieneCaracteresInvalidos(objSLOTransporteSolicitud.CAAT))
+            //    Validaciones.Add("CAAT contiene caracteres no permitidos");
+
+            if (string.IsNullOrWhiteSpace(objSLOTransporteDetalle.FolioUUID))
+                Validaciones.Add("No se asignó un FolioUUID");
+            //else if (ContieneCaracteresInvalidos(objSLOTransporteDetalle.FolioUUID))
+            //    Validaciones.Add("FolioUUID contiene caracteres no permitidos");
+
+            if (Validaciones.Any())
+                return await MostrarValidacion();
+
+            if (objSolicitudes.IdSLOSolicitud == 0)
+                Validaciones.Add("No se cargó correctamenta la información de la Solicitud de Servicio");
+
+
+            //Cargar en transporte Detalle los items seleccionados
+            objSLOTransporteSolicitud.sloTransporteDetalle = new List<SLOTransporteDetalle>();
+            var folioUUID = objSLOTransporteDetalle.FolioUUID;
+            foreach (var mercancia in selectedItems)
+            {
+                var detalle = new SLOTransporteDetalle
+                {
+                    IdCatTipoOperTransportes = objSLOTransporteSolicitud.IdCatTipoOperTransportes,
+                    IdCatTipoEstados = 1,
+                    FechaRegistro = DateTime.Now,
+                    Activo = true,
+                    IdCatUsuarios = UsuarioToken.IdCatUsuario,
+                    IdSLOSolicitudDet = mercancia.IdSLOSolicitudDet,
+                    IdSLOSolicitud = objSolicitudes.IdSLOSolicitud,
+                    FolioUUID = folioUUID
+                };
+                objSLOTransporteSolicitud.sloTransporteDetalle.Add(detalle);
+            }
+            //Asignar Transporte Detalle
+            //objSLOTransporteSolicitud.sloTransporteDetalle = lstTransporteDetalle;
+
+            if (!objSLOTransporteSolicitud.sloTransporteDetalle.Any())
+                Validaciones.Add("No se asignó correctamente la carga a la Solicitud de Transporte");
+
+            if (Validaciones.Any())
+            {
+                return await MostrarValidacion();
+            }
+            return true;
+        }
+
         private async Task CrearSolicitudTransporte()
         {
             try
@@ -292,79 +418,24 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 objSLOTransporteSolicitud.IdSLOSolicitud = objSolicitudes.IdSLOSolicitud;
                 objSLOTransporteSolicitud.Activo = true;
 
-
-                if (objSLOTransporteSolicitud.IdCatTransportista == 0)
-                    Validaciones.Add("Se debe asignar un Transportista");
-
-                if (objSLOTransporteSolicitud.IdCatTipoOperTransportes == 0)
-                    Validaciones.Add("Se debe asignar un tipo de transporte");
-
-                if (selectedItems == null || !selectedItems.Any())
-                    Validaciones.Add("No hay mercancía seleccionada para su transporte");
-
-                if (objTransporteAsignado.Placas == null || objTransporteAsignado.Placas == "")
-                    Validaciones.Add("No se han agregado Placas de Transporte");
-
-                if (objTransporteAsignado.Economico == null || objTransporteAsignado.Economico == "")
-                    Validaciones.Add("No se ha agregado un valor Economico");
-
-                if (objTransporteAsignado.Color == null || objTransporteAsignado.Color == "")
-                    Validaciones.Add("No se ha agregado un color de Transporte");
-
-                if (objTransporteAsignado.Marca == null || objTransporteAsignado.Marca == "")
-                    Validaciones.Add("No se ha agregado Marca de transporte");
-
-                if (objTransporteAsignado.Operador == null || objTransporteAsignado.Operador == "")
-                    Validaciones.Add("No se ha agregado información de Conductor");
-
-                if (objSLOTransporteSolicitud.CAAT == null || objSLOTransporteSolicitud.CAAT == "")
-                    Validaciones.Add("No se ha agregado información en CAAT");
-
-                if (objSLOTransporteDetalle.FolioUUID == null || objSLOTransporteDetalle.FolioUUID == "")
-                    Validaciones.Add("No se asignó un FolioUUID");
-
-                if (objSolicitudes.IdSLOSolicitud == 0)
-                    Validaciones.Add("No se cargó correctamenta la información de la Solicitud de Servicio");
+                // Normalizar (Trim) antes de validar
+                objTransporteAsignado.Placas = string.IsNullOrWhiteSpace(objTransporteAsignado.Placas) ? null : objTransporteAsignado.Placas.Trim();
+                objTransporteAsignado.Economico = string.IsNullOrWhiteSpace(objTransporteAsignado.Economico) ? null : objTransporteAsignado.Economico.Trim();
+                objTransporteAsignado.Color = string.IsNullOrWhiteSpace(objTransporteAsignado.Color) ? null : objTransporteAsignado.Color.Trim();
+                objTransporteAsignado.Marca = string.IsNullOrWhiteSpace(objTransporteAsignado.Marca) ? null : objTransporteAsignado.Marca.Trim();
+                objTransporteAsignado.Operador = string.IsNullOrWhiteSpace(objTransporteAsignado.Operador) ? null : objTransporteAsignado.Operador.Trim();
+                objSLOTransporteSolicitud.CAAT = string.IsNullOrWhiteSpace(objSLOTransporteSolicitud.CAAT) ? null : objSLOTransporteSolicitud.CAAT.Trim();
+                objSLOTransporteDetalle.FolioUUID = string.IsNullOrWhiteSpace(objSLOTransporteDetalle.FolioUUID) ? null : objSLOTransporteDetalle.FolioUUID.Trim();
 
 
-                //Cargar en transporte Detalle los items seleccionados
-                objSLOTransporteSolicitud.sloTransporteDetalle = new List<SLOTransporteDetalle>();
 
-                foreach (var mercancia in selectedItems)
+
+                var validacion = await ValidarSolicitud();
+
+                if (!validacion)
                 {
-                    var detalle = new SLOTransporteDetalle
-                    {
-                        IdCatTipoOperTransportes = objSLOTransporteSolicitud.IdCatTipoOperTransportes,                        
-                        IdCatTipoEstados = 1,
-                        FechaRegistro = DateTime.Now,
-                        Activo = true,
-                        IdCatUsuarios = UsuarioToken.IdCatUsuario,
-                        IdSLOSolicitudDet = mercancia.IdSLOSolicitudDet,
-                        IdSLOSolicitud = objSolicitudes.IdSLOSolicitud,
-                        FolioUUID = objSLOTransporteDetalle.FolioUUID
-                    };
-                    objSLOTransporteSolicitud.sloTransporteDetalle.Add(detalle);
+                    return;
                 }
-                //Asignar Transporte Detalle
-                //objSLOTransporteSolicitud.sloTransporteDetalle = lstTransporteDetalle;
-
-                if (!objSLOTransporteSolicitud.sloTransporteDetalle.Any())
-                    Validaciones.Add("No se asignó correctamente la carga a la Solicitud de Transporte");
-
-                if (Validaciones.Any())
-                {
-                    // Construir un mensaje HTML para SweetAlert
-                    string mensaje = "<ul style='padding-left:20px; line-height:1.5;'>" +
-                                     string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
-                                     "</ul>";
-
-
-                    await SweetAlertService.FireAsync("Falta Información", mensaje, SweetAlertIcon.Warning);
-                    Validaciones = new();
-                    return; // No continuar si hay errores
-                }
-
-
                 //Hacer la carga de la información una vez validada la información
                 #region CARGAR INFORMACION
                 try
@@ -802,7 +873,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         //    }
         //    await uploadFiles.ClearFiles();
         //}
-                
+
 
         private async Task OnUploadChange(UploadChangeEventArgs args)
         {
@@ -925,7 +996,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         {
             if (lstCargarArchivos == null || !lstCargarArchivos.Any())
             {
-                await SweetAlertService.FireAsync("Validación", "No hay documentos para procesar.", SweetAlertIcon.Warning);
+                //await SweetAlertService.FireAsync("Validación", "No hay documentos para procesar.", SweetAlertIcon.Warning);
                 return;
             }
 
@@ -1001,6 +1072,20 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             await documentosGrid.Reload();
         }
 
+        #region VALIDAR INFORMACION TRANSPORTE
+        private void RegularizarPlacas(ChangeEventArgs e)
+        {
+            if (!string.IsNullOrEmpty(objTransporteAsignado.Placas))
+            {
+                objTransporteAsignado.Placas = new string(objTransporteAsignado.Placas
+                    .ToUpper()
+                    .Where(c => char.IsLetterOrDigit(c) || c == '-')
+                    .ToArray());
+            }
+        }
+
+
+        #endregion
         #endregion
 
 

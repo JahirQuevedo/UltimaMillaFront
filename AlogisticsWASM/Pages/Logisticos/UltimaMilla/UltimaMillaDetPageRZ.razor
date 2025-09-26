@@ -203,7 +203,7 @@
                     {
                         <RadzenLabel Style="display:flex; margin:0.5rem;" Text="Tipo de Operación Comercial" />
                         <RadzenDropDown @bind-Value="objSLOSolicitudes.IdCatTipoOperComercio"
-                            Data="@lstCatTipoOperacionesComercio"
+                            Data="@lstCatTipoOperacionesComercioFiltrado"
                             Placeholder="Operación"
                             TextProperty="Nombre"
                             ValueProperty="IdCatTipoOperComercio"
@@ -712,7 +712,10 @@
                                         <EditTemplate Context="item">
                                             <RadzenNumeric TValue="decimal?" @bind-Value="item.Peso"
                                                            Style="width:100%;border-radius:12px;"
-                                                           Min="0" ShowUpDown="false" />
+                                                           Min="0" ShowUpDown="false"
+                                                           InputAttributes="@(new Dictionary<string, object>{
+                                                                          { "onkeypress", "if(event.key === ','){event.preventDefault();}" }
+                                                                      })" />
                                         </EditTemplate>
                                     </RadzenDataGridColumn>
 

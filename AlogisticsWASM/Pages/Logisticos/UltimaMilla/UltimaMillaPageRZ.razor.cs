@@ -264,8 +264,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 StateHasChanged();
             } if(response == false)
             {
+                await CargaDatos();
                 lstSLOSolicitudes = await _solicitudesService.GetSolicitudes(objFiltroSolicitudes);
                 await gridSolicitudes.Reload();
+                StateHasChanged();
             }
         }
         async Task BajaSolicitudServicio(int id)
@@ -351,9 +353,16 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
         #region CONTROL TOWER
         private async Task ControlTower(SLOSolicitudes solicitud)
-        {
+        {            
+
             //Verificar si existe el un transporte asignado para obtener el Control Tower
             RespuestaGenericaDTO respuestaGenerica = await SLOTControlTerrestreService.ObtenerPorIdTControlTerreste(solicitud.IdSLOSolicitud);
+
+            if(respuestaGenerica.Entidades.Count == 0)
+            {
+                await SweetAlertService.FireAsync("Sin transportes activos", "En este momento no existen transportes asignados para su seguimiento", SweetAlertIcon.Info);
+                return;
+            }
 
             if (respuestaGenerica.IsSuccess && respuestaGenerica.Entidades != null)
             {

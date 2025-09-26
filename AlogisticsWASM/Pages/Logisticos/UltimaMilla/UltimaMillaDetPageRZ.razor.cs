@@ -59,6 +59,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private List<CatClientesUbicaciones> lstCatClientesUbicaciones;
         private List<CatTipoCarga> lstCatTipoCarga;
         private List<CatTipoOperacionComercio> lstCatTipoOperacionesComercio;
+        private List<CatTipoOperacionComercio> lstCatTipoOperacionesComercioFiltrado = new List<CatTipoOperacionComercio>();
         private List<CatTipoIMO> lstCatTipoIMO;
         private ICollection<CatTipoEstados> lstCatEstados;
         private List<CatPaises> lstPaises;
@@ -131,6 +132,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 lstPaises =  await CatPaisesService.CatPaisesListar();
                 lstPaisEstados =  await CatPaisEstadosService.CatPaisEstadosListar();
                 lstMunicipios =  await catPaisMunicipiosService.CatPaisMunicipiosListar();
+                lstCatTipoOperacionesComercioFiltrado = lstCatTipoOperacionesComercio.Where(c => c.Acronimo == "EXPO" || c.Acronimo == "NACIONAL").ToList();
 
             }
 
@@ -293,33 +295,131 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         //}
         private async Task EliminarDetalle(SLOSolicitudesDetalle item)
         {
-            try
+            if(Modo == "E")
             {
-                // Cancelar edición si está en modo edición
-                gridSolicitudesDetalle.CancelEditRow(item);
-
-                // Si el item está en Items (ya guardado), removerlo
-                if (Items.Contains(item))
+                if (Items.Count == 1)
                 {
-                    Items.Remove(item);
+                    await SweetAlertService.FireAsync(new SweetAlertOptions
+                    {
+                        Title = "Mercancía Obligatoria",
+                        Text = "Debe existir al menos una mercancía registrada. Favor de agregar una nueva para avanzar.",
+                        Icon = SweetAlertIcon.Warning
+                    });
+
+                    return;
+
                 }
 
-                // Si era una fila nueva que aún no está en Items, resetear flags
-                if (inInsert && detalleEnEdicion == item)
+                var result = await SweetAlertService.FireAsync(new SweetAlertOptions
                 {
-                    inInsert = false;
-                    detalleEnEdicion = null;
+                    Title = "¿Desea eliminar esta mercancía?",
+                    Text = "La mercancía será eliminada definitivamente.",
+                    Icon = SweetAlertIcon.Warning,
+                    ShowCancelButton = true,
+                    ConfirmButtonText = "Sí, eliminar",
+                    CancelButtonText = "Cancelar"
+                });
+                
+
+                if (result.IsConfirmed)
+                {
+                    try
+                    {
+                        // Cancelar edición si está en modo edición
+                        gridSolicitudesDetalle.CancelEditRow(item);
+
+                        // Si el item está en Items (ya guardado), removerlo
+                        if (Items.Contains(item))
+                        {
+                            Items.Remove(item);
+                        }
+
+                        // Si era una fila nueva que aún no está en Items, resetear flags
+                        if (inInsert && detalleEnEdicion == item)
+                        {
+                            inInsert = false;
+                            detalleEnEdicion = null;
+                        }
+
+                        await ActualizarSolicitud(objSLOSolicitudes);
+
+                        //objSLOSolicitudes = await SLOSolicitudesService.ObtenerSolicitudId(objSLOSolicitudes.IdSLOSolicitud);
+                        Items = await SLOSolicitudesDetalleService.SLOSolicitudesDetalleObtener(objSLOSolicitudes.IdSLOSolicitud);
+                        // Refrescar el grid
+                        await gridSolicitudesDetalle.Reload();
+                        StateHasChanged();
+
+                        //objSLOSolicitudes.IdCatUsuario = UsuarioToken.IdCatUsuario;
+                        //objSLOSolicitudes.catClienteUbicacionDestino = null;
+                        //objSLOSolicitudes.catClienteUbicacionOrigen = null;
+                        //objSLOSolicitudes.catTipoEstado = null;
+                        //objSLOSolicitudes.catTipoOperacion = null;
+                        //objSLOSolicitudes.catUsuario = null;
+                        //objSLOSolicitudes.Cliente = null;
+                        //objSLOSolicitudes.Orden = null;
+
+                        //objSLOSolicitudes.sloSOlicitudesDetalle = Items;
+                        //var respuestaGenericaDTO = await SLOSolicitudesService.ActualizarSolicitudSLO(objSLOSolicitudes);
+                        //if (respuestaGenericaDTO.IsSuccess)
+                        //{
+                        //    NotificationService.Notify(new NotificationMessage
+                        //    {
+                        //        Severity = NotificationSeverity.Success,
+                        //        Summary = "Eliminado",
+                        //        Detail = "Mercancia eliminada correctamente",
+                        //        Duration = 4000
+                        //    });
+
+                        
+                        //}
+                        //else
+                        //{
+                        //    await SweetAlertService.FireAsync("Error", "Ha ocurrido un error al dar de baja mercancía", SweetAlertIcon.Error);
+                        //    return;
+                        //}                        
+                        // Mostrar mensaje (opcional)
+                        //MostrarExito("Detalle eliminado correctamente");
+                    }
+                    catch (Exception ex)
+                    {
+                        MostrarError("Error al eliminar detalle: " + ex.Message);
+                    }
                 }
-
-                // Refrescar el grid
-                await gridSolicitudesDetalle.Reload();
-
-                // Mostrar mensaje (opcional)
-                //MostrarExito("Detalle eliminado correctamente");
+                else
+                {
+                    return;
+                }
             }
-            catch (Exception ex)
+            else
             {
-                MostrarError("Error al eliminar detalle: " + ex.Message);
+                try
+                {
+                    // Cancelar edición si está en modo edición
+                    gridSolicitudesDetalle.CancelEditRow(item);
+
+                    // Si el item está en Items (ya guardado), removerlo
+                    if (Items.Contains(item))
+                    {
+                        Items.Remove(item);
+                    }
+
+                    // Si era una fila nueva que aún no está en Items, resetear flags
+                    if (inInsert && detalleEnEdicion == item)
+                    {
+                        inInsert = false;
+                        detalleEnEdicion = null;
+                    }
+
+                    // Refrescar el grid
+                    await gridSolicitudesDetalle.Reload();
+
+                    // Mostrar mensaje (opcional)
+                    //MostrarExito("Detalle eliminado correctamente");
+                }
+                catch (Exception ex)
+                {
+                    MostrarError("Error al eliminar detalle: " + ex.Message);
+                }
             }
         }
 
@@ -432,9 +532,55 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             return errores;
         }
 
+        private /*List<string>*/bool ValidarDetalleListaGuardado(SLOSolicitudesDetalle item)
+        {
+            //var errores = new List<string>();
+            bool validado = true;
+
+            if (string.IsNullOrWhiteSpace(item.NoParte))
+                validado = false;
+            //errores.Add("<strong>NoParte</strong> no puede estar vacío HECHO POR JAHIR");
+            //if (item.NoParte == null || item.NoParte == "")
+            //    errores.Add("<strong>NoParte</strong> no puede estar vacío");
+
+            if (item.Cantidad == null || item.Cantidad <= 0)
+                validado = false;
+            //errores.Add("<strong>Cantidad Piezas</strong> debe ser mayor a 0");
+
+            if (item.Peso == null || item.Peso <= 0)
+                validado = false;
+            //errores.Add("<strong>Peso</strong> debe ser mayor a 0");
+
+            if (item.IdCatMercancia == 0)
+                validado = false;
+            //errores.Add("Debe seleccionar <strong>Tipo Mercancia</strong>");
+
+            if (item.Piezas == null || item.Piezas <= 0)
+                validado = false;
+                //errores.Add("<strong>Cantidad de Piezas</strong> debe ser mayor a 0");
+
+
+
+            return validado;
+        }
+
         #endregion
 
         #region GUARDADO Y VALIDACIONES
+
+        public async Task<bool> MostrarValidaciones(List<string> Validaciones)
+        {
+            if (Validaciones.Any())
+            {
+                // Unimos los errores en un string con saltos de línea
+                string mensaje = "<ul style='padding-left: 20px; line-height: 1.6;'>" +
+                                 string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
+                                 "</ul>";
+                await SweetAlertService.FireAsync("Datos incompletos", mensaje, SweetAlertIcon.Warning);
+                return false;
+            }
+            return true;
+        }
         //GENERAR SOLICITUD DE SERVICIO
         private async Task GenerarSolicitud()
         {
@@ -459,14 +605,44 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (objSLOSolicitudes.IdCatCliente < 1)
                 Validaciones.Add("No se ha seleccionado un <strong>Cliente</strong>");
 
+            if (objSLOSolicitudes.ReferenciaCliente != null && string.IsNullOrWhiteSpace(objSLOSolicitudes.ReferenciaCliente))
+            {
+                objSLOSolicitudes.ReferenciaCliente = null; // Asignamos null                
+            }
+
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
+
+            if (objSLOSolicitudes.IdCatTipoOperComercio < 1)
+            {
+                Validaciones.Add("Debe seleccionar al menos un <strong>Tipo de Operación Comercial</strong>");
+            }
+
+            if (objSLOSolicitudes.IdCatTipoOperacion < 1)
+                Validaciones.Add("Debe seleccionar al menos un <strong>Tipo de Operación</strong>");
+
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
+
             if (objSLOSolicitudes.IdCatUbicacionOrigen < 1)
                 Validaciones.Add("Debe seleccionar al menos una <strong>Ubicación de Origen</strong>");
 
             if (objSLOSolicitudes.IdCatUbicacionDestino < 1)
                 Validaciones.Add("Debe seleccionar una <strong>Ubicación de Destino</strong>");
 
-            if (objSLOSolicitudes.IdCatTipoOperacion < 1)
-                Validaciones.Add("Debe seleccionar al menos un <strong>Tipo de Operación Comercial</strong>");
+            if (objSLOSolicitudes.IdCatUbicacionOrigen == objSLOSolicitudes.IdCatUbicacionDestino)
+                Validaciones.Add("La <strong>Ubicación de Origen</strong> y la <strong>Ubicación de Destino</strong> no pueden ser iguales");
+
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
+
+            
 
             if (!objSLOSolicitudes.FechaPosicionamiento.HasValue)
                 Validaciones.Add("Debe seleccionar una <strong>Fecha de Posicionamiento</strong>");
@@ -474,20 +650,30 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (!objSLOSolicitudes.FechaFin.HasValue)
                 Validaciones.Add("Debe seleccionar una <strong>Fecha de Finalización</strong>");
 
-            if (objSLOSolicitudes.IdCatTipoCarga < 1 || objSLOSolicitudes.IdCatTipoCarga == null)
-                Validaciones.Add("Se debe establecer un <strong>Tipo de Carga</strong>");
-
-            if (objSLOSolicitudes.IdCatUbicacionOrigen == objSLOSolicitudes.IdCatUbicacionDestino)
-                Validaciones.Add("La <strong>Ubicación de Origen</strong> y la <strong>Ubicación de Destino</strong> no pueden ser iguales");
-
             if (objSLOSolicitudes.FechaPosicionamiento == objSLOSolicitudes.FechaFin)
                 Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser la misma que <strong>Fecha esperada de Entrega</strong>");
 
             if (objSLOSolicitudes.FechaPosicionamiento > objSLOSolicitudes.FechaFin)
                 Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser superior que <strong>Fecha esperada de Entrega</strong>");
 
-            if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
-                Validaciones.Add("La solicitud debe tener al menos una <strong>Mercancia</strong> a transportar");
+
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
+
+            if (objSLOSolicitudes.IdCatTipoCarga < 1 || objSLOSolicitudes.IdCatTipoCarga == null)
+                Validaciones.Add("Se debe establecer un <strong>Tipo de Carga</strong>");
+
+                        
+            
+
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
+            //if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
+            //    Validaciones.Add("La solicitud debe tener al menos una <strong>Mercancia</strong> a transportar");
 
             //if(objSLOSolicitudes.sloSOlicitudesDetalle == null || objSLOSolicitudes.sloSOlicitudesDetalle.Count == 0)
             //    Validaciones.Add("Debe cargar al menos una <strong>Mercancía</strong> a la solicitud");
@@ -509,35 +695,60 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
             if (detalleEnEdicion != null)
             {
-                Validaciones.Add("No se permite registrar mercancía con cantidad cero o sin datos. Verifica y corrige antes de continuar.");
+                Validaciones.Add("La información de la mercancía no es válida. Por favor, verifica los datos ingresados.");
             }
 
-
-            int index = 1;
-            foreach (var mercancia in Items)
+            if (!(await MostrarValidaciones(Validaciones)))
             {
-                var errores = ValidarDetalleLista(mercancia);
-
-                foreach (var error in errores)
-                {
-                    Validaciones.Add($"Mercancía {index}: {error}");
-                }
-
-                index++;
-            }
-
-
-
-            if (Validaciones.Any())
-            {
-                // Unimos los errores en un string con saltos de línea
-                string mensaje = "<ul style='padding-left: 20px; line-height: 1.6;'>" +
-                                 string.Join("", Validaciones.Select(e => $"<li>{e}</li>")) +
-                                 "</ul>";
-                await SweetAlertService.FireAsync("Datos incompletos", mensaje, SweetAlertIcon.Warning);
                 return;
             }
+            //int index = 1;
+            //foreach (var mercancia in Items)
+            //{
+            //    var errores = ValidarDetalleLista(mercancia);
 
+            //    foreach (var error in errores)
+            //    {
+            //        Validaciones.Add($"Mercancía {index}: {error}");
+            //    }
+
+            //    index++;
+            //}
+
+            if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
+            {
+                Validaciones.Add("La solicitud debe tener al menos una <strong>Mercancia</strong> a transportar");
+            }
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
+            else
+            {
+                bool validado = false;
+                foreach (var mercancia in Items)
+                {
+                    validado = ValidarDetalleListaGuardado(mercancia);
+                    if (!validado)
+                    {
+                        break;
+                    }
+                    //foreach (var error in errores)
+                    //{
+                    //    Validaciones.Add($"Mercancía {index}: {error}");
+                    //}
+                    //index++;                                    
+                }
+
+                if (!validado)
+                    Validaciones.Add("Datos no completos en Detalle de Mercancía.");
+            }
+
+            ////////VALIDAR AQUI
+            if (!(await MostrarValidaciones(Validaciones)))
+            {
+                return;
+            }
 
             // Si pasó todas las validaciones            
             //objSLOSolicitudes.FechaInicio = DateTime.Now;
@@ -578,14 +789,24 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (objSLOSolicitudes.IdCatCliente < 1)
                 Validaciones.Add("No se ha seleccionado un <strong>Cliente</strong>");
 
+            if (objSLOSolicitudes.ReferenciaCliente != null && string.IsNullOrWhiteSpace(objSLOSolicitudes.ReferenciaCliente))
+            {
+                objSLOSolicitudes.ReferenciaCliente = null; // Asignamos null                
+            }
+
             if (objSLOSolicitudes.IdCatUbicacionOrigen < 1)
                 Validaciones.Add("Debe seleccionar al menos una <strong>Ubicación de Origen</strong>");
 
             if (objSLOSolicitudes.IdCatUbicacionDestino < 1)
                 Validaciones.Add("Debe seleccionar al menos una <strong>Ubicación de Destino</strong>");
 
-            if (objSLOSolicitudes.IdCatTipoOperacion < 1)
+            if(objSLOSolicitudes.IdCatTipoOperComercio < 1)
+            {
                 Validaciones.Add("Debe seleccionar al menos un <strong>Tipo de Operación Comercial</strong>");
+            }
+
+            if (objSLOSolicitudes.IdCatTipoOperacion < 1)
+                Validaciones.Add("Debe seleccionar al menos un <strong>Tipo de Operación</strong>");
 
             if (!objSLOSolicitudes.FechaPosicionamiento.HasValue)
                 Validaciones.Add("Debe seleccionar una <strong>Fecha de Posicionamiento</strong>");
@@ -603,33 +824,43 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser la misma que <strong>Fecha esperada de Entrega</strong>");
 
             if (objSLOSolicitudes.FechaPosicionamiento > objSLOSolicitudes.FechaFin)
-                Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser superior que <strong>Fecha esperada de Entrega</strong>");
-
-            if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
-                Validaciones.Add("La solicitud debe tener al menos una <strong>Mercancia</strong> a transportar");
+                Validaciones.Add("La <strong>Fecha de Posicionamiento</strong> no puede ser superior que <strong>Fecha esperada de Entrega</strong>");           
 
             // Validaciones del grid y detalle en edición
             if (!gridSolicitudesDetalle.IsValid)
                 Validaciones.Add("Existen filas en edición en <strong>Agregar Mercancia</strong>.");
 
             if (detalleEnEdicion != null)
-                Validaciones.Add("Debe agregar correctamente la informacion de la <strong>Mercancia</strong>");
+                Validaciones.Add("Información no valida de Mercancía, por favor valida.");
 
             // Validaciones de cada mercancía
-            int index = 1;
-            List<string> errores = new();
-            foreach (var mercancia in Items)
+            //int index = 1;
+            //List<string> errores = new();
+            if (objSLOSolicitudes.sloSOlicitudesDetalle.Count < 1 || objSLOSolicitudes.sloSOlicitudesDetalle == null)
             {
-                errores = ValidarDetalleLista(mercancia);
-                //foreach (var error in errores)
-                //{
-                //    Validaciones.Add($"Mercancía {index}: {error}");
-                //}
-                //index++;                                    
+                Validaciones.Add("La información de la mercancía no es válida. Por favor, verifica los datos ingresados.");
             }
+            else
+            {
+                bool validado = false;
+                foreach (var mercancia in Items)
+                {
+                    validado = ValidarDetalleListaGuardado(mercancia);
+                    if (!validado)
+                    {
+                        break;
+                    }
+                    //foreach (var error in errores)
+                    //{
+                    //    Validaciones.Add($"Mercancía {index}: {error}");
+                    //}
+                    //index++;                                    
+                }
 
-            if (errores.Any())
-                Validaciones.Add("Datos no completos en Detalle de Mercancía.");
+                if (!validado)
+                    Validaciones.Add("Datos no completos en Detalle de Mercancía.");
+            }
+                
 
 
             // Mostrar errores si existen
@@ -643,23 +874,47 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
 
             // Limpieza de referencias antes de actualizar
-            objSLOSolicitudes.IdCatUsuario = UsuarioToken.IdCatUsuario;
-            objSLOSolicitudes.catClienteUbicacionDestino = null;
-            objSLOSolicitudes.catClienteUbicacionOrigen = null;
-            objSLOSolicitudes.catTipoEstado = null;
-            objSLOSolicitudes.catTipoOperacion = null;
-            objSLOSolicitudes.catUsuario = null;
-            objSLOSolicitudes.Cliente = null;
-            objSLOSolicitudes.Orden = null;
+            var objClon = new SLOSolicitudes
+            {
+                IdSLOSolicitud = objSLOSolicitudes.IdSLOSolicitud,
+                IdCatCliente = objSLOSolicitudes.IdCatCliente,
+                IdCatUbicacionOrigen = objSLOSolicitudes.IdCatUbicacionOrigen,
+                IdCatUbicacionDestino = objSLOSolicitudes.IdCatUbicacionDestino,
+                IdCatTipoCarga = objSLOSolicitudes.IdCatTipoCarga,
+                IdCatTipoOperComercio = objSLOSolicitudes.IdCatTipoOperComercio,
+                FechaPosicionamiento = objSLOSolicitudes.FechaPosicionamiento,
+                ReferenciaCliente = objSLOSolicitudes.ReferenciaCliente,
+                Booking = objSLOSolicitudes.Booking,
+                FechaInicio = objSLOSolicitudes.FechaInicio,
+                FechaFin = objSLOSolicitudes.FechaFin,
+                IdCatUsuario = UsuarioToken.IdCatUsuario, // nuevo valor si aplica
+                Notas = objSLOSolicitudes.Notas,
+                IdCatTipoEstado = objSLOSolicitudes.IdCatTipoEstado,
+                IdOrden = objSLOSolicitudes.IdOrden,
+                Activo = objSLOSolicitudes.Activo,
+                FechaRegistro = objSLOSolicitudes.FechaRegistro,
+                IdCatTipoOperacion = objSLOSolicitudes.IdCatTipoOperacion,
 
+                // Relaciones anuladas
+                Cliente = null,
+                TipoCarga = null,
+                catUsuario = null,
+                catClienteUbicacionOrigen = null,
+                catClienteUbicacionDestino = null,
+                Orden = null,
+                catTipoEstado = null,
+                catTipoOperacion = null,
+                sloSOlicitudesDetalle = Items
+            };
+            
             // Llamada al servicio de actualización
             try
             {
-                respuestaGenericaDTO = await SLOSolicitudesService.ActualizarSolicitudSLO(solicitud);
+                respuestaGenericaDTO = await SLOSolicitudesService.ActualizarSolicitudSLO(objClon);
                 if (respuestaGenericaDTO.IsSuccess)
                 {
                     await SweetAlertService.FireAsync("Actualizado", "Solicitud de Servicios Actualizada Correctamente", SweetAlertIcon.Success);
-                    DialogService.Close(true);
+                    //DialogService.Close(true);
                 }
                 else
                 {

@@ -28,7 +28,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (Modo == "TRANSPORTE")
             {
                 _listDocumentosFiltrado =
-                    _listaDocumentos.Where(doc => doc.Acronimo == "CARTAPORTE" || doc.Acronimo == "POD")
+                    _listaDocumentos.Where(doc => doc.Acronimo == "CARTAPORTE" /*|| doc.Acronimo == "POD"*/)
                         .ToList();
             }
 

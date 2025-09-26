@@ -272,12 +272,32 @@
             <RadzenFieldset Text="Transporte Asignado" Style="margin-top: 2rem; min-height: 220px;" class="@zoomType">
                 <RadzenRow Gutter="16">
                     <!-- Placas -->
-                    <RadzenColumn Size="2">
+                    @* <RadzenColumn Size="2">
                         <RadzenLabel Text="Placas"/>
-                        <RadzenTextBox @bind-Value="objTransporteAsignado.Placas" Style="width: 100%;" Disabled="@(Modo == "R")"
+                    <RadzenTextBox @bind-Value="objTransporteAsignado.Placas" Style="width: 100%; text-transform: uppercase;" Disabled="@(Modo == "R")"
                         MaxLength="10"
-                        />
-                    </RadzenColumn>
+                                   />
+                                   <RadzenRegexValidator/>
+                    </RadzenColumn> *@
+                <!-- Placas -->
+                <RadzenColumn Size="2">
+                    <RadzenLabel Text="Placas" />
+
+                    <RadzenTextBox @bind-Value="objTransporteAsignado.Placas"                                   
+                                   Style="width: 100%; text-transform: uppercase;"
+                                   Disabled="@(Modo == "R")"
+                                   MaxLength="10"
+                                   Name="Placas"
+                                   />
+
+                    @* <RadzenRegexValidator Component="Placas"
+                                          Pattern="^[A-Z0-9-]*$"
+                                          Text="Solo se permiten letras mayúsculas, números y guion."
+                                          Style="position: relative; display: block;"
+                                          Popup="true" /> *@
+                </RadzenColumn>
+
+
 
                     <!-- Económico -->
                     <RadzenColumn Size="2">
@@ -336,8 +356,9 @@
                         <RadzenTextBox @bind-Value="objSLOTransporteSolicitud.CAAT"
                                        Name="CAAT"
                                        Style="width: 100%; text-transform: uppercase;"
-                                       MaxLength="50" Disabled="@(Modo == "R")"/>
-
+                                       MaxLength="50" Disabled="@(Modo == "R")"                                       
+                                       />
+                                       
                         <RadzenRequiredValidator Component="CAAT"
                                                  Text="El CAAT es requerido"
                                                  Style="margin-left: 0.5rem" Disabled="@(Modo == "R")"/>
@@ -348,9 +369,9 @@
                                               Style="margin-left: 0.5rem" Disabled="@(Modo == "R")"/>
                     </RadzenColumn>
 
-                    <!-- FOLIO CCP -->
+                    <!-- FOLIO UUID -->
                     <RadzenColumn Size="3"> <!-- aumenté el tamaño -->
-                        <RadzenLabel Text="FOLIO CCP"/>
+                        <RadzenLabel Text="FOLIO UUID"/>
                         <RadzenTextBox @bind-Value="objSLOTransporteDetalle.FolioUUID"
                                        MaxLength="50"
                                        Style="width: 100%;"
