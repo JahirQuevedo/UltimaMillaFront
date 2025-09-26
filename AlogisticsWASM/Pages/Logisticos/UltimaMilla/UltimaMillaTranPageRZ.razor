@@ -369,14 +369,30 @@
                                               Style="margin-left: 0.5rem" Disabled="@(Modo == "R")"/>
                     </RadzenColumn>
 
+                    @if(Modo == "C")
+                    {
+
                     <!-- FOLIO UUID -->
-                    <RadzenColumn Size="3"> <!-- aumenté el tamaño -->
-                        <RadzenLabel Text="FOLIO UUID"/>
+                    <RadzenColumn Size="3">
+                        <!-- aumenté el tamaño -->
+                        <RadzenLabel Text="FOLIO UUID" />
                         <RadzenTextBox @bind-Value="objSLOTransporteDetalle.FolioUUID"
                                        MaxLength="50"
                                        Style="width: 100%;"
-                                       Disabled="@(Modo == "R")"/>
+                                       Disabled="@(Modo == "R")" />
                     </RadzenColumn>
+                }else if(Modo == "R")
+                {
+                    <RadzenColumn Size="3">
+                        <!-- aumenté el tamaño -->
+                        <RadzenLabel Text="FOLIO UUID" />
+                        <RadzenTextBox @bind-Value="FolioUUID"
+                                       MaxLength="50"
+                                       Style="width: 100%;"
+                                       Disabled="@(Modo == "R")" />
+                    </RadzenColumn>
+                }
+
 
                     <!--XCarga de documentos-->
                    

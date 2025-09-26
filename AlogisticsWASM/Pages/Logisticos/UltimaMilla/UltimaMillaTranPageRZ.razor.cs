@@ -110,6 +110,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         //private List<string> _nombresArchivos;
         //private List<long> _sizeFiles;
         //private List<int?> _idDocumentoSeleccionados;
+        private string FolioUUID;
 
         private bool busy;
 
@@ -169,8 +170,10 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (Modo == "R")
             {
                 objSolicitudes = Solicitud;
-                objSLOTransporteSolicitud = SolicitudTransporte;
+                objSLOTransporteSolicitud = SolicitudTransporte;    
                 objTransporteAsignado = TransporteAsignado;
+
+                FolioUUID = lstTransporteDetalle?.FirstOrDefault()?.FolioUUID;
 
                 foreach (var solicitudDetalle in lstCargamento)
                 {
@@ -311,13 +314,13 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         {
             //Validar Solicitud de Transporte
             if (objSLOTransporteSolicitud.IdCatTransportista == 0)
-                Validaciones.Add("Se debe asignar un Transportista");
+                Validaciones.Add("Se debe asignar un <strong>Transportista</strong>");
 
             if (objSLOTransporteSolicitud.IdCatTipoOperTransportes == 0)
-                Validaciones.Add("Se debe asignar un tipo de transporte");
+                Validaciones.Add("Se debe asignar un <strong>Tipo de Transporte</strong>");
 
             if (selectedItems == null || !selectedItems.Any())
-                Validaciones.Add("No hay mercancía seleccionada para su transporte");
+                Validaciones.Add("No hay <strong>Mercancía</strong> seleccionada para su transporte");
 
             if (Validaciones.Any())
                 return await MostrarValidacion();
@@ -326,29 +329,86 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             // Validación de Placas
             if (string.IsNullOrWhiteSpace(objTransporteAsignado.Placas))
             {
-                Validaciones.Add("No se han agregado Placas de Transporte");
+                Validaciones.Add("No se han agregado <strong>Placas</strong> de Transporte");
             }
-            //else if (!Regex.IsMatch(objTransporteAsignado.Placas, @"^[A-Z0-9-]+$"))
-            //{
-            //    Validaciones.Add("Las placas solo pueden contener letras mayúsculas, números y guiones");
-            //}
+            else
+            {
+                // Convertimos a mayúsculas para evitar errores por minúsculas
+                string placas = objTransporteAsignado.Placas.Trim().ToUpper();
+
+                // Regex: solo letras mayúsculas, números y guiones
+                if (!Regex.IsMatch(placas, @"^[A-Z0-9-]+$"))
+                {
+                    Validaciones.Add("<strong>Placas</strong> solo pueden contener letras mayúsculas, números y guiones, sin otros símbolos");
+                }
+
+                // Asignamos la versión limpia de vuelta
+                objTransporteAsignado.Placas = placas;
+            }
+
             //if (string.IsNullOrWhiteSpace(objTransporteAsignado.Placas))
             //    Validaciones.Add("No se han agregado Placas de Transporte");
             //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Placas))
             //    Validaciones.Add("Las Placas contienen caracteres no permitidos");
 
             if (string.IsNullOrWhiteSpace(objTransporteAsignado.Economico))
-                Validaciones.Add("No se ha agregado Económico");
+            {
+                Validaciones.Add("No se ha agregado <strong>Económico</strong>");
+            }
+            else
+            {
+                string economico = objTransporteAsignado.Economico.Trim().ToUpper();
+
+                // Regex: solo letras mayúsculas, números y guiones
+                if (!Regex.IsMatch(economico, @"^[A-Z0-9-]+$"))
+                {
+                    Validaciones.Add("<strong>Económico</strong> solo puede contener letras mayúsculas, números y guiones, sin otros símbolos");
+                }
+
+                objTransporteAsignado.Economico = economico;
+            }
             //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Economico))
             //    Validaciones.Add("El valor Económico contiene caracteres no permitidos");
 
+            // Validación de Color
             if (string.IsNullOrWhiteSpace(objTransporteAsignado.Color))
-                Validaciones.Add("No se ha agregado un color de Transporte");
+            {
+                Validaciones.Add("No se ha agregado un <strong>Color</strong> de Transporte");
+            }
+            else
+            {
+                string color = objTransporteAsignado.Color.Trim().ToUpper();
+
+                // Regex: solo letras mayúsculas (A-Z)
+                if (!Regex.IsMatch(color, @"^[A-Z]+$"))
+                {
+                    Validaciones.Add("<strong>Color</strong> solo puede contener letras mayúsculas, sin números ni símbolos");
+                }
+
+                objTransporteAsignado.Color = color;
+            }
+
             //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Color))
             //    Validaciones.Add("El color contiene caracteres no permitidos");
 
+            // Validación de Operador
             if (string.IsNullOrWhiteSpace(objTransporteAsignado.Operador))
-                Validaciones.Add("No se ha agregado información de Conductor");
+            {
+                Validaciones.Add("No se ha agregado información de <strong>Conductor</strong>");
+            }
+            else
+            {
+                string operador = objTransporteAsignado.Operador.Trim();
+
+                // Regex: solo letras y espacios
+                if (!Regex.IsMatch(operador, @"^[A-Za-zÁÉÍÓÚÑáéíóúñ\s]+$"))
+                {
+                    Validaciones.Add("<strong>Conductor</strong> solo puede contener letras y espacios");
+                }
+
+                objTransporteAsignado.Operador = operador;
+            }
+
             //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Operador))
             //    Validaciones.Add("El nombre del conductor contiene caracteres no permitidos")
 
@@ -357,17 +417,53 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
 
             if (string.IsNullOrWhiteSpace(objTransporteAsignado.Marca))
-                Validaciones.Add("No se ha agregado Marca de transporte");
+            {
+                Validaciones.Add("No se ha agregado <strong>Marca</strong> de transporte");
+            }
+            else
+            {
+                string marca = objTransporteAsignado.Marca.Trim();
+
+                // Regex: letras, números y espacios
+                if (!Regex.IsMatch(marca, @"^[A-Za-z0-9\s]+$"))
+                {
+                    Validaciones.Add("<strong>Marca</strong> solo puede contener letras, números y espacios");
+                }
+
+                objTransporteAsignado.Marca = marca;
+            }
+
+            //if (string.IsNullOrWhiteSpace(objTransporteAsignado.Marca))
+            //    Validaciones.Add("No se ha agregado Marca de transporte");
             //else if (ContieneCaracteresInvalidos(objTransporteAsignado.Marca))
             //    Validaciones.Add("La marca contiene caracteres no permitidos");
 
             if (string.IsNullOrWhiteSpace(objSLOTransporteSolicitud.CAAT))
-                Validaciones.Add("No se ha agregado información en CAAT");
-            //else if (ContieneCaracteresInvalidos(objSLOTransporteSolicitud.CAAT))
-            //    Validaciones.Add("CAAT contiene caracteres no permitidos");
+            {
+                Validaciones.Add("No se ha agregado información en <strong>CAAT</strong>");
+            }
+            else if (!Regex.IsMatch(objSLOTransporteSolicitud.CAAT, @"^[a-zA-Z0-9-]+$"))
+            {
+                Validaciones.Add("<strong>CAAT</strong> contiene caracteres no permitidos (solo letras, números y guiones)");
+            }
 
             if (string.IsNullOrWhiteSpace(objSLOTransporteDetalle.FolioUUID))
-                Validaciones.Add("No se asignó un FolioUUID");
+            {
+                Validaciones.Add("No se asignó un <strong>FolioUUID</strong>");
+            }
+            else if (!Regex.IsMatch(objSLOTransporteDetalle.FolioUUID, @"^[a-zA-Z0-9-]+$"))
+            {
+                Validaciones.Add("<strong>FolioUUID</strong> contiene caracteres no permitidos (solo letras, números y guiones)");
+            }
+
+
+            //if (string.IsNullOrWhiteSpace(objSLOTransporteSolicitud.CAAT))
+            //    Validaciones.Add("No se ha agregado información en CAAT");
+            ////else if (ContieneCaracteresInvalidos(objSLOTransporteSolicitud.CAAT))
+            ////    Validaciones.Add("CAAT contiene caracteres no permitidos");
+
+            //if (string.IsNullOrWhiteSpace(objSLOTransporteDetalle.FolioUUID))
+            //    Validaciones.Add("No se asignó un FolioUUID");
             //else if (ContieneCaracteresInvalidos(objSLOTransporteDetalle.FolioUUID))
             //    Validaciones.Add("FolioUUID contiene caracteres no permitidos");
 
