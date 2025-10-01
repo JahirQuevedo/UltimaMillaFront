@@ -15,6 +15,7 @@ using Radzen.Blazor;
 using System.Drawing;
 using System.Linq.Dynamic.Core;
 using static System.Net.WebRequestMethods;
+using ALOG.Modelos.Modelos.DTO.Consultas;
 
 namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 {
@@ -61,6 +62,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private bool limpiarPendiente = false;
         private const long MaxFileSize = 2 * 1024 * 1024; // 2 MB
         private const int MaxCountFiles = 6;
+
+        //FiltroDocumentos
+        FiltroGenericoDTO filtroDocumentos = new FiltroGenericoDTO();
         #endregion
 
         #region INICIALIZAR
@@ -73,8 +77,11 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 if (respuestaGenericaDTO.IsSuccess)
                 {
                     objTransporteCron = (SLOTransportesCron)respuestaGenericaDTO.Entidad;
+
+                    filtroDocumentos.Id = TControlTerrestre.sloSolicitudes.IdSLOSolicitud;
+                    filtroDocumentos.IdTipoDocumento = TControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud;
                     
-                    lstDocumentosGuardados = await sloDocumentosService.sloGetFilesTask(TControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
+                    lstDocumentosGuardados = await sloDocumentosService.sloGetFilesTask(filtroDocumentos);
                     lstTransporteCronDocumentos = await SLOTransporteCronDocumentosService.ObtenerSLOTranporteCronDocumentos(idCron);
 
                     lstPruebasIncidencia = lstDocumentosGuardados.Where(doc => lstTransporteCronDocumentos
@@ -396,7 +403,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 
                     var resultado = await SLOTransporteCronDocumentosService.CrearSLOTransporteCronDocumeto(lstTransporteCronDocumentos);
 
-                    lstDocumentosGuardados = await sloDocumentosService.sloGetFilesTask(TControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
+                    lstDocumentosGuardados = await sloDocumentosService.sloGetFilesTask(filtroDocumentos);
                     lstTransporteCronDocumentos = await SLOTransporteCronDocumentosService.ObtenerSLOTranporteCronDocumentos(idCron);
                     lstPruebasIncidencia = new();
                     lstPruebasIncidencia = lstDocumentosGuardados.Where(doc => lstTransporteCronDocumentos
@@ -527,7 +534,12 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 {
                     await sweetAlertService.FireAsync("Baja", "Documento dado de baja correctamente", SweetAlertIcon.Success);
                     // Opcional: refrescar lista de documentos
-                    lstDocumentosGuardados = await sloDocumentosService.sloGetFilesTask(TControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud);
+                    var filtro =  new FiltroGenericoDTO
+                    {
+                        Id = TControlTerrestre.sloSolicitudes.IdSLOSolicitud,
+                        IdTipoDocumento = TControlTerrestre.sloTransporteAsignado.IdSLOTransporteSolicitud
+                    };
+                    lstDocumentosGuardados = await sloDocumentosService.sloGetFilesTask(filtro);
                     lstTransporteCronDocumentos = await SLOTransporteCronDocumentosService.ObtenerSLOTranporteCronDocumentos(idCron);
                     
                     lstPruebasIncidencia = lstDocumentosGuardados.Where(doc => lstTransporteCronDocumentos

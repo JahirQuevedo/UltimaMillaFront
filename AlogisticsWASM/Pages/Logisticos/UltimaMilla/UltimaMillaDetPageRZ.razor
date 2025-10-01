@@ -1,5 +1,6 @@
 ﻿@using ALOG.Modelos.Modelos.Logisticos;
 @using ALOG.Modelos.Modelos.Catalogos;
+@using ALOGRepositorios.Services.Logisticos
 @using System.Globalization;
 
 @inject Radzen.DialogService DialogService;
@@ -132,7 +133,7 @@
 
 <div class="modal-wrapper @zoomType" style="position: relative; padding: -1rem;">
     
-	<div class="modal-wrapper" style="position: relative; padding-top: -1rem;">
+	@* <div class="modal-wrapper" style="position: relative; padding-top: -1rem;">
 
 
 
@@ -140,16 +141,10 @@
 
 		<!-- Encabezado -->
 			  		<div class="modal-header" style="background-color: darkred; padding: 1rem; display: flex; justify-content: space-between; align-items: center;">
-                        @* <h4 style="margin: 0; font-size: 1.25rem; font-weight: 600; color: white;">
-                            SOLICITUD DE SERVICIOS
-                        </h4> *@
-                        
-			@* <span style="color: white; font-weight: 400;">
-				@(char.ToUpper(DateTime.Now.ToString("dddd dd 'de' MMMM", new CultureInfo("es-MX"))[0]) + DateTime.Now.ToString("dddd dd 'de' MMMM", new CultureInfo("es-MX")).Substring(1))
-			</span> *@
+                      
 		</div>
-	</div>
-<RadzenFieldset Style="border-bottom-left-radius: 12px;border-bottom-right-radius:12px;">
+	</div> *@
+<RadzenFieldset Style="border-radius:12px;">
 <div style="margin-left: 2.5rem;">
 
     <!-- Cuerpo del modal: dos columnas -->
@@ -536,7 +531,8 @@
                             Rows="4"
                             Disabled="@(objSLOSolicitudes.IdCatTipoEstado == 2 || objSLOSolicitudes.IdCatTipoEstado == 3)" />
         </RadzenColumn>
-    </RadzenRow>
+    </RadzenRow>    
+
 </div>
         <RadzenTabs Style="margin: 2rem;border-radius:12px;margin-left: -1rem;margin-right: -1rem;" @bind-SelectedIndex="selectedTabIndex">
             <Tabs>
@@ -793,7 +789,89 @@
             </Tabs>
         </RadzenTabs>
 
-<!-- Botones arriba a la derecha -->
+        <RadzenUpload @ref="uploadFile"
+                      ChooseText="Agregar documentos"
+                      Multiple="true"
+                      Accept=".jpg,.jpeg,.png,.pdf"                      
+                      Auto="true"
+                      Change="@OnUploadChange"
+                      Style="width:40%;"
+                      InputAttributes="@(new Dictionary<string, object> {
+                                                                  {"accept",".pdf, .jpg, .png"},
+                                                                  { "aria-label", "select file" },
+                                                                  { "title", "Seleccionar archivos PDF o imágenes (JPG, PNG)" },
+                                                                  { "oninput", "if(this.files.length > 10){ alert('Solo puedes seleccionar hasta 6 archivos simultaneamente.'); this.value=null; }" }
+                                                              })"
+                      Disabled="@(Modo == "E" && Solicitud?.catTipoEstado?.TipoEstado == "P" || Modo == "E" && Solicitud?.catTipoEstado?.TipoEstado == "T")" />
+
+        @if (Modo == "C" && lstCargarArchivos != null && lstCargarArchivos.Any())
+        {
+            <RadzenDataGrid @ref="documentosGrid" TItem="SLOCargarArchivo" Data="@lstCargarArchivos"
+                            ShowPagingSummary="false" AllowSorting="false" AllowFiltering="false" Responsive="true"
+                            AllowPaging="false" Style="max-height:200px; overflow-y:auto; font-size:0.85rem;">
+                <Columns>
+                    <RadzenDataGridColumn TItem="SLOCargarArchivo" Property="TipoDocumento" Title="Tipo" Resizable="true" />
+                    <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Archivo" Resizable="true">
+                        <Template Context="doc">
+                            @doc.NombreArchivo (@(doc.SizeFile / 1024) KB)
+                        </Template>
+                    </RadzenDataGridColumn>
+                    <RadzenDataGridColumn TItem="SLOCargarArchivo" Title="Acciones" Width="80px">
+                        <Template Context="doc">
+                            <RadzenButton Icon="close"
+                                          ButtonStyle="ButtonStyle.Danger"
+                                          Size="ButtonSize.Small"
+                                          Click="@(() => EliminarDocumento(doc))" />
+                        </Template>
+                    </RadzenDataGridColumn>
+                </Columns>
+            </RadzenDataGrid>
+
+        }
+        
+        @if(Modo == "E" && lstDocumentos.Count > 0)
+        {
+            {
+                <RadzenDataGrid @ref="gridArchivos"
+                                TItem="SLOSolicitudesDocumentos"
+                                Data="@lstDocumentos"
+                                AllowPaging="true" PageSize="4"
+                                AllowColumnResize="true"
+                                Style="border-radius:12px;">
+                    <Columns>
+                        <RadzenDataGridColumn Title="T. Documento">
+                            <Template Context="item">@item?.catDocumentos?.Nombre</Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn Title="N. Documento">
+                            <Template Context="item">@item.NombreDocumento</Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn Title="Fecha de subida">
+                            <Template Context="item">@item.FechaRegistro.ToString("dd/MM/yyyy")</Template>
+                        </RadzenDataGridColumn>
+
+                        <RadzenDataGridColumn Title="Acciones">
+                            <Template Context="item">
+                                <RadzenButton Icon="visibility"
+                                              Size="ButtonSize.Small"
+                                              Style="border-radius: 8px;"
+                                              ButtonStyle="ButtonStyle.Info"
+                                              Click="@(args => AbrirDocumentoCont(item))" />
+
+                                <RadzenButton Icon="delete"
+                                              Size="ButtonSize.Small"
+                                              ButtonStyle="ButtonStyle.Danger"
+                                              Style="border-radius: 8px;"
+                                              Click="@(() => BajaDocumento(item))"
+                                              Visible="@(Modo == "E" && Solicitud?.catTipoEstado?.TipoEstado == "A")" />
+                            </Template>
+                        </RadzenDataGridColumn>
+                    </Columns>
+                </RadzenDataGrid>
+            }
+        }
+        <!-- Botones arriba a la derecha -->
 <div style="display:flex; gap:0.5rem; justify-content:flex-end; margin:0.5rem 2.5rem 1rem 0;">
     <RadzenButton Icon="add_circle"
                   Text="@(Modo == "C" ? "Crear" : "Actualizar")"

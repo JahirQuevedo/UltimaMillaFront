@@ -1,4 +1,5 @@
-﻿using ALOG.Modelos.Modelos.DTO.Logistica;
+﻿using ALOG.Modelos.Modelos.DTO.Consultas;
+using ALOG.Modelos.Modelos.DTO.Logistica;
 using ALOG.Modelos.Modelos.DTO.Respuestas;
 using ALOG.Modelos.Modelos.Logisticos;
 using ALOG.Modelos.Modelos.Vacios;
@@ -12,6 +13,7 @@ using Newtonsoft.Json.Linq;
 using Radzen;
 using System;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using static System.Net.WebRequestMethods;
 
@@ -164,40 +166,14 @@ namespace ALOGRepositorios.Services.Logisticos
 
         [Inject] private JSRuntime JS { get; set; }
         [Inject] private NotificationService notificationService { get; set; }
-        public async Task<List<SLOSolicitudesDocumentos>> sloGetFilesTask(int idSLOTransporteSolicitud)
+        public async Task<List<SLOSolicitudesDocumentos>> sloGetFilesTask(FiltroGenericoDTO filtroGenericoDTO)
         {
-            //try
-            //{
-
-            //    var response = await _httpClient.GetAsync(
-            //        $"{Inicializar.UrlApiLogistico}SLODocumentos/listarArchivo/{idSLOTransporteSolicitud}");
-
-            //    /* 2️⃣  Si la respuesta es OK, leerla y deserializar a List<...> */
-            //    if (response.IsSuccessStatusCode)
-            //    {
-            //        var json = await response.Content.ReadAsStringAsync();
-            //        var objRespuestaGenericaDTO = JsonConvert.DeserializeObject<RespuestaGenericaDTO>(json);
-            //        var lstDocumentos = (objRespuestaGenericaDTO.Entidad as JObject)?.ToObject<List<SLOSolicitudesDocumentos>>();
-            //        //var lstDocumentos = JsonConvert.DeserializeObject<List<SLOSolicitudesDocumentos>>(json);
-            //        return lstDocumentos;
-
-            //    }
-
-            //    /* 3️⃣  Si el API devuelve error, lanzamos una excepción con el cuerpo */
-            //    var errorContent = await response.Content.ReadAsStringAsync();
-            //    throw new HttpRequestException(
-            //        $"Error al obtener documentos. Código {response.StatusCode}. Detalle: {errorContent}");
-            //}
-            //catch (Exception ex)
-            //{
-            //    Console.WriteLine($"[SLODocumentosService] sloGetFilesTask - {ex.Message}");
-            //    // Puedes decidir si vuelves a lanzar o devolver una lista vacía.
-            //    throw;   // re‑throw para que el componente cliente lo capture
-            //}
+            var JsonObject = JsonConvert.SerializeObject(filtroGenericoDTO);
+            var content = new StringContent(JsonObject, Encoding.UTF8, "application/json");
 
             try
             {
-                var response = await _httpClient.GetAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/listarArchivo/{idSLOTransporteSolicitud}");
+                var response = await _httpClient.PostAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/listarArchivo",content);
 
                 var json = await response.Content.ReadAsStringAsync();
 
@@ -251,6 +227,44 @@ namespace ALOGRepositorios.Services.Logisticos
                 respuestaGenericaDto.IsSuccess = false;
                 respuestaGenericaDto.StatusCode = response.StatusCode;
                 return respuestaGenericaDto;
+            }
+        }
+
+        public async Task<List<SLOSolicitudesDocumentos>> SLOListarArchivosSolicitud(int IdSolicitud)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/listarArchivoSolicitud/{IdSolicitud}");
+
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (!response.IsSuccessStatusCode)
+                    throw new HttpRequestException(
+                        $"Error al obtener documentos. Código {response.StatusCode}. Detalle: {json}");
+
+                var dto = JsonConvert.DeserializeObject<RespuestaGenericaDTO>(json);
+
+                // Entidad puede venir como JArray
+                if (dto?.Entidad is JArray arr)
+                    return arr.ToObject<List<SLOSolicitudesDocumentos>>() ?? new List<SLOSolicitudesDocumentos>();
+
+                // o como List directamente
+                if (dto?.Entidad is List<SLOSolicitudesDocumentos> lista)
+                    return lista;
+
+                // fallback
+                return new List<SLOSolicitudesDocumentos>();
+            }
+            catch (HttpRequestException httpEx)
+            {
+                Console.WriteLine($"[HTTP] {httpEx.Message}");
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[SLODocumentosService] sloGetFilesTask - {ex}");
+                throw;
             }
         }
     }

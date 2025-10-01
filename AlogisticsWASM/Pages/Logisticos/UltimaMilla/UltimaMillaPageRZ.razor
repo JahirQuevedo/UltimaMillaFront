@@ -223,6 +223,12 @@
     .icon-gps {
         background: green;
     }
+
+    .acciones-container {
+        display: flex;
+        gap: 8px; /* espacio entre iconos */
+        align-items: center; /* los centra verticalmente */
+    }
 </style>
 @if (position == 0)
 {
@@ -469,21 +475,37 @@ else if(cargando == false)
                     <!-- Icono según tipo -->
                     <RadzenDataGridColumn TItem="SLOSolicitudes" Title="Acciones" Resizable="true">
                         <Template Context="solicitud">
+                           <div class="acciones-container">
+                           
                             <div class='icon-container icon-document'
                                  @onclick='@(() => SolicitudServicio("E", solicitud))'>
                                 <img src="img/UltimaMilla/document.svg" />
                             </div>
+                            
+                            @if (solicitud.sloSOlicitudesDetalle.Count > 0)
+                            {
+                                <div class="icon-container icon-truck"
+                                     @onclick='@(() => SolicitudTransportista("C", solicitud))'>
+                                    <img src="img/UltimaMilla/Camion.svg" />
+                                </div>
+                            }
+                            
 
-                            <div class="icon-container icon-truck"
-                                @onclick='@(() => SolicitudTransportista("C",solicitud))'>
-                                <img src="img/UltimaMilla/Camion.svg"/>
-                            </div>                           
-                            <div class="icon-container icon-gps"
-                                 @onclick='@(() => ControlTower(solicitud))'>
-                                <img src="img/UltimaMilla/gps.svg"/>
-                            </div>
+                            @if (GetControlTower(solicitud.IdSLOSolicitud))
+                            {
+                                <div class="icon-container icon-gps"
+                                     @onclick='@(() => ControlTower(solicitud))'>
+                                    <img src="img/UltimaMilla/gps.svg" />
+                                </div>
+                            }
+                            else
+                            {
+                                
+                            }
+
                             <div class="icon-container">
-                            @if (solicitud.IdCatTipoEstado == 1)
+                            
+                                @if (solicitud.IdCatTipoEstado == 1)
                             {
                                 <div class="icon-container icon-trash"
                                      @onclick='@(() => BajaSolicitudServicio(solicitud.IdSLOSolicitud))'>
@@ -491,7 +513,7 @@ else if(cargando == false)
                                 </div>
                             }
                             </div>
-
+                          </div>
                         </Template>
                     </RadzenDataGridColumn>
                 </Columns>

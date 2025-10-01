@@ -4,27 +4,22 @@ using ALOGRepositorios.Services.Catalogos.ICatalogos;
 using ClienteBlazorWASM.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace ALOGRepositorios.Services.Catalogos
 {
-    public class CatDocumentoService : ICatDocumentoService
+    public class CatDocumentosLNegocioService : ICatDocumentosLNegocioService
     {
-
         private readonly HttpClient _httpClient;
 
-        public CatDocumentoService(HttpClient httpClient)
+        public CatDocumentosLNegocioService(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }
-
-        public async Task<ICollection<CatDocumentos>> GetTiposDocumento()
-        {
-            var response = await _httpClient.GetAsync($"{Inicializar.UrlApiCatalogos}CatDocumentos/Listar");
-            var content = await response.Content.ReadAsStringAsync();
-            var documentos = JsonConvert.DeserializeObject<ICollection<CatDocumentos>>(content);
-            return documentos;
-        }
-
 
         public async Task<List<CatDocumentos>> ListarDocumentosLNegocio(int IdLineaNegocio)
         {
@@ -32,7 +27,7 @@ namespace ALOGRepositorios.Services.Catalogos
             List<CatDocumentos> lstTipoDocumentos = new List<CatDocumentos>();
             try
             {
-                var response = await _httpClient.GetAsync($"{Inicializar.UrlApiCatalogos}CatDocumentos/ListarDocumentosLineaNegocio/{IdLineaNegocio}");
+                var response = await _httpClient.GetAsync($"{Inicializar.UrlApiCatalogos}/CatDocumentosLNegocio/ListarDocumentosLNegocio/{IdLineaNegocio}");
                 var jsonReaded = await response.Content.ReadAsStringAsync();
                 respuestaGenericaDTO = JsonConvert.DeserializeObject<RespuestaGenericaDTO>(jsonReaded);
 
@@ -60,8 +55,8 @@ namespace ALOGRepositorios.Services.Catalogos
                     return lstTipoDocumentos;
                 }
             }
-            catch (Exception ex)
-            {
+            catch (Exception ex) 
+            { 
                 respuestaGenericaDTO.lstrErrorMessages.Add($"Error en ListarDocumentosLNegocio: {ex.Message}");
                 respuestaGenericaDTO.IsSuccess = false;
                 Console.WriteLine($"{respuestaGenericaDTO.lstrErrorMessages}");
@@ -70,4 +65,3 @@ namespace ALOGRepositorios.Services.Catalogos
         }
     }
 }
-

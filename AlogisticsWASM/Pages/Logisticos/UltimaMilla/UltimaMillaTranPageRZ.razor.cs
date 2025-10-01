@@ -67,7 +67,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         }
         #endregion
 
-        #region Objetos y listas
+        #region OBJETOS, LISTAS Y VARIABLES
         private SLOTransporteSolicitud objSLOTransporteSolicitud = new SLOTransporteSolicitud();
         private SLOTransporteDetalle objSLOTransporteDetalle = new SLOTransporteDetalle();
         private SLOTransporteAsignado objTransporteAsignado = new SLOTransporteAsignado();
@@ -124,6 +124,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private bool limpiarPendiente = false;
         private const long MaxFileSize = 2 * 1024 * 1024; // 2 MB
         private const int MaxCountFiles = 6;
+
+        private int IdLineaNegocio;
         #endregion
 
         #region Funciones
@@ -140,7 +142,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             lstCatTipoTransporte = await CatTipoTransporteService.GetTipoTransporte();
             lstCatTipoOperacionesTransporte = await CatTipoOperacionesTransportesService.GetTiposOperacionesTransportes();
             objSLOTransporteSolicitud.IdCatTipoEstados = Solicitud.IdCatTipoEstado;
-
+            IdLineaNegocio = (int)Solicitud?.Orden?.IdCatLineaNegocio;
 
             if (SolicitudTransporte != null && SolicitudTransporte.IdSLOTransporteSolicitud > 0)
             {
@@ -160,7 +162,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
 
 
-            lstCatDocumentos = await documentoService.GetTiposDocumento();
+            //lstCatDocumentos = await documentoService.GetTiposDocumento();
+            lstCatDocumentos = await documentoService.ListarDocumentosLNegocio(IdLineaNegocio);
             lstTransporteDocumentos = lstCatDocumentos
                 .Where(s => s.Acronimo == "CARTAPORTE")
                 .ToList();

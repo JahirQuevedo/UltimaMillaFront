@@ -1,4 +1,5 @@
 ﻿using ALOG.Modelos.Modelos.Catalogos;
+using ALOG.Modelos.Modelos.DTO.Consultas;
 using ALOG.Modelos.Modelos.DTO.Respuestas;
 using ALOG.Modelos.Modelos.Logisticos;
 using ALOG.Modelos.Modelos.Vacios;
@@ -133,6 +134,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private bool limpiarPendiente = false;
         private const long MaxFileSize = 2 * 1024 * 1024; // 2 MB
         private const int MaxCountFiles = 6;
+
+        //Filtrar Documetos
+        private FiltroGenericoDTO filtroGenericoDTO = new FiltroGenericoDTO();
         #endregion
 
         #region INICIALIZAR
@@ -271,8 +275,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                         .sloTransporteSolicitud
                         .sloTransporteDetalle
                         .ToList();
-
-                    lstDocumentos = await sloDocumentosService.sloGetFilesTask(item.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);                    
+                    filtroGenericoDTO.Id = item.sloSolicitudes.IdSLOSolicitud;
+                    filtroGenericoDTO.IdTipoDocumento = item.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud;
+                    lstDocumentos = await sloDocumentosService.sloGetFilesTask(filtroGenericoDTO);                    
                     await ConstruirEventos(); 
                      
                     idEstadoActual = objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados;
@@ -822,7 +827,13 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 {
                     await sweetAlertService.FireAsync("Baja", "Documento dado de baja correctamente", SweetAlertIcon.Success);
                     // Opcional: refrescar lista de documentos
-                    lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                    var filtro = new FiltroGenericoDTO
+                    {
+                        Id = objCotControlTerrestre.sloSolicitudes.IdSLOSolicitud,
+                        IdTipoDocumento = objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud
+                    };
+
+                    lstDocumentos = await sloDocumentosService.sloGetFilesTask(filtro);
                     await gridArchivos.Reload();
                 }
                 else
@@ -1029,7 +1040,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     {
                         todosCorrectos = true;                        
                         lstCargarArchivos = new List<SLOCargarArchivo>();
-                        lstDocumentos = await sloDocumentosService.sloGetFilesTask(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                        lstDocumentos = await sloDocumentosService.sloGetFilesTask(filtroGenericoDTO);
                         await gridArchivos.Reload();
                         StateHasChanged();
                     }                   
@@ -1109,7 +1120,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (response == true)
             {
                 await ConstruirEventos();
-                lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                lstDocumentos = await sloDocumentosService.sloGetFilesTask(filtroGenericoDTO);
                 await gridArchivos.Reload();
                 StateHasChanged();
             }
@@ -1159,14 +1170,14 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             if (result)
             {
                 await ConstruirEventos();
-                lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                lstDocumentos = await sloDocumentosService.sloGetFilesTask(filtroGenericoDTO);
                 await gridArchivos.Reload();
                 StateHasChanged();
             }
             else
             {
                 await ConstruirEventos();
-                lstDocumentos = await sloDocumentosService.sloGetFilesTask(objTControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdSLOTransporteSolicitud);
+                lstDocumentos = await sloDocumentosService.sloGetFilesTask(filtroGenericoDTO);
                 //await gridArchivos.Reload();
                 StateHasChanged();
             }

@@ -11,6 +11,53 @@
 
 <style>
 
+    .lista-transporte {
+        display: flex;
+        flex-direction: column;
+        gap: 8px; /* espacio entre filas */
+    }
+
+    .item-line {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* los sub-divs estarán uno al lado del otro */
+        gap: 12px; /* espacio entre sub-divs */
+        padding: 6px 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background-color: white;
+    }
+
+    /* Subdivs */
+    .sub-div {
+        padding: 6px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+    }
+
+    /* Color del botón */
+    .boton-div {
+        background-color: #5a86c1; /* verde claro */
+    }
+
+    /* Color de la placa */
+    .placa-div {
+        background-color: #f0f0f0; /* gris claro profesional */
+        font-weight: bold;
+        color: #333; /* texto oscuro para contraste */    
+    }
+
+    /* Iconos dentro del boton */
+    .sub-div img {
+        width: 20px;
+        height: 20px;
+    }
+
+
+/////////////
+
     .display-zoom {
         zoom: 0.75;
     }
@@ -193,14 +240,14 @@
 <div class="modal-wrapper" style="position: relative; padding: 1rem;">    
 <RadzenRow class="@zoomType">
         <RadzenColumn Size="2">
-        <RadzenCard Style="border-radius: 12px;">            
-                <RadzenDataGrid Data="@TControlTerrestre"
+        <RadzenCard Style="border-radius: 12px;">      
+            <h6 class="text-center">Información de Transporte</h6>
+                @* <RadzenDataGrid Data="@TControlTerrestre"
                                 TItem="SLOTControlTerrestre"
                                 AllowPaging="true"
                                 PageSize="5"
                                 Responsive="true"
-                                AllowColumnResize="true"
-                                Style="padding:-2rem; margin:0; border-radius:12px; width:100%; margin-left: -1rem; margin-right: -2rem;"
+                                AllowColumnResize="true"                                
                                 RowSelect="@(item => MostrarControlTower(item))">
 
                     <Columns>
@@ -221,35 +268,57 @@
                                               Property="sloTransporteAsignado.Placas"
                                               Title="Vehículo"
                                               Width="150px" />
-
-                        <!-- Columna Transportista -->
-                        @* <RadzenDataGridColumn TItem="SLOTControlTerrestre" Title="Transportista">
-                                            <Template Context="data">
-                                                @(data?.sloTransporteAsignado?.sloTransporteSolicitud?.catTransportistas?.RazonSocial ?? "N/A")
-                                            </Template>
-                                        </RadzenDataGridColumn> *@
                     </Columns>
-                </RadzenDataGrid>            
+                </RadzenDataGrid>   *@       
+               <div class="lista-transporte">
+                    @foreach (var item in TControlTerrestre)
+                    {
+                        <div class="item-line">
+                            <!-- Subdiv para el botón Ojo -->
+                            <div class="sub-div boton-div" @onclick="@(() => VerDetalle("R", item))">
+                                <img src="img/UltimaMilla/eye.svg" />
+                            </div>
+
+                            <!-- Subdiv para la Placa -->
+                            <div class="sub-div placa-div" @onclick="@(() => MostrarControlTower(item))">
+                                @item?.sloTransporteAsignado?.Placas
+                            </div>
+                        </div>
+                    }
+                </div>
+
+
         </RadzenCard>        
         </RadzenColumn>
         <!-- Timeline Central -->
         <RadzenColumn Size="6">
         <RadzenCard Style="border-radius: 12px; margin-bottom: 0.5rem; position: relative;">
-        <div class="modal-header" style="background-color: darkred; padding: 0.5rem;">
+        <div class="modal-header" style="padding: 0.5rem;">
             @* <RadzenText Style="color: white;">Solicitud de Transporte: @if(objTControlTerrestre != null){@objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO}</RadzenText> *@
-            <RadzenText Style="color: white;">                
+            @* <RadzenText Style="color: black;">                
                 @if (objTControlTerrestre != null 
                      && objTControlTerrestre.sloSolicitudes != null 
                      && objTControlTerrestre.sloSolicitudes.Orden != null)
                 {
                     @objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO
                 }
-            </RadzenText>
+            </RadzenText> *@
+
+                    <h6>
+                        @if (objTControlTerrestre != null
+                                                && objTControlTerrestre.sloSolicitudes != null
+                                                && objTControlTerrestre.sloSolicitudes.Orden != null)
+                        {
+                            @objTControlTerrestre.sloSolicitudes.Orden.ReferenciaALO
+                        }
+                    </h6>
+
                     @if (idEstadoActual != null)
                     {   
                         @if(NombreOperacionComercial != null)
                         {
-                            <RadzenText Style="color: white;" Text="@NombreOperacionComercial"/>
+                            @* <RadzenText Style="color: black;" Text="@NombreOperacionComercial"/> *@
+                            <h6>@NombreOperacionComercial</h6>
                         }
                         @* <RadzenText Style="align-content: end; color: white; display: inline-block;">Estado:</RadzenText> *@
                         <span class=@($"status-chip status-{idEstadoActual}")>
@@ -264,7 +333,7 @@
 
         @if (objTControlTerrestre.IdSLOTransporteAsignado != null)
         {
-                     <RadzenFieldset Style="min-width: 100px;">
+                     <RadzenFieldset Style="min-width: 100px; border-radius: 12px;">
                         <RadzenRow Class="two-col-form">
             
             @if(objTControlTerrestre.sloSolicitudes.IdCatTipoOperComercio == idOperacionEXPORTACION)
@@ -750,11 +819,13 @@
                                     <RadzenButton Icon="visibility"
                                                   Size="ButtonSize.Small"
                                                   ButtonStyle="ButtonStyle.Info"
+                                                  Style="border-radius: 8px;"
                                                   Click="@(args => AbrirDocumentoCont(item))" />
                                                   
                                     <RadzenButton Icon="delete"
                                                   Size="ButtonSize.Small"
                                                   ButtonStyle="ButtonStyle.Danger"
+                                                  Style="border-radius: 8px;"
                                                   Click="@(() => BajaDocumento(item))"
                                                   Visible="@(!(objCotControlTerrestre.sloTransporteAsignado.sloTransporteSolicitud.IdCatTipoEstados == idCatEstadoTerminado))" />
                                 </Template>
@@ -787,8 +858,9 @@
                 box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             ">
                         <!-- Encabezado -->
-                        <div style="background-color: darkred; padding: 0.5rem; border-radius: 6px;">
-                            <RadzenText Style="color: white;">Puntos de control de viaje</RadzenText>
+                        <div style=" padding: 0.5rem; border-radius: 6px;">
+                            @* <RadzenText Style="color: black;">Puntos de control de viaje</RadzenText> *@
+                            <h6>Puntos de control de viaje</h6>
                         </div>
 
                         <!-- Botones -->

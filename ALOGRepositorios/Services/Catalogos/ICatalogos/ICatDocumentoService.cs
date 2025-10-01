@@ -7,5 +7,7 @@ namespace ALOGRepositorios.Services.Catalogos.ICatalogos
 
         public Task<ICollection<CatDocumentos>> GetTiposDocumento();
 
+        public Task<List<CatDocumentos>> ListarDocumentosLNegocio(int IdLineaNegocio);
+
     }
 }

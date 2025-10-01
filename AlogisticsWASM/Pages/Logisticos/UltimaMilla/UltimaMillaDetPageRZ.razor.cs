@@ -2,14 +2,19 @@
 using ALOG.Modelos.Modelos.DTO.Respuestas;
 using ALOG.Modelos.Modelos.Logisticos;
 using ALOGRepositorios.Services.Catalogos.ICatalogos;
+using ALOGRepositorios.Services.Logisticos;
 using ALOGRepositorios.Services.Logisticos.ILogisticos;
 using ALOGRespositorios.Modelos.Dtos.Control;
+using ClienteBlazorWASM.Helpers;
 using CurrieTechnologies.Razor.SweetAlert2;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Radzen;
 using Radzen.Blazor;
 using static AlogisticsWASM.Pages.Vacios.Solicitudes.SolicitudesCRUDCMP;
+using static System.Net.WebRequestMethods;
 
 namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
 {
@@ -41,6 +46,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         [Parameter] public string Modo { get; set; } = "C";
         [Parameter] public SLOSolicitudes? Solicitud { get; set; }
         [Inject] IJSRuntime JS { get; set; }
+        [Inject] ISLODocumentosService sloDocumentosService { get; set; }
+        [Inject] private HttpClient Http { get; set; }
         #endregion
 
         #region OBJETOS, LISTAS, VARIABLES
@@ -84,6 +91,20 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private SLOSolicitudesDetalle detalleEnEdicion = null;
 
         private RadzenAccordion accordionRef;
+
+        //variables de RadzenUpload
+        private int uploadKey = 0;
+        private bool limpiarPendiente = false;
+        private const long MaxFileSize = 2 * 1024 * 1024; // 2 MB
+        private const int MaxCountFiles = 6;
+        private RadzenUpload uploadFile;
+        private List<SLOCargarArchivo> lstCargarArchivos = new List<SLOCargarArchivo>();
+        private RadzenDataGrid<SLOCargarArchivo> documentosGrid;
+
+        //Documentos
+        private List<SLOSolicitudesDocumentos> lstDocumentos = new List<SLOSolicitudesDocumentos>();
+        private RadzenDataGrid<SLOSolicitudesDocumentos> gridArchivos;
+
         #endregion
 
         #region DTO´s
@@ -114,7 +135,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 lstCatTipoIMO = await CatTipoIMOService.GetCatTipoIMO();
                 //lstTipoTransporte = await TipoTransporteService.GetTipoTransporte();
                 lstCatTipoCarga = await CatTipoCargaService.CatTipoCargaListar();
-                lstCatMercancias = await MercanciasService.GetCatMercancias();                
+                lstCatMercancias = await MercanciasService.GetCatMercancias();
+                lstDocumentos = await sloDocumentosService.SLOListarArchivosSolicitud(Solicitud.IdSLOSolicitud);
             }
             if (Modo == "C")
             {
@@ -158,10 +180,26 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                     zoomType = "";
                 }
                 StateHasChanged();
-
+            }
                 // Registrar listener de resize
                 await JS.InvokeVoidAsync("registerResizeHandler", DotNetObjectReference.Create(this));
-            }
+                
+                if (limpiarPendiente && uploadFile != null)
+                {
+                    limpiarPendiente = false; // quitar flag antes de limpiar para evitar recursión
+                    try
+                    {
+                        await uploadFile.ClearFiles();
+                    }
+                    catch
+                    {
+                        // ignorar fallos al limpiar para no romper la UI
+                    }
+                    StateHasChanged();
+                }
+
+                await base.OnAfterRenderAsync(firstRender);
+            
         }
         #endregion
 
@@ -762,7 +800,13 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             respuestaGenericaDTO = await SLOSolicitudesService.CrearSolicitudSLO(objSLOSolicitudes);
 
             if (respuestaGenericaDTO.IsSuccess)
-            {
+            {                             
+
+                Solicitud = (respuestaGenericaDTO.Entidad as JObject)?.ToObject<SLOSolicitudes>();                
+
+                if(lstCargarArchivos.Count > 0)
+                    await ProcesarDocumentosAsync();
+
                 await SweetAlertService.FireAsync("Solicitud creada", "La solicitud se creó correctamente.", SweetAlertIcon.Success);
                 DialogService.Close(true);
             }
@@ -913,6 +957,8 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 respuestaGenericaDTO = await SLOSolicitudesService.ActualizarSolicitudSLO(objClon);
                 if (respuestaGenericaDTO.IsSuccess)
                 {
+                    await ProcesarDocumentosAsync();
+
                     await SweetAlertService.FireAsync("Actualizado", "Solicitud de Servicios Actualizada Correctamente", SweetAlertIcon.Success);
                     //DialogService.Close(true);
                 }
@@ -1023,8 +1069,309 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             Solicitud = null;
             DialogService.Close(false);
         }
+
+        #region DOCUMENTOS
+        private async Task OnUploadChange(UploadChangeEventArgs args)
+        {
+            // Si estamos limpiando por código, ignoramos el evento
+            if (limpiarPendiente)
+            {
+                return;
+            }
+
+            var files = args.Files?.ToList() ?? new List<Radzen.FileInfo>();
+
+            // Si no hay archivos (por ejemplo, ClearFiles disparó OnChange), salir sin mensajes
+            if (!files.Any())
+                return;
+
+            // 1) Validaciones rápidas: cantidad
+            if (files.Count > MaxCountFiles)
+            {
+                await MostrarAlertaLimiteCantidad();
+                // marcar limpieza para hacerla fuera del evento
+                limpiarPendiente = true;
+                return;
+            }
+
+            // 2) Validar tipos y tamaños (agrupar errores)
+            var errores = new List<string>();
+
+            // Tipos inválidos (solo permitimos PDF)
+            var tiposInvalidos = files
+                .Where(f =>
+                {
+                    var contentType = (f.ContentType ?? "").ToLowerInvariant();
+                    var ext = System.IO.Path.GetExtension(f.Name ?? "").ToLowerInvariant();
+                    return !(contentType == "application/pdf" || ext == ".pdf" ||
+         contentType.StartsWith("image/") ||
+         ext == ".jpg" || ext == ".jpeg" || ext == ".png");
+
+                })
+                .ToList();
+
+            if (tiposInvalidos.Any())
+                errores.Add($"Los siguientes archivos no son validos: {string.Join(", ", tiposInvalidos.Select(x => x.Name))}");
+
+            // Tamaño por archivo
+            var grandes = files.Where(f => f.Size > MaxFileSize).ToList();
+            if (grandes.Any())
+                errores.Add($"Los siguientes archivos exceden {MaxFileSize / 1024 / 1024} MB: {string.Join(", ", grandes.Select(x => x.Name))}");
+
+            if (errores.Any())
+            {
+                // Mostrar todos los errores juntos (puedes usar SweetAlert o NotificationService)
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Validación fallida",
+                    Detail = string.Join(" / ", errores),
+                    Duration = 6000
+                });
+
+                limpiarPendiente = true; // limpiar fuera del evento
+                return;
+            }
+
+            // Abrir modal para clasificar los archivos
+            var result = await DialogService.OpenAsync<UltimaMillaModalDocumentos>(
+                "Clasificar Documentos",
+                new Dictionary<string, object>() { { "Archivos", files }, { "Modo", "TIMELINE" } },
+                new DialogOptions()
+                { Width = "60%", Height = "55%", Resizable = true, Draggable = true, ShowClose = false, Style = "border-radius: 12px;" }
+            );
+
+            // Procesar resultados del modal
+            if (result is List<UltimaMillaModalDocumentos.DocumentoUploadItem> listaFinal && listaFinal.Any())
+            {
+                try
+                {
+                    foreach (var doc in listaFinal)
+                    {
+                        // Convertir IBrowserFile a byte[]
+                        byte[] fileBytes = null;
+                        if (doc.FileInfo != null)
+                        {
+                            using var ms = new MemoryStream();
+                            await doc.FileInfo.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
+                            fileBytes = ms.ToArray();
+                        }
+
+                        lstCargarArchivos.Add(new SLOCargarArchivo()
+                        {
+                            TipoDocumento = doc.AcronimoDocumento,
+                            //Identificador = Solicitud?.Orden?.ReferenciaALO,
+                            NombreArchivo = doc.FileInfo?.Name,
+                            SizeFile = doc.FileInfo?.Size ?? 0,
+                            ContentType = doc.FileInfo?.ContentType,
+                            FileBytes = fileBytes,
+                            //IdOrden = Solicitud.IdOrden,
+                            IdUsuario = UsuarioToken.IdCatUsuario
+                        });
+                    }
+                    var lista = lstCargarArchivos;
+                    //await ProcesarDocumentosAsync();
+                    limpiarPendiente = true;
+                }
+                catch (Exception ex)
+                {
+                    return;
+                }
+
+                if(Modo == "E" && Solicitud?.catTipoEstado?.TipoEstado == "A")
+                {
+                    await ProcesarDocumentosAsync();
+                }
+
+                // Limpiar selección del upload
+                limpiarPendiente = true;
+            }
+            limpiarPendiente = true;
+        }
+
+        private async Task ProcesarDocumentosAsync()
+        {
+            if (lstCargarArchivos == null || !lstCargarArchivos.Any())
+            {
+                await SweetAlertService.FireAsync("Validación", "No hay documentos para procesar.", SweetAlertIcon.Warning);
+                return;
+            }
+
+            int total = lstCargarArchivos.Count;
+            int procesados = 0;
+            bool todosCorrectos = true;
+
+            // 🔹 Mostrar modal inicial sin bloquear
+            //_ = SweetAlertService.FireAsync(new SweetAlertOptions
+            //{
+            //    Title = "Subiendo documentos...",
+            //    Text = $"0 de {total}",
+            //    Icon = SweetAlertIcon.Info,
+            //    AllowOutsideClick = false,
+            //    ShowConfirmButton = false
+            //});
+
+            //await Task.Yield(); // asegura que el modal se monte
+            //await SweetAlertService.ShowLoadingAsync();
+
+            foreach (var archiCarga in lstCargarArchivos)
+            {
+                try
+                {
+                    //archiCarga.IdOrden = objSolicitudes.IdOrden;
+                    //archiCarga.IdUsuario = UsuarioToken.IdCatUsuario;
+                    //archiCarga.Identificador = objSLOTransporteSolicitud.IdSLOTransporteSolicitud.ToString();
+                    archiCarga.IdOrden = Solicitud.IdOrden;
+                    archiCarga.IdUsuario = UsuarioToken.IdCatUsuario;
+                    archiCarga.Identificador = Solicitud.Orden.ReferenciaALO;
+
+                    // 🔹 Actualizar progreso en el mismo modal
+                    //await SweetAlertService.UpdateAsync(new SweetAlertOptions
+                    //{
+                    //    Title = "Subiendo documentos...",
+                    //    Text = $"{procesados + 1} de {total}"
+                    //});
+
+                    RespuestaGenericaDTO respon = await sloDocumentosService.SLOUploadFile(archiCarga);
+
+                    if (!respon.IsSuccess)
+                    {
+                        todosCorrectos = false;
+                        await SweetAlertService.CloseAsync();
+                        await SweetAlertService.FireAsync("Error", $"No se pudo cargar el archivo {archiCarga.NombreArchivo}.", SweetAlertIcon.Error);
+                        break; // detener en el primer error
+                    }
+                    else
+                    {
+                        todosCorrectos = true;
+                        lstCargarArchivos = new List<SLOCargarArchivo>();
+                        lstDocumentos = await sloDocumentosService.SLOListarArchivosSolicitud(Solicitud.IdSLOSolicitud); 
+                        if(gridArchivos != null)
+                        {
+                            await gridArchivos.Reload();
+                        }                        
+                        StateHasChanged();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    todosCorrectos = false;
+                    await SweetAlertService.CloseAsync();
+                    await SweetAlertService.FireAsync("Error", ex.Message, SweetAlertIcon.Error);
+                    break;
+                }
+                procesados++;
+            }
+
+
+            // 🔹 Al finalizar
+            await SweetAlertService.CloseAsync();
+
+            if (todosCorrectos)
+            {
+                //await SweetAlertService.FireAsync("Éxito", "Todos los documentos se cargaron correctamente.", SweetAlertIcon.Success);
+                return;
+            }
+            else
+            {
+                await SweetAlertService.FireAsync("Proceso incompleto", "Algunos documentos no se pudieron cargar.", SweetAlertIcon.Warning);
+            }
+        }
+
+        private async Task MostrarAlertaLimiteCantidad()
+        {
+            // Si usas SweetAlertService:
+            // await SweetAlertService.FireAsync("Límite superado", $"No puedes cargar más de {MaxCountFiles} archivos.", SweetAlertIcon.Warning);
+
+            // O usar NotificationService:
+            NotificationService.Notify(new NotificationMessage
+            {
+                Severity = NotificationSeverity.Warning,
+                Summary = "Cantidad máxima superada",
+                Detail = $"No puedes cargar más de {MaxCountFiles} archivos a la vez.",
+                Duration = 4000
+            });
+        }
+
+        private async Task EliminarDocumento(SLOCargarArchivo doc)
+        {
+            lstCargarArchivos.Remove(doc);
+            await documentosGrid.Reload();
+        }
+
+        private async Task AbrirDocumentoCont(SLOSolicitudesDocumentos doc)
+        {
+            var response = await Http.GetAsync($"{Inicializar.UrlApiLogistico}SLODocumentos/obtenerArchivo/{doc.DocumentoUUID}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var base64 = Convert.ToBase64String(fileBytes);
+                //var fileUrl = $"data:application/pdf;base64,{base64}";
+
+                // 👇 Obtenemos el tipo real del archivo (ej: application/pdf, image/png, image/jpeg)
+                //var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+
+                //await JS.InvokeVoidAsync("abrirPDFenNuevaPestana", base64, "application/pdf");
+                await JS.InvokeVoidAsync("abrirPDFenNuevaPestana", base64, doc.TipoArchivo.ToString());
+                //await _jsRuntime.InvokeVoidAsync("saveAsFile", nombreArchivo, Convert.ToBase64String(contenido));
+
+
+                // Abre el PDF en una nueva pestaña
+                //await JS.InvokeVoidAsync("open", fileUrl, "_blank");
+            }
+            else
+            {
+                NotificationService.Notify(new NotificationMessage
+                {
+                    Severity = NotificationSeverity.Error,
+                    Summary = "Error",
+                    Detail = "No se pudo abrir el documento.",
+                    Duration = 4000
+                });
+            }
+        }
+
+        private async Task BajaDocumento(SLOSolicitudesDocumentos item)
+        {
+            // Mostrar confirmación
+            var result = await SweetAlertService.FireAsync(new SweetAlertOptions
+            {
+                Title = "Confirmar",
+                Text = $"¿Seguro que desea dar de baja el documento '{item.NombreDocumento}'?",
+                Icon = SweetAlertIcon.Question,
+                ShowCancelButton = true,
+                ConfirmButtonText = "Sí, eliminar",
+                CancelButtonText = "Cancelar"
+            });
+
+            // Solo continuar si el usuario confirmó
+            if (result.IsConfirmed)
+            {
+                var respuestaGenericaDto = await sloDocumentosService.BajaDocumento(item);
+
+                if (respuestaGenericaDto.IsSuccess)
+                {
+                    await SweetAlertService.FireAsync("Baja", "Documento dado de baja correctamente", SweetAlertIcon.Success);
+                    // Opcional: refrescar lista de documentos
+                    lstDocumentos = await sloDocumentosService.SLOListarArchivosSolicitud(Solicitud.IdSLOSolicitud);
+                    await gridArchivos.Reload();
+                }
+                else
+                {
+                    await SweetAlertService.FireAsync("Error", "Error al dar de baja el documento.", SweetAlertIcon.Error);
+                }
+            }
+            else
+            {
+                // El usuario canceló
+                //await sweetAlertService.FireAsync("Cancelado", "No se eliminó el documento.", SweetAlertIcon.Info);
+            }
+        }
         #endregion
-       
+
+        #endregion
+
     }
 }
 

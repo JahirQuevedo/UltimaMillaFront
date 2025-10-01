@@ -90,6 +90,7 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
         private ICollection<CatClientes> lstCatClientes;
         private bool cargando = true;
         private Dictionary<int, string> tiposMercanciaPorSolicitud = new();
+        private Dictionary<int, bool> existeControlTower = new();
 
         //Control Tamaño Pantalla
         int alto;
@@ -136,6 +137,15 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                 return tipos;
             }
             return string.Empty;
+        }
+
+        private bool GetControlTower(int solicitudId)
+        {
+            if(existeControlTower.TryGetValue(solicitudId, out var existe))
+            {
+                return existe;
+            }
+            return false;
         }
         #endregion
 
@@ -196,6 +206,9 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
                         .Distinct();
 
                     tiposMercanciaPorSolicitud[solicitud.IdSLOSolicitud] = string.Join(", ", tipos);
+
+                    bool existe = await ValidarControlTower(solicitud);
+                    existeControlTower[solicitud.IdSLOSolicitud] = existe;
                 }
             }
             finally
@@ -397,6 +410,20 @@ namespace AlogisticsWASM.Pages.Logisticos.UltimaMilla
             }
 
 
+        }
+
+        private async Task<bool> ValidarControlTower(SLOSolicitudes solicitud)
+        {
+            RespuestaGenericaDTO respuestaGenerica = await SLOTControlTerrestreService.ObtenerPorIdTControlTerreste(solicitud.IdSLOSolicitud);
+
+            if (respuestaGenerica.Entidades.Count == 0)
+            {
+                return false;
+            }
+            else
+            {
+                return true;
+            }
         }
         #endregion
 
